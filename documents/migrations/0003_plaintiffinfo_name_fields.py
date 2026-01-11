@@ -31,7 +31,7 @@ def combine_names(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('documents', '0001_initial'),
+        ('documents', '0002_alter_document_title_alter_documentsection_status'),
     ]
 
     operations = [
