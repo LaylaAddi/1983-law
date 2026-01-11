@@ -721,8 +721,17 @@ document.addEventListener('DOMContentLoaded', function() {
     var manualCourtCheckbox = document.getElementById('id_use_manual_court');
 
     if (cityField && stateField && courtField) {
-        // Debounce function to prevent too many AJAX calls
-        var lookupTimeout = null;
+        // Add a "Lookup Court" button next to the court field
+        var lookupBtn = document.createElement('button');
+        lookupBtn.type = 'button';
+        lookupBtn.className = 'btn btn-outline-primary mt-2';
+        lookupBtn.id = 'lookupCourtBtn';
+        lookupBtn.innerHTML = '<i class="bi bi-search me-1"></i>Lookup Court';
+
+        var courtFieldContainer = courtField.closest('.mb-3');
+        if (courtFieldContainer) {
+            courtFieldContainer.appendChild(lookupBtn);
+        }
 
         function lookupDistrictCourt() {
             // Don't lookup if manual override is checked
@@ -733,51 +742,79 @@ document.addEventListener('DOMContentLoaded', function() {
             var city = cityField.value.trim();
             var state = stateField.value.trim().toUpperCase();
 
-            if (city.length >= 2 && state.length === 2) {
-                // Show loading indicator
-                courtField.placeholder = 'Looking up district court...';
+            if (!city || !state) {
+                alert('Please enter both City and State (2-letter code like CA, NY, TX) first.');
+                return;
+            }
 
-                fetch('/documents/lookup-district-court/?city=' + encodeURIComponent(city) + '&state=' + encodeURIComponent(state))
-                    .then(function(response) { return response.json(); })
-                    .then(function(data) {
-                        if (data.success && data.court_name) {
-                            courtField.value = data.court_name;
-                            courtField.placeholder = 'Federal district court';
+            if (state.length !== 2) {
+                alert('Please enter a 2-letter state code (e.g., CA, NY, TX)');
+                return;
+            }
 
-                            // Show confidence indicator
-                            var confidenceBadge = document.getElementById('court-confidence');
-                            if (!confidenceBadge) {
-                                confidenceBadge = document.createElement('small');
-                                confidenceBadge.id = 'court-confidence';
-                                confidenceBadge.className = 'text-muted d-block mt-1';
-                                courtField.parentNode.appendChild(confidenceBadge);
-                            }
+            // Show loading
+            lookupBtn.disabled = true;
+            lookupBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Looking up...';
+            courtField.placeholder = 'Looking up district court...';
 
-                            var confidenceText = data.confidence === 'high' ? 'High confidence match' : 'Best match found';
-                            var confidenceClass = data.confidence === 'high' ? 'text-success' : 'text-warning';
-                            confidenceBadge.innerHTML = '<i class="bi bi-check-circle me-1"></i><span class="' + confidenceClass + '">' + confidenceText + '</span>';
-                        } else {
-                            courtField.placeholder = 'Could not determine - enter manually';
+            fetch('/documents/lookup-district-court/?city=' + encodeURIComponent(city) + '&state=' + encodeURIComponent(state))
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.success && data.court_name) {
+                        courtField.value = data.court_name;
+                        courtField.placeholder = 'Federal district court';
+
+                        // Show confidence indicator
+                        var confidenceBadge = document.getElementById('court-confidence');
+                        if (!confidenceBadge) {
+                            confidenceBadge = document.createElement('small');
+                            confidenceBadge.id = 'court-confidence';
+                            confidenceBadge.className = 'd-block mt-1';
+                            courtField.parentNode.insertBefore(confidenceBadge, lookupBtn);
                         }
-                    })
-                    .catch(function(error) {
-                        console.error('District lookup error:', error);
-                        courtField.placeholder = 'Lookup failed - enter manually';
-                    });
-            }
+
+                        var confidenceText = data.confidence === 'high' ? 'High confidence match' : 'Best match found';
+                        var confidenceClass = data.confidence === 'high' ? 'text-success' : 'text-warning';
+                        confidenceBadge.innerHTML = '<i class="bi bi-check-circle me-1"></i><span class="' + confidenceClass + '">' + confidenceText + '</span>';
+
+                        lookupBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Found!';
+                        lookupBtn.classList.remove('btn-outline-primary');
+                        lookupBtn.classList.add('btn-success');
+                    } else {
+                        courtField.placeholder = 'Could not find - check manual entry';
+                        var confidenceBadge = document.getElementById('court-confidence');
+                        if (!confidenceBadge) {
+                            confidenceBadge = document.createElement('small');
+                            confidenceBadge.id = 'court-confidence';
+                            confidenceBadge.className = 'd-block mt-1';
+                            courtField.parentNode.insertBefore(confidenceBadge, lookupBtn);
+                        }
+                        confidenceBadge.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>City not in database. Try a nearby major city or enter manually.</span>';
+                        lookupBtn.innerHTML = '<i class="bi bi-x-lg me-1"></i>Not Found';
+                        lookupBtn.classList.remove('btn-outline-primary');
+                        lookupBtn.classList.add('btn-warning');
+                    }
+                })
+                .catch(function(error) {
+                    console.error('District lookup error:', error);
+                    courtField.placeholder = 'Lookup failed - enter manually';
+                    lookupBtn.innerHTML = '<i class="bi bi-x-lg me-1"></i>Error';
+                    lookupBtn.classList.remove('btn-outline-primary');
+                    lookupBtn.classList.add('btn-danger');
+                })
+                .finally(function() {
+                    lookupBtn.disabled = false;
+                    // Reset button after 3 seconds
+                    setTimeout(function() {
+                        lookupBtn.innerHTML = '<i class="bi bi-search me-1"></i>Lookup Court';
+                        lookupBtn.classList.remove('btn-success', 'btn-warning', 'btn-danger');
+                        lookupBtn.classList.add('btn-outline-primary');
+                    }, 3000);
+                });
         }
 
-        // Trigger lookup when city or state changes
-        function onLocationChange() {
-            if (lookupTimeout) {
-                clearTimeout(lookupTimeout);
-            }
-            lookupTimeout = setTimeout(lookupDistrictCourt, 500); // Wait 500ms after typing stops
-        }
-
-        cityField.addEventListener('blur', lookupDistrictCourt);
-        stateField.addEventListener('blur', lookupDistrictCourt);
-        stateField.addEventListener('change', lookupDistrictCourt);
+        // Click handler for lookup button
+        lookupBtn.addEventListener('click', lookupDistrictCourt);
 
         // Toggle court field editability based on manual checkbox
         if (manualCourtCheckbox) {
@@ -785,24 +822,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (manualCourtCheckbox.checked) {
                     courtField.readOnly = false;
                     courtField.placeholder = 'Enter federal district court name';
+                    lookupBtn.style.display = 'none';
                 } else {
                     courtField.readOnly = true;
-                    courtField.placeholder = 'Auto-filled based on city/state';
-                    // Re-run lookup when switching back to auto
-                    lookupDistrictCourt();
+                    courtField.placeholder = 'Click "Lookup Court" after entering city & state';
+                    lookupBtn.style.display = '';
                 }
             }
 
             manualCourtCheckbox.addEventListener('change', toggleCourtEditable);
-
-            // Initial state - make readonly unless manual is checked
-            if (!manualCourtCheckbox.checked) {
-                courtField.readOnly = true;
-            }
+            toggleCourtEditable(); // Set initial state
         }
 
-        // Run lookup on page load if city and state are already filled
-        if (cityField.value && stateField.value && !courtField.value) {
+        // Auto-lookup on page load if city and state are filled but court isn't
+        if (cityField.value && stateField.value && stateField.value.length === 2 && !courtField.value) {
             lookupDistrictCourt();
         }
     }

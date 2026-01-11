@@ -124,7 +124,7 @@ class IncidentOverviewForm(forms.ModelForm):
             'location_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Public sidewalk, Government building lobby'}),
             'was_recording': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'recording_device': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., iPhone 14, GoPro Hero 10'}),
-            'federal_district_court': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Will be auto-filled based on city/state', 'id': 'id_federal_district_court'}),
+            'federal_district_court': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter city & state above, then click Lookup', 'id': 'id_federal_district_court', 'readonly': 'readonly'}),
             'use_manual_court': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_use_manual_court'}),
         }
         labels = {
