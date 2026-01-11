@@ -9,6 +9,7 @@ urlpatterns = [
     path('new/', views.document_create, name='document_create'),
     path('<int:document_id>/', views.document_detail, name='document_detail'),
     path('<int:document_id>/delete/', views.document_delete, name='document_delete'),
+    path('<int:document_id>/fill-test-data/', views.fill_test_data, name='fill_test_data'),
 
     # Section editing (interview style)
     path('<int:document_id>/section/<str:section_type>/', views.section_edit, name='section_edit'),

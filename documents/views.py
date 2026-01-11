@@ -319,3 +319,24 @@ def document_delete(request, document_id):
         return redirect('documents:document_list')
 
     return render(request, 'documents/document_confirm_delete.html', {'document': document})
+
+
+@login_required
+@require_POST
+def fill_test_data(request, document_id):
+    """Fill document with realistic test data (test users only)."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Check if user is a test user
+    if not request.user.is_test_user:
+        messages.error(request, 'Test data feature is only available for test users.')
+        return redirect('documents:document_detail', document_id=document.id)
+
+    try:
+        from .test_data import populate_test_data
+        populate_test_data(document)
+        messages.success(request, 'Document filled with sample test data!')
+    except Exception as e:
+        messages.error(request, f'Error filling test data: {str(e)}')
+
+    return redirect('documents:document_detail', document_id=document.id)
