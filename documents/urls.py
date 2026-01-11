@@ -21,4 +21,7 @@ urlpatterns = [
     # AJAX endpoints for preview page
     path('<int:document_id>/section/<str:section_type>/save/', views.section_save_ajax, name='section_save_ajax'),
     path('<int:document_id>/section/<str:section_type>/delete-item/<int:item_id>/', views.delete_item_ajax, name='delete_item_ajax'),
+
+    # District court lookup
+    path('lookup-district-court/', views.lookup_district_court, name='lookup_district_court'),
 ]

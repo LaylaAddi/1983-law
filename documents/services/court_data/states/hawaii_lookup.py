@@ -1,0 +1,12 @@
+from .base_state_lookup import BaseStateLookup
+
+class HawaiiLookup(BaseStateLookup):
+    STATE_CODE = 'HI'
+    STATE_NAME = 'Hawaii'
+    
+    DISTRICTS = {
+        'district': {
+            'name': 'United States District Court for the District of Hawaii',
+            'cities': ['honolulu', 'hilo', 'kailua-kona', 'kahului', 'lihue', 'pearl city', 'kailua', 'kaneohe']
+        }
+    }

@@ -265,19 +265,38 @@
         <div class="col-md-12">
             <div class="data-field">
                 <div class="data-label">Location</div>
-                <div class="data-value">{{ section_data.data.location|default:"Not provided" }}</div>
+                <div class="data-value">
+                    {% if section_data.data.incident_location %}
+                        {{ section_data.data.incident_location }}<br>
+                        {{ section_data.data.city }}, {{ section_data.data.state }}
+                        {% if section_data.data.location_type %}<br><small class="text-muted">({{ section_data.data.location_type }})</small>{% endif %}
+                    {% else %}
+                        Not provided
+                    {% endif %}
+                </div>
             </div>
         </div>
+        {% if section_data.data.federal_district_court %}
         <div class="col-md-12">
             <div class="data-field">
-                <div class="data-label">Jurisdiction</div>
-                <div class="data-value">{{ section_data.data.jurisdiction|default:"Not provided" }}</div>
+                <div class="data-label">Federal District Court</div>
+                <div class="data-value">
+                    <i class="bi bi-bank me-1 text-primary"></i>{{ section_data.data.federal_district_court }}
+                </div>
             </div>
         </div>
-        <div class="col-md-12">
+        {% endif %}
+        <div class="col-md-6">
             <div class="data-field">
-                <div class="data-label">Brief Description</div>
-                <div class="data-value">{{ section_data.data.brief_description|default:"Not provided"|linebreaks }}</div>
+                <div class="data-label">Recording</div>
+                <div class="data-value">
+                    {% if section_data.data.was_recording %}
+                        <span class="badge bg-success">Yes</span>
+                        {% if section_data.data.recording_device %} - {{ section_data.data.recording_device }}{% endif %}
+                    {% else %}
+                        <span class="badge bg-secondary">No</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>

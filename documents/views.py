@@ -613,3 +613,44 @@ def delete_item_ajax(request, document_id, section_type, item_id):
         'success': True,
         'message': 'Item deleted successfully',
     })
+
+
+@login_required
+def lookup_district_court(request):
+    """AJAX endpoint to lookup federal district court based on city and state."""
+    city = request.GET.get('city', '').strip()
+    state = request.GET.get('state', '').strip().upper()
+
+    if not city or not state:
+        return JsonResponse({
+            'success': False,
+            'error': 'City and state are required',
+        })
+
+    try:
+        from .services.court_lookup_service import CourtLookupService
+        result = CourtLookupService.lookup_court_by_location(city, state)
+
+        if result:
+            return JsonResponse({
+                'success': True,
+                'court_name': result.get('court_name', ''),
+                'confidence': result.get('confidence', 'low'),
+                'district': result.get('district', ''),
+                'method': result.get('method', ''),
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': f'Could not find federal district court for {city}, {state}',
+            })
+    except ImportError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Court lookup service not available',
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        })

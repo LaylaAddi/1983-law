@@ -114,16 +114,26 @@ class IncidentOverviewForm(forms.ModelForm):
 
     class Meta:
         model = IncidentOverview
-        exclude = ['section']
+        exclude = ['section', 'district_lookup_confidence']
         widgets = {
             'incident_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'incident_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
             'incident_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specific location (e.g., 123 Main St, front entrance)'}),
-            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City'}),
-            'state': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State'}),
+            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City', 'id': 'id_city'}),
+            'state': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State (2-letter code, e.g., CA)', 'id': 'id_state', 'maxlength': '2'}),
             'location_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Public sidewalk, Government building lobby'}),
             'was_recording': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'recording_device': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., iPhone 14, GoPro Hero 10'}),
+            'federal_district_court': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Will be auto-filled based on city/state', 'id': 'id_federal_district_court'}),
+            'use_manual_court': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_use_manual_court'}),
+        }
+        labels = {
+            'federal_district_court': 'Federal District Court',
+            'use_manual_court': 'Enter court manually (override auto-lookup)',
+        }
+        help_texts = {
+            'federal_district_court': 'This will be automatically determined based on the incident location.',
+            'state': 'Use 2-letter state code (e.g., CA, NY, TX)',
         }
 
 

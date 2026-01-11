@@ -713,6 +713,99 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 2000);
         });
     }
+
+    // District court lookup for incident_overview section
+    var cityField = document.getElementById('id_city');
+    var stateField = document.getElementById('id_state');
+    var courtField = document.getElementById('id_federal_district_court');
+    var manualCourtCheckbox = document.getElementById('id_use_manual_court');
+
+    if (cityField && stateField && courtField) {
+        // Debounce function to prevent too many AJAX calls
+        var lookupTimeout = null;
+
+        function lookupDistrictCourt() {
+            // Don't lookup if manual override is checked
+            if (manualCourtCheckbox && manualCourtCheckbox.checked) {
+                return;
+            }
+
+            var city = cityField.value.trim();
+            var state = stateField.value.trim().toUpperCase();
+
+            if (city.length >= 2 && state.length === 2) {
+                // Show loading indicator
+                courtField.placeholder = 'Looking up district court...';
+
+                fetch('/documents/lookup-district-court/?city=' + encodeURIComponent(city) + '&state=' + encodeURIComponent(state))
+                    .then(function(response) { return response.json(); })
+                    .then(function(data) {
+                        if (data.success && data.court_name) {
+                            courtField.value = data.court_name;
+                            courtField.placeholder = 'Federal district court';
+
+                            // Show confidence indicator
+                            var confidenceBadge = document.getElementById('court-confidence');
+                            if (!confidenceBadge) {
+                                confidenceBadge = document.createElement('small');
+                                confidenceBadge.id = 'court-confidence';
+                                confidenceBadge.className = 'text-muted d-block mt-1';
+                                courtField.parentNode.appendChild(confidenceBadge);
+                            }
+
+                            var confidenceText = data.confidence === 'high' ? 'High confidence match' : 'Best match found';
+                            var confidenceClass = data.confidence === 'high' ? 'text-success' : 'text-warning';
+                            confidenceBadge.innerHTML = '<i class="bi bi-check-circle me-1"></i><span class="' + confidenceClass + '">' + confidenceText + '</span>';
+                        } else {
+                            courtField.placeholder = 'Could not determine - enter manually';
+                        }
+                    })
+                    .catch(function(error) {
+                        console.error('District lookup error:', error);
+                        courtField.placeholder = 'Lookup failed - enter manually';
+                    });
+            }
+        }
+
+        // Trigger lookup when city or state changes
+        function onLocationChange() {
+            if (lookupTimeout) {
+                clearTimeout(lookupTimeout);
+            }
+            lookupTimeout = setTimeout(lookupDistrictCourt, 500); // Wait 500ms after typing stops
+        }
+
+        cityField.addEventListener('blur', lookupDistrictCourt);
+        stateField.addEventListener('blur', lookupDistrictCourt);
+        stateField.addEventListener('change', lookupDistrictCourt);
+
+        // Toggle court field editability based on manual checkbox
+        if (manualCourtCheckbox) {
+            function toggleCourtEditable() {
+                if (manualCourtCheckbox.checked) {
+                    courtField.readOnly = false;
+                    courtField.placeholder = 'Enter federal district court name';
+                } else {
+                    courtField.readOnly = true;
+                    courtField.placeholder = 'Auto-filled based on city/state';
+                    // Re-run lookup when switching back to auto
+                    lookupDistrictCourt();
+                }
+            }
+
+            manualCourtCheckbox.addEventListener('change', toggleCourtEditable);
+
+            // Initial state - make readonly unless manual is checked
+            if (!manualCourtCheckbox.checked) {
+                courtField.readOnly = true;
+            }
+        }
+
+        // Run lookup on page load if city and state are already filled
+        if (cityField.value && stateField.value && !courtField.value) {
+            lookupDistrictCourt();
+        }
+    }
 });
 </script>
 {% endblock %}
