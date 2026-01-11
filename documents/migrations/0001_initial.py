@@ -48,9 +48,7 @@ class Migration(migrations.Migration):
             name='PlaintiffInfo',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('first_name', models.CharField(blank=True, max_length=50)),
-                ('middle_name', models.CharField(blank=True, max_length=50)),
-                ('last_name', models.CharField(blank=True, max_length=50)),
+                ('full_name', models.CharField(blank=True, max_length=255)),
                 ('street_address', models.CharField(blank=True, max_length=255)),
                 ('city', models.CharField(blank=True, max_length=100)),
                 ('state', models.CharField(blank=True, max_length=50)),
