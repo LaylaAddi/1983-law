@@ -144,15 +144,45 @@
                     </div>
                     {% endif %}
 
+                    <!-- Recommended Note (for relief_sought section) -->
+                    {% if help_content.recommended_note %}
+                    <div class="mb-3">
+                        {{ help_content.recommended_note|safe }}
+                    </div>
+                    {% endif %}
+
                     <!-- Tips -->
                     {% if help_content.tips %}
                     <div class="help-tips">
                         <strong><i class="bi bi-lightbulb me-2"></i>Tips:</strong>
                         <ul class="mb-0 mt-2">
                             {% for tip in help_content.tips %}
-                            <li>{{ tip }}</li>
+                            <li>{{ tip|safe }}</li>
                             {% endfor %}
                         </ul>
+                    </div>
+                    {% endif %}
+
+                    <!-- Simple Explanations / FAQ (for relief_sought section) -->
+                    {% if help_content.simple_explanations %}
+                    <div class="mt-3">
+                        <strong><i class="bi bi-question-circle me-2"></i>Common Questions:</strong>
+                        <div class="accordion mt-2" id="faqAccordion">
+                            {% for faq in help_content.simple_explanations %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#faq{{ forloop.counter }}">
+                                        {{ faq.question }}
+                                    </button>
+                                </h2>
+                                <div id="faq{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body small">
+                                        {{ faq.answer|safe }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
                     {% endif %}
 
@@ -177,7 +207,7 @@
                     </div>
                     {% endif %}
 
-                    <!-- Relief Types (for relief_sought section) -->
+                    <!-- Relief Types (for relief_sought section) - removed, replaced by simple_explanations -->
                     {% if help_content.types_of_relief %}
                     <div class="mt-3">
                         <strong><i class="bi bi-currency-dollar me-2"></i>Types of Relief Explained:</strong>
@@ -237,6 +267,21 @@
                 {% endif %}
 
                 <p class="text-muted mb-4">{{ config.description }}</p>
+
+                {% if section.section_type == 'relief_sought' %}
+                <!-- Recommended Settings for Relief Sought -->
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <strong><i class="bi bi-star-fill me-2"></i>Not sure what to ask for?</strong>
+                            <p class="mb-0 small">Click below to use the recommended settings for First Amendment audit cases.</p>
+                        </div>
+                        <button type="button" class="btn btn-info btn-sm" id="useRecommendedBtn">
+                            <i class="bi bi-magic me-1"></i>Use Recommended
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
 
                 {% if is_multiple %}
                     <!-- Multiple items section (defendants, witnesses, evidence) -->
@@ -509,6 +554,53 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         helpContent.addEventListener('hide.bs.collapse', function () {
             helpChevron.style.transform = 'rotate(0deg)';
+        });
+    }
+
+    // Use Recommended Settings button for Relief Sought section
+    var recommendedBtn = document.getElementById('useRecommendedBtn');
+    if (recommendedBtn) {
+        recommendedBtn.addEventListener('click', function() {
+            // Check the recommended boxes
+            var checkboxes = {
+                'id_compensatory_damages': true,    // Money for losses - YES
+                'id_punitive_damages': true,        // Punish bad behavior - YES
+                'id_attorney_fees': true,           // Legal fees - ALWAYS YES
+                'id_injunctive_relief': false,      // Policy changes - Optional
+                'id_declaratory_relief': true,      // Official declaration - YES
+                'id_jury_trial_demanded': true      // Jury trial - YES
+            };
+
+            for (var id in checkboxes) {
+                var checkbox = document.getElementById(id);
+                if (checkbox) {
+                    checkbox.checked = checkboxes[id];
+                    // Trigger change event for any dependent fields
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            }
+
+            // Pre-fill declaratory description with common 1A audit language
+            var declaratoryDesc = document.getElementById('id_declaratory_description');
+            if (declaratoryDesc && !declaratoryDesc.value) {
+                declaratoryDesc.value = 'Declare that the Plaintiff\'s First Amendment right to record police officers performing their official duties in public places was violated by the Defendants.';
+            }
+
+            // Show success feedback
+            this.innerHTML = '<i class="bi bi-check-lg me-1"></i>Applied!';
+            this.classList.remove('btn-info');
+            this.classList.add('btn-success');
+
+            // Scroll to form
+            document.querySelector('form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Reset button after 2 seconds
+            var btn = this;
+            setTimeout(function() {
+                btn.innerHTML = '<i class="bi bi-magic me-1"></i>Use Recommended';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-info');
+            }, 2000);
         });
     }
 });

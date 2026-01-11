@@ -419,72 +419,67 @@ SECTION_HELP = {
     },
 
     'relief_sought': {
-        'title': 'Relief Sought',
+        'title': 'What Do You Want From This Lawsuit?',
         'overview': '''
-            <strong>What is this?</strong> What you're asking the court to give you if you win.
-            This includes money damages and other remedies.
+            <strong>What is this?</strong> This is where you tell the court what you want if you win.
+            Don't worry about the legal terms - we've written everything in plain English!
         ''',
         'why_important': '''
-            <strong>Why it matters:</strong> You can only get what you ask for. It's better to ask
-            for more than less - you can always accept a smaller settlement, but you can't get more
-            than you requested.
+            <strong>Why it matters:</strong> You can only get what you ask for. Ask for everything
+            that applies to your situation. You can always settle for less, but you can't get more
+            than what you requested.
         ''',
-        'types_of_relief': {
-            'compensatory': {
-                'name': 'Compensatory Damages',
-                'description': 'Money to compensate you for actual losses - medical bills, lost wages, property damage, emotional distress.',
-            },
-            'punitive': {
-                'name': 'Punitive Damages',
-                'description': 'Additional money to punish the defendant for especially bad conduct and deter future violations. Available when conduct was willful or reckless.',
-            },
-            'injunctive': {
-                'name': 'Injunctive Relief',
-                'description': 'Court order requiring the defendant to do or stop doing something. Example: ordering police department to change its policies.',
-            },
-            'declaratory': {
-                'name': 'Declaratory Relief',
-                'description': 'Court declaration that your rights were violated. Important for establishing the law even if money damages are small.',
-            },
-            'attorneys_fees': {
-                'name': "Attorney's Fees",
-                'description': 'Section 1983 allows winning plaintiffs to recover attorney\'s fees. Always request this.',
-            },
-        },
+        'recommended_note': '''
+            <div class="alert alert-success mb-3">
+                <strong><i class="bi bi-lightbulb me-2"></i>Pro Tip:</strong> Click the
+                <strong>"Use Recommended"</strong> button above to automatically select the most
+                common requests for First Amendment audit cases. You can then customize as needed.
+            </div>
+        ''',
         'tips': [
-            'Always request attorney\'s fees - it\'s allowed under Section 1983',
-            'Compensatory damages should reflect your actual losses',
-            'Punitive damages are appropriate for willful, malicious, or reckless conduct',
-            'You don\'t have to specify an exact amount - "damages according to proof" is acceptable',
+            '<strong>ALWAYS</strong> ask for legal fees - if you win, the other side pays your lawyer',
+            'You do NOT need to know exact dollar amounts - the court can figure that out',
+            'Most 1A auditors ask for: money for losses, extra money as punishment, a court declaration, and legal fees',
+            'Juries (regular people) often side with citizens whose rights were violated - request a jury!',
+        ],
+        'simple_explanations': [
+            {
+                'question': 'What\'s the difference between the money options?',
+                'answer': '<strong>Compensatory</strong> = pays you back for real losses (damaged camera, missed work, stress). <strong>Punitive</strong> = extra money to punish the officers for being bad. You can ask for both!'
+            },
+            {
+                'question': 'What\'s a "declaration" from the court?',
+                'answer': 'It\'s an official statement from a judge saying "Yes, this person\'s rights were violated." It creates a legal record that can help other auditors and may prevent future violations.'
+            },
+            {
+                'question': 'Should I ask for policy changes?',
+                'answer': 'Only if you want the police department to actually change how they operate (new training, new policies). This is harder to get but can create real change.'
+            },
         ],
         'fields': {
             'compensatory_damages': {
-                'tooltip': 'Money for your actual losses and suffering',
-                'help': 'Check to request compensation for medical bills, lost wages, property damage, emotional distress, and other actual harms.',
+                'tooltip': 'Money to cover your actual losses - equipment, wages, emotional harm',
+                'help': 'This pays you back for things you lost or suffered: damaged equipment, missed work, anxiety, humiliation, etc.',
             },
             'punitive_damages': {
-                'tooltip': 'Additional money to punish especially bad conduct',
-                'help': 'Check if the defendant\'s conduct was willful, malicious, or showed reckless disregard for your rights.',
+                'tooltip': 'Extra money to punish the officers - common in 1A audit cases',
+                'help': 'When officers clearly knew they were wrong (like telling you filming is illegal when it\'s not), courts often award extra money as punishment.',
             },
             'injunctive_relief': {
-                'tooltip': 'Court order changing defendant\'s behavior or policies',
-                'help': 'Check if you want the court to order changes to prevent future violations.',
+                'tooltip': 'Force the department to change their policies or training',
+                'help': 'This is optional. Select this if you want the court to ORDER the police department to make changes.',
             },
             'declaratory_relief': {
-                'tooltip': 'Official court declaration that your rights were violated',
-                'help': 'Check to have the court formally declare that the defendant violated your constitutional rights.',
+                'tooltip': 'Get an official court statement that your rights were violated',
+                'help': 'Highly recommended! Creates an official record and helps establish legal precedent for future cases.',
             },
-            'attorneys_fees': {
-                'tooltip': 'Request that defendant pay your legal fees if you win',
-                'help': 'Always check this. Section 1983 allows prevailing plaintiffs to recover attorney\'s fees.',
+            'attorney_fees': {
+                'tooltip': 'Make them pay your lawyer if you win - Section 1983 allows this!',
+                'help': 'ALWAYS select this! The law specifically allows you to recover legal fees in civil rights cases.',
             },
-            'specific_amount': {
-                'tooltip': 'Total dollar amount you\'re requesting',
-                'help': 'Optional. You can leave blank and request "damages according to proof" or specify an amount based on your documented losses.',
-            },
-            'other_relief': {
-                'tooltip': 'Any other remedies you\'re requesting',
-                'help': 'Examples: specific policy changes, training requirements, public apology.',
+            'jury_trial_demanded': {
+                'tooltip': 'Let regular citizens (not just a judge) decide your case',
+                'help': 'Juries are often sympathetic to regular people whose rights were violated by police. Most plaintiffs prefer a jury.',
             },
         },
     },
