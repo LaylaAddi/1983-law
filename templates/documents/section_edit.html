@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ config.title }} - {{ document.title }} - 1983 Law{% endblock %}
+
+{% block extra_css %}
+<style>
+    .section-status-badge {
+        font-size: 0.9rem;
+    }
+    .needs-work-highlight {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .interview-card {
+        border-left: 4px solid #0d6efd;
+    }
+    .interview-card.needs-work {
+        border-left-color: #ffc107;
+        background-color: #fffbf0;
+    }
+    .interview-card.completed {
+        border-left-color: #198754;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'documents:document_list' %}">Documents</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'documents:document_detail' document.id %}">{{ document.title|truncatechars:30 }}</a></li>
+        <li class="breadcrumb-item active">{{ config.title }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <div class="card interview-card {% if section.status == 'needs_work' %}needs-work{% elif section.status == 'completed' %}completed{% endif %} shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ config.title }}</h4>
+
+                    {% if section.status == 'not_started' %}
+                        <span class="badge bg-secondary section-status-badge">Not Started</span>
+                    {% elif section.status == 'in_progress' %}
+                        <span class="badge bg-info section-status-badge">In Progress</span>
+                    {% elif section.status == 'needs_work' %}
+                        <span class="badge bg-warning text-dark section-status-badge">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Needs Work
+                        </span>
+                    {% elif section.status == 'completed' %}
+                        <span class="badge bg-success section-status-badge">
+                            <i class="bi bi-check-lg me-1"></i>Completed
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card-body">
+                {% if section.status == 'needs_work' and section.notes %}
+                    <div class="needs-work-highlight">
+                        <strong><i class="bi bi-exclamation-triangle me-2"></i>Notes:</strong>
+                        {{ section.notes }}
+                    </div>
+                {% endif %}
+
+                <p class="text-muted mb-4">{{ config.description }}</p>
+
+                {% if is_multiple %}
+                    <!-- Multiple items section (defendants, witnesses, evidence) -->
+                    {% if items %}
+                        <div class="mb-4">
+                            <h5>Added Items</h5>
+                            <div class="list-group mb-3">
+                                {% for item in items %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{{ item }}</span>
+                                        <a href="{% url 'documents:delete_multiple_item' document.id section.section_type item.id %}"
+                                           class="btn btn-outline-danger btn-sm"
+                                           onclick="return confirm('Delete this item?')">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <h5>Add New</h5>
+                    <form method="post" action="{% url 'documents:add_multiple_item' document.id section.section_type %}">
+                        {% csrf_token %}
+                        {% for field in form %}
+                            <div class="mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label">
+                                    {{ field.label }}
+                                    {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <div class="form-text">{{ field.help_text }}</div>
+                                {% endif %}
+                                {% if field.errors %}
+                                    <div class="invalid-feedback d-block">{{ field.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="bi bi-plus-lg me-1"></i>Add
+                        </button>
+                    </form>
+
+                {% else %}
+                    <!-- Single item section -->
+                    <form method="post">
+                        {% csrf_token %}
+                        {% for field in form %}
+                            <div class="mb-3">
+                                {% if field.field.widget.input_type == 'checkbox' %}
+                                    <div class="form-check">
+                                        {{ field }}
+                                        <label class="form-check-label" for="{{ field.id_for_label }}">
+                                            {{ field.label }}
+                                        </label>
+                                        {% if field.help_text %}
+                                            <div class="form-text">{{ field.help_text }}</div>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <label for="{{ field.id_for_label }}" class="form-label">
+                                        {{ field.label }}
+                                        {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                                    </label>
+                                    {{ field }}
+                                    {% if field.help_text %}
+                                        <div class="form-text">{{ field.help_text }}</div>
+                                    {% endif %}
+                                {% endif %}
+                                {% if field.errors %}
+                                    <div class="invalid-feedback d-block">{{ field.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+
+                        <hr class="my-4">
+
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" name="save" class="btn btn-outline-primary">
+                                <i class="bi bi-save me-1"></i>Save
+                            </button>
+                            <button type="submit" name="save_and_continue" class="btn btn-primary">
+                                Save & Continue<i class="bi bi-arrow-right ms-1"></i>
+                            </button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="d-flex justify-content-between mb-4">
+            {% if prev_section %}
+                <a href="{% url 'documents:section_edit' document.id prev_section.section_type %}"
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Previous
+                </a>
+            {% else %}
+                <span></span>
+            {% endif %}
+
+            {% if next_section %}
+                <a href="{% url 'documents:section_edit' document.id next_section.section_type %}"
+                   class="btn btn-outline-secondary">
+                    Next<i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            {% else %}
+                <a href="{% url 'documents:document_detail' document.id %}"
+                   class="btn btn-success">
+                    <i class="bi bi-check-lg me-1"></i>Finish
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Section Status -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-flag me-2"></i>Section Status</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'documents:update_section_status' document.id section.section_type %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Mark this section as:</label>
+                        <select name="status" class="form-select">
+                            {% for value, label in section.STATUS_CHOICES %}
+                                <option value="{{ value }}" {% if section.status == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes (if needs work):</label>
+                        <textarea name="notes" class="form-control" rows="2"
+                                  placeholder="What needs to be fixed?">{{ section.notes }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                        Update Status
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Section Progress -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>All Sections</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for s in document.sections.all %}
+                    <a href="{% url 'documents:section_edit' document.id s.section_type %}"
+                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center
+                              {% if s.section_type == section.section_type %}active{% endif %}
+                              {% if s.status == 'needs_work' %}list-group-item-warning{% endif %}">
+                        <span class="{% if s.section_type == section.section_type %}fw-bold{% endif %}">
+                            {{ s.get_section_type_display }}
+                        </span>
+                        {% if s.status == 'completed' %}
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                        {% elif s.status == 'needs_work' %}
+                            <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                        {% elif s.status == 'in_progress' %}
+                            <i class="bi bi-circle-half text-info"></i>
+                        {% else %}
+                            <i class="bi bi-circle text-muted"></i>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

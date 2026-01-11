@@ -4,28 +4,92 @@
 
 {% block content %}
 <div class="text-center py-5">
-    <h1 class="display-4 mb-4">Welcome to 1983 Law</h1>
-    <p class="lead text-muted mb-5">Your legal document management solution.</p>
+    <h1 class="display-4 mb-3">Section 1983 Civil Rights</h1>
+    <p class="lead text-muted mb-5">
+        Document and build your civil rights case when your constitutional rights have been violated.
+    </p>
 
     {% if user.is_authenticated %}
-        <div class="card mx-auto" style="max-width: 500px;">
-            <div class="card-body">
-                <h5 class="card-title">Hello, {{ user.get_short_name }}!</h5>
-                <p class="card-text text-muted">You are logged in.</p>
-                <a href="{% url 'accounts:profile' %}" class="btn btn-primary">
-                    <i class="bi bi-person me-1"></i>View Profile
-                </a>
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-3">Welcome back, {{ user.get_short_name }}!</h5>
+
+                        <div class="d-grid gap-3">
+                            <a href="{% url 'documents:document_list' %}" class="btn btn-primary btn-lg">
+                                <i class="bi bi-folder2-open me-2"></i>My Documents
+                            </a>
+                            <a href="{% url 'documents:document_create' %}" class="btn btn-outline-success btn-lg">
+                                <i class="bi bi-plus-lg me-2"></i>Start New Case
+                            </a>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{% url 'accounts:profile' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-person me-1"></i>Profile
+                            </a>
+                            <a href="{% url 'accounts:logout' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-box-arrow-right me-1"></i>Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     {% else %}
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-8">
+                <div class="card bg-light">
+                    <div class="card-body p-4">
+                        <h5 class="card-title">For First Amendment Auditors</h5>
+                        <p class="card-text">
+                            If your constitutional rights were violated while exercising your First Amendment rights
+                            to record in public spaces, this tool will help you document your case and prepare
+                            a Section 1983 civil rights complaint.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="d-flex justify-content-center gap-3">
-            <a href="{% url 'accounts:login' %}" class="btn btn-primary btn-lg">
-                <i class="bi bi-box-arrow-in-right me-2"></i>Login
+            <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-lg">
+                <i class="bi bi-person-plus me-2"></i>Get Started
             </a>
-            <a href="{% url 'accounts:register' %}" class="btn btn-outline-primary btn-lg">
-                <i class="bi bi-person-plus me-2"></i>Register
+            <a href="{% url 'accounts:login' %}" class="btn btn-outline-primary btn-lg">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Login
             </a>
         </div>
     {% endif %}
 </div>
+
+{% if not user.is_authenticated %}
+<!-- Features Section -->
+<div class="row mt-5 pt-5 border-top">
+    <div class="col-md-4 mb-4">
+        <div class="text-center">
+            <i class="bi bi-list-check text-primary" style="font-size: 3rem;"></i>
+            <h4 class="mt-3">Guided Interview</h4>
+            <p class="text-muted">Step-by-step questions guide you through documenting every aspect of your case.</p>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="text-center">
+            <i class="bi bi-flag text-warning" style="font-size: 3rem;"></i>
+            <h4 class="mt-3">Track Progress</h4>
+            <p class="text-muted">Mark sections as complete or flag them for review. Never lose track of what needs work.</p>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="text-center">
+            <i class="bi bi-shield-check text-success" style="font-size: 3rem;"></i>
+            <h4 class="mt-3">Know Your Rights</h4>
+            <p class="text-muted">Identify which constitutional amendments were violated with our structured approach.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

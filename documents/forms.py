@@ -1,0 +1,269 @@
+from django import forms
+from .models import (
+    Document, DocumentSection, PlaintiffInfo, IncidentOverview,
+    Defendant, IncidentNarrative, RightsViolated, Witness,
+    Evidence, Damages, PriorComplaints, ReliefSought
+)
+
+
+class DocumentForm(forms.ModelForm):
+    """Form for creating/editing a document."""
+
+    class Meta:
+        model = Document
+        fields = ['title']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'form-control form-control-lg',
+                'placeholder': 'e.g., City Police Unlawful Detention Case'
+            })
+        }
+
+
+class SectionStatusForm(forms.ModelForm):
+    """Form for updating section status."""
+
+    class Meta:
+        model = DocumentSection
+        fields = ['status', 'notes']
+        widgets = {
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Notes about what needs work...'
+            })
+        }
+
+
+class PlaintiffInfoForm(forms.ModelForm):
+    """Form for plaintiff information."""
+
+    class Meta:
+        model = PlaintiffInfo
+        exclude = ['section']
+        widgets = {
+            'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Your full legal name'}),
+            'street_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Street address'}),
+            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City'}),
+            'state': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State'}),
+            'zip_code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ZIP Code'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 123-4567'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'your.email@example.com'}),
+            'is_pro_se': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class IncidentOverviewForm(forms.ModelForm):
+    """Form for incident overview."""
+
+    class Meta:
+        model = IncidentOverview
+        exclude = ['section']
+        widgets = {
+            'incident_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'incident_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'incident_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specific location (e.g., 123 Main St, front entrance)'}),
+            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City'}),
+            'state': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State'}),
+            'location_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Public sidewalk, Government building lobby'}),
+            'was_recording': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'recording_device': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., iPhone 14, GoPro Hero 10'}),
+        }
+
+
+class DefendantForm(forms.ModelForm):
+    """Form for defendant information."""
+
+    class Meta:
+        model = Defendant
+        exclude = ['section']
+        widgets = {
+            'defendant_type': forms.Select(attrs={'class': 'form-select'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Agency or officer name'}),
+            'badge_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Badge/ID number if known'}),
+            'title_rank': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Sergeant, Detective'}),
+            'agency_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Employing agency'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Official address for service'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Physical description or identifying info'}),
+        }
+
+
+class IncidentNarrativeForm(forms.ModelForm):
+    """Form for incident narrative."""
+
+    class Meta:
+        model = IncidentNarrative
+        exclude = ['section']
+        widgets = {
+            'summary': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Brief 2-3 sentence summary of what happened'
+            }),
+            'detailed_narrative': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 6,
+                'placeholder': 'Full detailed account of the incident from start to finish'
+            }),
+            'what_were_you_doing': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'What were you doing before and during the incident?'
+            }),
+            'initial_contact': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'How did the encounter with officers begin?'
+            }),
+            'what_was_said': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'What did officers say? What did you say?'
+            }),
+            'physical_actions': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Describe any physical actions (handcuffing, pushing, etc.)'
+            }),
+            'how_it_ended': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'How did the encounter end?'
+            }),
+        }
+
+
+class RightsViolatedForm(forms.ModelForm):
+    """Form for rights violated."""
+
+    class Meta:
+        model = RightsViolated
+        exclude = ['section']
+        widgets = {
+            'first_amendment': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'first_amendment_speech': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'first_amendment_press': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'first_amendment_assembly': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'first_amendment_petition': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'first_amendment_details': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'fourth_amendment': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'fourth_amendment_search': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'fourth_amendment_seizure': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'fourth_amendment_arrest': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'fourth_amendment_force': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'fourth_amendment_details': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'fifth_amendment': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'fifth_amendment_self_incrimination': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'fifth_amendment_due_process': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'fifth_amendment_details': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'fourteenth_amendment': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'fourteenth_amendment_due_process': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'fourteenth_amendment_equal_protection': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'fourteenth_amendment_details': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'other_rights': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+
+class WitnessForm(forms.ModelForm):
+    """Form for witness information."""
+
+    class Meta:
+        model = Witness
+        exclude = ['section']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Witness name'}),
+            'contact_info': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Phone, email, or address'}),
+            'relationship': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Bystander, Fellow auditor, Store owner'}),
+            'what_they_witnessed': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'What did this person see?'}),
+            'willing_to_testify': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class EvidenceForm(forms.ModelForm):
+    """Form for evidence information."""
+
+    class Meta:
+        model = Evidence
+        exclude = ['section']
+        widgets = {
+            'evidence_type': forms.Select(attrs={'class': 'form-select'}),
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., My recording of the incident'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Describe this evidence'}),
+            'date_created': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'location_obtained': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Where was this obtained?'}),
+            'is_in_possession': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'needs_subpoena': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Additional notes'}),
+        }
+
+
+class DamagesForm(forms.ModelForm):
+    """Form for damages information."""
+
+    class Meta:
+        model = Damages
+        exclude = ['section']
+        widgets = {
+            'physical_injury': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'physical_injury_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'medical_treatment': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'medical_treatment_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'ongoing_medical_issues': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'ongoing_medical_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'emotional_distress': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'emotional_distress_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'property_damage': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'property_damage_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'lost_wages': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'lost_wages_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
+            'legal_fees': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
+            'medical_expenses': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
+            'other_expenses': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
+            'other_expenses_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'reputation_harm': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'reputation_harm_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'other_damages': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+
+class PriorComplaintsForm(forms.ModelForm):
+    """Form for prior complaints information."""
+
+    class Meta:
+        model = PriorComplaints
+        exclude = ['section']
+        widgets = {
+            'filed_internal_complaint': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'internal_complaint_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'internal_complaint_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'internal_complaint_outcome': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'filed_civilian_complaint': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'civilian_complaint_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'civilian_complaint_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'civilian_complaint_outcome': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'contacted_media': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'media_contact_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'other_actions': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+
+class ReliefSoughtForm(forms.ModelForm):
+    """Form for relief sought information."""
+
+    class Meta:
+        model = ReliefSought
+        exclude = ['section']
+        widgets = {
+            'compensatory_damages': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'compensatory_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Amount sought'}),
+            'punitive_damages': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'punitive_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Amount sought'}),
+            'attorney_fees': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'injunctive_relief': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'injunctive_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'declaratory_relief': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'declaratory_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'other_relief': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'jury_trial_demanded': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
