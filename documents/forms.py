@@ -9,15 +9,24 @@ from .models import (
 class DocumentForm(forms.ModelForm):
     """Form for creating/editing a document."""
 
+    title = forms.CharField(
+        max_length=255,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control form-control-lg',
+            'placeholder': 'e.g., City Police Unlawful Detention Case'
+        }),
+        label='Case Title',
+        help_text='Give your case a descriptive name. You can change this later.',
+        error_messages={
+            'required': 'Please enter a title for your case.',
+            'max_length': 'Title must be 255 characters or less.',
+        }
+    )
+
     class Meta:
         model = Document
         fields = ['title']
-        widgets = {
-            'title': forms.TextInput(attrs={
-                'class': 'form-control form-control-lg',
-                'placeholder': 'e.g., City Police Unlawful Detention Case'
-            })
-        }
 
 
 class SectionStatusForm(forms.ModelForm):

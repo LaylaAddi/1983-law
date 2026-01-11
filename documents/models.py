@@ -13,7 +13,7 @@ class Document(models.Model):
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='documents')
-    title = models.CharField(max_length=255, default='Untitled Case')
+    title = models.CharField(max_length=255)  # Required field
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
