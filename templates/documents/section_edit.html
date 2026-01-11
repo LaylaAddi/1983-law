@@ -740,15 +740,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             var city = cityField.value.trim();
-            var state = stateField.value.trim().toUpperCase();
+            var state = stateField.value;  // Already 2-letter code from dropdown
 
             if (!city || !state) {
-                alert('Please enter both City and State (2-letter code like CA, NY, TX) first.');
-                return;
-            }
-
-            if (state.length !== 2) {
-                alert('Please enter a 2-letter state code (e.g., CA, NY, TX)');
+                alert('Please enter a City and select a State first.');
                 return;
             }
 
@@ -835,9 +830,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Auto-lookup on page load if city and state are filled but court isn't
-        if (cityField.value && stateField.value && stateField.value.length === 2 && !courtField.value) {
+        if (cityField.value && stateField.value && !courtField.value) {
             lookupDistrictCourt();
         }
+
+        // Also trigger lookup when state dropdown changes (if city is filled)
+        stateField.addEventListener('change', function() {
+            if (cityField.value && stateField.value && !manualCourtCheckbox.checked) {
+                lookupDistrictCourt();
+            }
+        });
     }
 });
 </script>

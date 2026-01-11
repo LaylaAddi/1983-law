@@ -6,6 +6,63 @@ from .models import (
 )
 
 
+# US States for dropdown selection
+US_STATES = [
+    ('', 'Select State'),
+    ('AL', 'Alabama'),
+    ('AK', 'Alaska'),
+    ('AZ', 'Arizona'),
+    ('AR', 'Arkansas'),
+    ('CA', 'California'),
+    ('CO', 'Colorado'),
+    ('CT', 'Connecticut'),
+    ('DE', 'Delaware'),
+    ('DC', 'District of Columbia'),
+    ('FL', 'Florida'),
+    ('GA', 'Georgia'),
+    ('HI', 'Hawaii'),
+    ('ID', 'Idaho'),
+    ('IL', 'Illinois'),
+    ('IN', 'Indiana'),
+    ('IA', 'Iowa'),
+    ('KS', 'Kansas'),
+    ('KY', 'Kentucky'),
+    ('LA', 'Louisiana'),
+    ('ME', 'Maine'),
+    ('MD', 'Maryland'),
+    ('MA', 'Massachusetts'),
+    ('MI', 'Michigan'),
+    ('MN', 'Minnesota'),
+    ('MS', 'Mississippi'),
+    ('MO', 'Missouri'),
+    ('MT', 'Montana'),
+    ('NE', 'Nebraska'),
+    ('NV', 'Nevada'),
+    ('NH', 'New Hampshire'),
+    ('NJ', 'New Jersey'),
+    ('NM', 'New Mexico'),
+    ('NY', 'New York'),
+    ('NC', 'North Carolina'),
+    ('ND', 'North Dakota'),
+    ('OH', 'Ohio'),
+    ('OK', 'Oklahoma'),
+    ('OR', 'Oregon'),
+    ('PA', 'Pennsylvania'),
+    ('RI', 'Rhode Island'),
+    ('SC', 'South Carolina'),
+    ('SD', 'South Dakota'),
+    ('TN', 'Tennessee'),
+    ('TX', 'Texas'),
+    ('UT', 'Utah'),
+    ('VT', 'Vermont'),
+    ('VA', 'Virginia'),
+    ('WA', 'Washington'),
+    ('WV', 'West Virginia'),
+    ('WI', 'Wisconsin'),
+    ('WY', 'Wyoming'),
+]
+
+
 class DocumentForm(forms.ModelForm):
     """Form for creating/editing a document."""
 
@@ -65,7 +122,7 @@ class PlaintiffInfoForm(forms.ModelForm):
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last name'}),
             'street_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Street address'}),
             'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City'}),
-            'state': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State'}),
+            'state': forms.Select(choices=US_STATES, attrs={'class': 'form-select'}),
             'zip_code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ZIP Code'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 123-4567'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'your.email@example.com'}),
@@ -75,7 +132,7 @@ class PlaintiffInfoForm(forms.ModelForm):
             'attorney_firm_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Law firm name (if applicable)'}),
             'attorney_street_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Street address'}),
             'attorney_city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City'}),
-            'attorney_state': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State'}),
+            'attorney_state': forms.Select(choices=US_STATES, attrs={'class': 'form-select'}),
             'attorney_zip_code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ZIP Code'}),
             'attorney_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 123-4567'}),
             'attorney_fax': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 123-4568'}),
@@ -115,16 +172,22 @@ class IncidentOverviewForm(forms.ModelForm):
     class Meta:
         model = IncidentOverview
         exclude = ['section', 'district_lookup_confidence']
+        # Order fields so court lookup appears right after state
+        fields = [
+            'incident_date', 'incident_time', 'incident_location',
+            'city', 'state', 'federal_district_court', 'use_manual_court',
+            'location_type', 'was_recording', 'recording_device'
+        ]
         widgets = {
             'incident_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'incident_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
             'incident_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specific location (e.g., 123 Main St, front entrance)'}),
             'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City', 'id': 'id_city'}),
-            'state': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State (2-letter code, e.g., CA)', 'id': 'id_state', 'maxlength': '2'}),
+            'state': forms.Select(choices=US_STATES, attrs={'class': 'form-select', 'id': 'id_state'}),
             'location_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Public sidewalk, Government building lobby'}),
             'was_recording': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'recording_device': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., iPhone 14, GoPro Hero 10'}),
-            'federal_district_court': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter city & state above, then click Lookup', 'id': 'id_federal_district_court', 'readonly': 'readonly'}),
+            'federal_district_court': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Select city & state, then click Lookup', 'id': 'id_federal_district_court', 'readonly': 'readonly'}),
             'use_manual_court': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_use_manual_court'}),
         }
         labels = {
@@ -132,8 +195,7 @@ class IncidentOverviewForm(forms.ModelForm):
             'use_manual_court': 'Enter court manually (override auto-lookup)',
         }
         help_texts = {
-            'federal_district_court': 'This will be automatically determined based on the incident location.',
-            'state': 'Use 2-letter state code (e.g., CA, NY, TX)',
+            'federal_district_court': 'Click "Lookup Court" after selecting city and state.',
         }
 
 
