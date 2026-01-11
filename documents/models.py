@@ -87,7 +87,9 @@ class PlaintiffInfo(models.Model):
     """Plaintiff (auditor) information."""
 
     section = models.OneToOneField(DocumentSection, on_delete=models.CASCADE, related_name='plaintiff_info')
-    full_name = models.CharField(max_length=255, blank=True)
+    first_name = models.CharField(max_length=50, blank=True)
+    middle_name = models.CharField(max_length=50, blank=True)
+    last_name = models.CharField(max_length=50, blank=True)
     street_address = models.CharField(max_length=255, blank=True)
     city = models.CharField(max_length=100, blank=True)
     state = models.CharField(max_length=50, blank=True)
@@ -97,7 +99,12 @@ class PlaintiffInfo(models.Model):
     is_pro_se = models.BooleanField(default=True, help_text='Representing yourself without an attorney')
 
     def __str__(self):
-        return self.full_name or "Plaintiff Info"
+        return self.get_full_name() or "Plaintiff Info"
+
+    def get_full_name(self):
+        """Return the full name combining first, middle, and last names."""
+        name_parts = [self.first_name, self.middle_name, self.last_name]
+        return ' '.join(part for part in name_parts if part)
 
 
 class IncidentOverview(models.Model):

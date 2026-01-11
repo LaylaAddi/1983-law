@@ -21,7 +21,9 @@ def populate_test_data(document):
         PlaintiffInfo.objects.update_or_create(
             section=section,
             defaults={
-                'full_name': 'John Michael Smith',
+                'first_name': 'John',
+                'middle_name': 'Michael',
+                'last_name': 'Smith',
                 'street_address': '1234 Liberty Lane',
                 'city': 'Springfield',
                 'state': 'Illinois',

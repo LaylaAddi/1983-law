@@ -50,6 +50,14 @@ class UserRegistrationForm(UserCreationForm):
             'placeholder': 'First name (optional)',
         })
     )
+    middle_name = forms.CharField(
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Middle name (optional)',
+        })
+    )
     last_name = forms.CharField(
         max_length=30,
         required=False,
@@ -75,7 +83,7 @@ class UserRegistrationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ('email', 'first_name', 'last_name', 'password1', 'password2')
+        fields = ('email', 'first_name', 'middle_name', 'last_name', 'password1', 'password2')
 
 
 class CustomPasswordResetForm(PasswordResetForm):
@@ -151,6 +159,15 @@ class ProfileEditForm(forms.ModelForm):
         }),
         help_text='This will be used to pre-fill your name in legal documents.'
     )
+    middle_name = forms.CharField(
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your middle name (optional)',
+        }),
+        help_text='Optional - include if you want it on legal documents.'
+    )
     last_name = forms.CharField(
         max_length=30,
         required=False,
@@ -163,4 +180,4 @@ class ProfileEditForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ('first_name', 'last_name')
+        fields = ('first_name', 'middle_name', 'last_name')

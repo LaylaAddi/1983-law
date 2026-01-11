@@ -28,11 +28,15 @@
                             </div>
 
                             <div class="row">
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label text-muted small">First Name</label>
                                     <p class="mb-0">{{ user.first_name|default:"-" }}</p>
                                 </div>
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-muted small">Middle Name</label>
+                                    <p class="mb-0">{{ user.middle_name|default:"-" }}</p>
+                                </div>
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label text-muted small">Last Name</label>
                                     <p class="mb-0">{{ user.last_name|default:"-" }}</p>
                                 </div>

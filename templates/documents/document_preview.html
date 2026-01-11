@@ -109,22 +109,35 @@
     </div>
     {% if section_data.data %}
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="data-field">
-                <div class="data-label">Full Name</div>
-                <div class="data-value">{{ section_data.data.full_name|default:"Not provided" }}</div>
+                <div class="data-label">First Name</div>
+                <div class="data-value">{{ section_data.data.first_name|default:"Not provided" }}</div>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="data-field">
-                <div class="data-label">Date of Birth</div>
-                <div class="data-value">{{ section_data.data.date_of_birth|date:"F j, Y"|default:"Not provided" }}</div>
+                <div class="data-label">Middle Name</div>
+                <div class="data-value">{{ section_data.data.middle_name|default:"-" }}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="data-field">
+                <div class="data-label">Last Name</div>
+                <div class="data-value">{{ section_data.data.last_name|default:"Not provided" }}</div>
             </div>
         </div>
         <div class="col-md-12">
             <div class="data-field">
                 <div class="data-label">Address</div>
-                <div class="data-value">{{ section_data.data.address|default:"Not provided"|linebreaks }}</div>
+                <div class="data-value">
+                    {% if section_data.data.street_address %}
+                        {{ section_data.data.street_address }}<br>
+                        {{ section_data.data.city }}, {{ section_data.data.state }} {{ section_data.data.zip_code }}
+                    {% else %}
+                        Not provided
+                    {% endif %}
+                </div>
             </div>
         </div>
         <div class="col-md-6">
@@ -137,6 +150,12 @@
             <div class="data-field">
                 <div class="data-label">Email</div>
                 <div class="data-value">{{ section_data.data.email|default:"Not provided" }}</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="data-field">
+                <div class="data-label">Pro Se (Self-Represented)</div>
+                <div class="data-value">{{ section_data.data.is_pro_se|yesno:"Yes,No" }}</div>
             </div>
         </div>
     </div>

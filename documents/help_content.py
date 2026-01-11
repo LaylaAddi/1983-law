@@ -20,16 +20,20 @@ SECTION_HELP = {
             'Include a phone number where you can be reached during business hours',
         ],
         'fields': {
-            'full_name': {
-                'tooltip': 'Your complete legal name as shown on government-issued ID',
-                'help': 'Enter your full legal name. This should match your driver\'s license or other official ID.',
+            'first_name': {
+                'tooltip': 'Your legal first name as shown on government-issued ID',
+                'help': 'Enter your first name exactly as it appears on your driver\'s license or other official ID.',
             },
-            'date_of_birth': {
-                'tooltip': 'Your birth date - used to verify your identity',
-                'help': 'This helps distinguish you from others with similar names.',
+            'middle_name': {
+                'tooltip': 'Your middle name (optional)',
+                'help': 'Include your middle name if you want it on legal documents. Leave blank if you don\'t have one.',
             },
-            'address': {
-                'tooltip': 'Where you currently live or receive mail',
+            'last_name': {
+                'tooltip': 'Your legal last name/surname',
+                'help': 'Enter your last name exactly as it appears on official documents.',
+            },
+            'street_address': {
+                'tooltip': 'Your street address',
                 'help': 'The court will send important documents here. Use an address where you reliably receive mail.',
             },
             'phone': {
@@ -39,6 +43,10 @@ SECTION_HELP = {
             'email': {
                 'tooltip': 'Email address for electronic communications',
                 'help': 'Many courts now allow electronic filing and notifications.',
+            },
+            'is_pro_se': {
+                'tooltip': 'Are you representing yourself without an attorney?',
+                'help': 'Pro se means you are filing and handling this case yourself, without a lawyer.',
             },
         },
     },

@@ -32,7 +32,7 @@ class DocumentSectionAdmin(admin.ModelAdmin):
 
 @admin.register(PlaintiffInfo)
 class PlaintiffInfoAdmin(admin.ModelAdmin):
-    list_display = ['full_name', 'email', 'is_pro_se']
+    list_display = ['first_name', 'middle_name', 'last_name', 'email', 'is_pro_se']
 
 
 @admin.register(Defendant)

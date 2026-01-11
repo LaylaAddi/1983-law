@@ -31,6 +31,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=30, blank=True)
+    middle_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -51,7 +52,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
     def get_full_name(self):
-        full_name = f'{self.first_name} {self.last_name}'.strip()
+        name_parts = [self.first_name, self.middle_name, self.last_name]
+        full_name = ' '.join(part for part in name_parts if part)
         return full_name or self.email
 
     def get_short_name(self):

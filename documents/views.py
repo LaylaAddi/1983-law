@@ -19,8 +19,10 @@ def check_section_complete(section, obj):
     section_type = section.section_type
 
     if section_type == 'plaintiff_info':
-        # Complete if name and at least one contact method
-        return bool(obj.full_name and (obj.phone or obj.email))
+        # Complete if first and last name provided, plus at least one contact method
+        has_name = bool(obj.first_name and obj.last_name)
+        has_contact = bool(obj.phone or obj.email)
+        return has_name and has_contact
 
     elif section_type == 'incident_overview':
         # Complete if date and location are filled
@@ -249,14 +251,15 @@ def section_edit(request, document_id, section_type):
         initial_data = {}
         if section_type == 'plaintiff_info' and instance is None:
             user = request.user
-            # Build full name from first_name and last_name if available
-            name_parts = []
+            # Pre-fill name fields from profile
             if user.first_name:
-                name_parts.append(user.first_name)
+                initial_data['first_name'] = user.first_name
+                profile_prefilled = True
+            if user.middle_name:
+                initial_data['middle_name'] = user.middle_name
+                profile_prefilled = True
             if user.last_name:
-                name_parts.append(user.last_name)
-            if name_parts:
-                initial_data['full_name'] = ' '.join(name_parts)
+                initial_data['last_name'] = user.last_name
                 profile_prefilled = True
             # Also pre-fill email
             if user.email:
@@ -272,6 +275,22 @@ def section_edit(request, document_id, section_type):
                 obj = form.save(commit=False)
                 obj.section = section
                 obj.save()
+
+                # Sync plaintiff name info back to user profile
+                if section_type == 'plaintiff_info':
+                    user = request.user
+                    name_updated = False
+                    if obj.first_name and obj.first_name != user.first_name:
+                        user.first_name = obj.first_name
+                        name_updated = True
+                    if obj.middle_name != user.middle_name:
+                        user.middle_name = obj.middle_name
+                        name_updated = True
+                    if obj.last_name and obj.last_name != user.last_name:
+                        user.last_name = obj.last_name
+                        name_updated = True
+                    if name_updated:
+                        user.save()
 
                 # Auto-update section status based on completeness
                 if section.status not in ['completed', 'not_applicable']:
