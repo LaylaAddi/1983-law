@@ -1171,5 +1171,72 @@ document.querySelectorAll('.modal .form-control, .modal select, .modal textarea'
         }
     }
 });
+
+// Attorney toggle for plaintiff_info modal
+function setupAttorneyToggle() {
+    const modal = document.getElementById('modal-plaintiff_info');
+    if (!modal) return;
+
+    const hasAttorneyCheckbox = modal.querySelector('#id_has_attorney');
+    if (!hasAttorneyCheckbox) return;
+
+    // Attorney field IDs
+    const attorneyFieldIds = [
+        'id_attorney_name', 'id_attorney_bar_number', 'id_attorney_firm_name',
+        'id_attorney_street_address', 'id_attorney_city', 'id_attorney_state',
+        'id_attorney_zip_code', 'id_attorney_phone', 'id_attorney_fax', 'id_attorney_email'
+    ];
+
+    // Check if wrapper already exists
+    let attorneySection = modal.querySelector('#attorney-section-modal');
+    if (!attorneySection) {
+        // Create wrapper for attorney fields
+        attorneySection = document.createElement('div');
+        attorneySection.id = 'attorney-section-modal';
+        attorneySection.style.cssText = 'background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.5rem; padding: 1rem; margin-top: 1rem;';
+        attorneySection.innerHTML = '<h6 style="color: #495057; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #dee2e6;"><i class="bi bi-briefcase me-2" style="color: #0d6efd;"></i>Attorney Information</h6>';
+
+        const fieldsContainer = document.createElement('div');
+        fieldsContainer.id = 'attorney-fields-modal';
+        attorneySection.appendChild(fieldsContainer);
+
+        // Move attorney fields into the container
+        attorneyFieldIds.forEach(fieldId => {
+            const field = modal.querySelector('#' + fieldId);
+            if (field) {
+                const fieldContainer = field.closest('.mb-3');
+                if (fieldContainer) {
+                    fieldsContainer.appendChild(fieldContainer);
+                }
+            }
+        });
+
+        // Insert after the has_attorney checkbox
+        const checkboxContainer = hasAttorneyCheckbox.closest('.mb-3');
+        if (checkboxContainer && fieldsContainer.children.length > 0) {
+            checkboxContainer.after(attorneySection);
+        }
+    }
+
+    // Toggle function
+    function toggleAttorneyFields() {
+        attorneySection.style.display = hasAttorneyCheckbox.checked ? 'block' : 'none';
+    }
+
+    // Initial state
+    toggleAttorneyFields();
+
+    // Listen for changes
+    hasAttorneyCheckbox.removeEventListener('change', toggleAttorneyFields);
+    hasAttorneyCheckbox.addEventListener('change', toggleAttorneyFields);
+}
+
+// Setup attorney toggle when modal is shown
+const plaintiffModal = document.getElementById('modal-plaintiff_info');
+if (plaintiffModal) {
+    plaintiffModal.addEventListener('shown.bs.modal', setupAttorneyToggle);
+    // Also setup on page load in case modal is already in DOM
+    setupAttorneyToggle();
+}
 </script>
 {% endblock %}
