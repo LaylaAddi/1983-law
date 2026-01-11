@@ -340,3 +340,134 @@ def fill_test_data(request, document_id):
         messages.error(request, f'Error filling test data: {str(e)}')
 
     return redirect('documents:document_detail', document_id=document.id)
+
+
+@login_required
+def document_preview(request, document_id):
+    """Preview the complete document with inline editing modals."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Load all section data
+    sections_data = {}
+    for section in document.sections.all():
+        config = SECTION_CONFIG.get(section.section_type, {})
+        Model = config.get('model')
+        Form = config.get('form')
+        is_multiple = config.get('multiple', False)
+
+        if Model and Form:
+            if is_multiple:
+                items = Model.objects.filter(section=section)
+                form = Form()
+                data = list(items)
+            else:
+                try:
+                    instance = Model.objects.get(section=section)
+                    form = Form(instance=instance)
+                    data = instance
+                except Model.DoesNotExist:
+                    form = Form()
+                    data = None
+
+            sections_data[section.section_type] = {
+                'section': section,
+                'config': config,
+                'data': data,
+                'form': form,
+                'is_multiple': is_multiple,
+            }
+
+    context = {
+        'document': document,
+        'sections_data': sections_data,
+        'section_config': SECTION_CONFIG,
+    }
+
+    return render(request, 'documents/document_preview.html', context)
+
+
+@login_required
+@require_POST
+def section_save_ajax(request, document_id, section_type):
+    """Save section data via AJAX."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    section = get_object_or_404(DocumentSection, document=document, section_type=section_type)
+
+    config = SECTION_CONFIG.get(section_type)
+    if not config:
+        return JsonResponse({'success': False, 'error': 'Invalid section type'})
+
+    Model = config['model']
+    Form = config['form']
+    is_multiple = config.get('multiple', False)
+
+    if is_multiple:
+        # For multiple items, we're adding a new item
+        form = Form(request.POST)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.section = section
+            obj.save()
+
+            if section.status == 'not_started':
+                section.status = 'in_progress'
+                section.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Item added successfully',
+                'item_id': obj.id,
+                'item_str': str(obj),
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors,
+            })
+    else:
+        # For single items, update or create
+        try:
+            instance = Model.objects.get(section=section)
+        except Model.DoesNotExist:
+            instance = None
+
+        form = Form(request.POST, instance=instance)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.section = section
+            obj.save()
+
+            if section.status == 'not_started':
+                section.status = 'in_progress'
+                section.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Section saved successfully',
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors,
+            })
+
+
+@login_required
+@require_POST
+def delete_item_ajax(request, document_id, section_type, item_id):
+    """Delete a multiple-item via AJAX."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    section = get_object_or_404(DocumentSection, document=document, section_type=section_type)
+
+    config = SECTION_CONFIG.get(section_type)
+    if not config or not config.get('multiple'):
+        return JsonResponse({'success': False, 'error': 'Invalid section type'})
+
+    Model = config['model']
+    item = get_object_or_404(Model, id=item_id, section=section)
+    item.delete()
+
+    return JsonResponse({
+        'success': True,
+        'message': 'Item deleted successfully',
+    })

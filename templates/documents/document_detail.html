@@ -124,6 +124,9 @@
                 {% endif %}
             </div>
             <div>
+                <a href="{% url 'documents:document_preview' document.id %}" class="btn btn-outline-info me-2">
+                    <i class="bi bi-eye me-1"></i>Preview Document
+                </a>
                 {% if document.get_completion_percentage == 100 %}
                     <button class="btn btn-success">
                         <i class="bi bi-file-earmark-pdf me-1"></i>Generate PDF
