@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.sqlite3
+.env
+staticfiles/
+media/
+*.log
+
+
+  git config --global user.email "s.chesnowitz@egmail.com"
+  git config --global user.name "Stephen Chesnowitz"
