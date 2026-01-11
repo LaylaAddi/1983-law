@@ -315,7 +315,13 @@ def section_edit(request, document_id, section_type):
                                        document_id=document.id,
                                        section_type=next_section.section_type)
                     else:
-                        messages.info(request, 'You\'ve completed all sections!')
+                        # Check if all sections are actually completed
+                        all_sections = document.sections.all()
+                        completed_count = all_sections.filter(status__in=['completed', 'not_applicable']).count()
+                        if completed_count == all_sections.count():
+                            messages.success(request, 'All sections completed! Your document is ready for review.')
+                        else:
+                            messages.info(request, 'You\'ve reached the last section. Review your document to see what still needs attention.')
                         return redirect('documents:document_detail', document_id=document.id)
 
                 return redirect('documents:section_edit',
