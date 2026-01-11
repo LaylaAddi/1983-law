@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from .help_content import get_section_help
 from .models import (
     Document, DocumentSection, PlaintiffInfo, IncidentOverview,
     Defendant, IncidentNarrative, RightsViolated, Witness,
@@ -204,6 +205,9 @@ def section_edit(request, document_id, section_type):
     prev_section = document.sections.filter(order__lt=section.order).last()
     next_section = document.sections.filter(order__gt=section.order).first()
 
+    # Get help content for this section
+    help_content = get_section_help(section_type)
+
     context = {
         'document': document,
         'section': section,
@@ -214,6 +218,7 @@ def section_edit(request, document_id, section_type):
         'prev_section': prev_section,
         'next_section': next_section,
         'status_form': SectionStatusForm(instance=section),
+        'help_content': help_content,
     }
 
     return render(request, 'documents/section_edit.html', context)
