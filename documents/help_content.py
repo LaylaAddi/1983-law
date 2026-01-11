@@ -65,7 +65,8 @@ SECTION_HELP = {
         'tips': [
             'Be as specific as possible about dates and times',
             'Include the exact address or location if known',
-            'The jurisdiction is typically the city/county where the incident occurred',
+            'Use the "Lookup Court" button to automatically find your federal district court',
+            'The location determines which federal court has jurisdiction over your case',
         ],
         'fields': {
             'incident_date': {
@@ -76,17 +77,39 @@ SECTION_HELP = {
                 'tooltip': 'Approximate time of day',
                 'help': 'Your best estimate is fine. This can help identify witnesses and corroborate your account.',
             },
-            'location': {
+            'incident_location': {
                 'tooltip': 'Physical address or description of where it happened',
                 'help': 'Be specific: street address, building name, or detailed description (e.g., "Corner of Main St and 5th Ave, in front of City Hall").',
             },
-            'jurisdiction': {
-                'tooltip': 'City, county, and state where the incident occurred',
-                'help': 'Example: "Los Angeles, Los Angeles County, California". This determines which federal court has jurisdiction.',
+            'city': {
+                'tooltip': 'City where the incident occurred',
+                'help': 'The city name is used to determine which federal district court has jurisdiction.',
             },
-            'brief_description': {
-                'tooltip': 'One-paragraph summary of what happened',
-                'help': 'Summarize the incident in 2-4 sentences. You\'ll provide full details in the Incident Narrative section.',
+            'state': {
+                'tooltip': 'State where the incident occurred',
+                'help': 'Select the state from the dropdown. This determines which federal court system handles your case.',
+            },
+            'federal_district_court': {
+                'tooltip': 'The federal court where you will file this case',
+                'help': '''<strong>What is this?</strong> Section 1983 cases are filed in federal court. The United States is divided into 94 federal judicial districts, and each district has a U.S. District Court. You must file in the district where the incident occurred.<br><br>
+                <strong>Why does it matter?</strong> Filing in the wrong court can get your case dismissed. The court must have "jurisdiction" (legal authority) over your case, which is based on where the events happened.<br><br>
+                <strong>How to use:</strong> Enter the city and select the state where the incident occurred, then click "Lookup Court" to automatically find the correct federal district court. If your city isn't in our database, try a nearby major city or check "Enter court manually" to type it yourself.''',
+            },
+            'use_manual_court': {
+                'tooltip': 'Override the automatic lookup and enter the court name yourself',
+                'help': 'Check this if the automatic lookup doesn\'t find your court or returns the wrong one. You can then type the correct federal district court name directly.',
+            },
+            'location_type': {
+                'tooltip': 'Type of location (public, private, government building, etc.)',
+                'help': 'Examples: "Public sidewalk", "Government building lobby", "Public park". This is relevant for First Amendment claims - public spaces generally have stronger free speech protections.',
+            },
+            'was_recording': {
+                'tooltip': 'Were you recording when the incident occurred?',
+                'help': 'Important for First Amendment audit cases. Recording in public is generally a protected activity.',
+            },
+            'recording_device': {
+                'tooltip': 'What device were you using to record?',
+                'help': 'Examples: iPhone, Android phone, GoPro, body camera. This helps establish what equipment may have been seized or damaged.',
             },
         },
     },

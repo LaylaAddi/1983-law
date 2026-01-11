@@ -728,9 +728,26 @@ document.addEventListener('DOMContentLoaded', function() {
         lookupBtn.id = 'lookupCourtBtn';
         lookupBtn.innerHTML = '<i class="bi bi-search me-1"></i>Lookup Court';
 
+        // Add help icon with tooltip next to the button
+        var helpIcon = document.createElement('span');
+        helpIcon.className = 'ms-2 text-muted';
+        helpIcon.setAttribute('data-bs-toggle', 'tooltip');
+        helpIcon.setAttribute('data-bs-placement', 'top');
+        helpIcon.setAttribute('data-bs-html', 'true');
+        helpIcon.setAttribute('title', '<strong>Why do I need this?</strong><br>Section 1983 cases must be filed in federal court. This lookup finds the correct U.S. District Court based on where your incident occurred. Filing in the wrong court can get your case dismissed.');
+        helpIcon.innerHTML = '<i class="bi bi-question-circle" style="cursor: help; font-size: 1.1rem;"></i>';
+
         var courtFieldContainer = courtField.closest('.mb-3');
         if (courtFieldContainer) {
-            courtFieldContainer.appendChild(lookupBtn);
+            // Create a wrapper for button and help icon
+            var btnWrapper = document.createElement('div');
+            btnWrapper.className = 'd-flex align-items-center';
+            btnWrapper.appendChild(lookupBtn);
+            btnWrapper.appendChild(helpIcon);
+            courtFieldContainer.appendChild(btnWrapper);
+
+            // Initialize the tooltip
+            new bootstrap.Tooltip(helpIcon);
         }
 
         function lookupDistrictCourt() {
