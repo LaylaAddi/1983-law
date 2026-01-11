@@ -166,23 +166,25 @@
         </div>
     </div>
 
-    {% if not section_data.data.is_pro_se %}
-    <!-- Attorney Information -->
+    {% if not section_data.data.is_pro_se and section_data.data.attorney_name %}
+    <!-- Attorney Information - Only show if attorney info is provided -->
     <div class="mt-4 p-3 bg-light rounded">
         <h5 class="mb-3"><i class="bi bi-briefcase me-2"></i>Attorney Information</h5>
         <div class="row">
             <div class="col-md-6">
                 <div class="data-field">
                     <div class="data-label">Attorney Name</div>
-                    <div class="data-value">{{ section_data.data.attorney_name|default:"Not provided" }}</div>
+                    <div class="data-value">{{ section_data.data.attorney_name }}</div>
                 </div>
             </div>
+            {% if section_data.data.attorney_bar_number %}
             <div class="col-md-6">
                 <div class="data-field">
                     <div class="data-label">Bar Number</div>
-                    <div class="data-value">{{ section_data.data.attorney_bar_number|default:"Not provided" }}</div>
+                    <div class="data-value">{{ section_data.data.attorney_bar_number }}</div>
                 </div>
             </div>
+            {% endif %}
             {% if section_data.data.attorney_firm_name %}
             <div class="col-md-12">
                 <div class="data-field">
@@ -191,37 +193,41 @@
                 </div>
             </div>
             {% endif %}
+            {% if section_data.data.attorney_street_address %}
             <div class="col-md-12">
                 <div class="data-field">
                     <div class="data-label">Attorney Address</div>
                     <div class="data-value">
-                        {% if section_data.data.attorney_street_address %}
-                            {{ section_data.data.attorney_street_address }}<br>
-                            {{ section_data.data.attorney_city }}, {{ section_data.data.attorney_state }} {{ section_data.data.attorney_zip_code }}
-                        {% else %}
-                            Not provided
-                        {% endif %}
+                        {{ section_data.data.attorney_street_address }}<br>
+                        {{ section_data.data.attorney_city }}, {{ section_data.data.attorney_state }} {{ section_data.data.attorney_zip_code }}
                     </div>
                 </div>
             </div>
+            {% endif %}
+            {% if section_data.data.attorney_phone %}
             <div class="col-md-4">
                 <div class="data-field">
                     <div class="data-label">Phone</div>
-                    <div class="data-value">{{ section_data.data.attorney_phone|default:"Not provided" }}</div>
+                    <div class="data-value">{{ section_data.data.attorney_phone }}</div>
                 </div>
             </div>
+            {% endif %}
+            {% if section_data.data.attorney_fax %}
             <div class="col-md-4">
                 <div class="data-field">
                     <div class="data-label">Fax</div>
-                    <div class="data-value">{{ section_data.data.attorney_fax|default:"-" }}</div>
+                    <div class="data-value">{{ section_data.data.attorney_fax }}</div>
                 </div>
             </div>
+            {% endif %}
+            {% if section_data.data.attorney_email %}
             <div class="col-md-4">
                 <div class="data-field">
                     <div class="data-label">Email</div>
-                    <div class="data-value">{{ section_data.data.attorney_email|default:"Not provided" }}</div>
+                    <div class="data-value">{{ section_data.data.attorney_email }}</div>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
     {% endif %}
