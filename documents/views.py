@@ -9,6 +9,80 @@ from .models import (
     Defendant, IncidentNarrative, RightsViolated, Witness,
     Evidence, Damages, PriorComplaints, ReliefSought
 )
+
+
+def check_section_complete(section, obj):
+    """
+    Check if a section has enough data to be auto-marked as complete.
+    Returns True if the section should be marked complete.
+    """
+    section_type = section.section_type
+
+    if section_type == 'plaintiff_info':
+        # Complete if name and at least one contact method
+        return bool(obj.full_name and (obj.phone or obj.email))
+
+    elif section_type == 'incident_overview':
+        # Complete if date and location are filled
+        return bool(obj.incident_date and obj.incident_location and obj.city)
+
+    elif section_type == 'incident_narrative':
+        # Complete if main narrative is filled (at least 50 chars)
+        return bool(obj.detailed_narrative and len(obj.detailed_narrative) >= 50)
+
+    elif section_type == 'rights_violated':
+        # Complete if at least one amendment is checked
+        return any([
+            obj.first_amendment,
+            obj.fourth_amendment,
+            obj.fifth_amendment,
+            obj.fourteenth_amendment
+        ])
+
+    elif section_type == 'damages':
+        # Complete if at least one damage type is indicated
+        return any([
+            obj.physical_injury,
+            obj.emotional_distress,
+            obj.property_damage,
+            obj.lost_wages,
+            obj.reputation_harm
+        ])
+
+    elif section_type == 'prior_complaints':
+        # Always complete - it's ok to have none
+        return True
+
+    elif section_type == 'relief_sought':
+        # Complete if attorney_fees is checked AND at least one relief type
+        has_relief = any([
+            obj.compensatory_damages,
+            obj.punitive_damages,
+            obj.declaratory_relief,
+            obj.injunctive_relief
+        ])
+        return obj.attorney_fees and has_relief
+
+    # For multiple-item sections (defendants, witnesses, evidence),
+    # completion is checked separately
+    return False
+
+
+def check_multiple_section_complete(section):
+    """Check if a multiple-item section has at least one item."""
+    section_type = section.section_type
+
+    if section_type == 'defendants':
+        return Defendant.objects.filter(section=section).exists()
+    elif section_type == 'witnesses':
+        # Witnesses are optional - can be marked N/A
+        return Witness.objects.filter(section=section).exists()
+    elif section_type == 'evidence':
+        return Evidence.objects.filter(section=section).exists()
+
+    return False
+
+
 from .forms import (
     DocumentForm, PlaintiffInfoForm, IncidentOverviewForm,
     DefendantForm, IncidentNarrativeForm, RightsViolatedForm,
@@ -179,12 +253,20 @@ def section_edit(request, document_id, section_type):
                 obj.section = section
                 obj.save()
 
-                # Update section status to in_progress if it was not_started
-                if section.status == 'not_started':
-                    section.status = 'in_progress'
-                    section.save()
-
-                messages.success(request, f'{config["title"]} saved.')
+                # Auto-update section status based on completeness
+                if section.status not in ['completed', 'not_applicable']:
+                    if check_section_complete(section, obj):
+                        section.status = 'completed'
+                        section.save()
+                        messages.success(request, f'{config["title"]} saved and marked complete!')
+                    elif section.status == 'not_started':
+                        section.status = 'in_progress'
+                        section.save()
+                        messages.success(request, f'{config["title"]} saved.')
+                    else:
+                        messages.success(request, f'{config["title"]} saved.')
+                else:
+                    messages.success(request, f'{config["title"]} saved.')
 
                 if 'save_and_continue' in request.POST:
                     # Go to next section
@@ -244,12 +326,21 @@ def add_multiple_item(request, document_id, section_type):
             obj.section = section
             obj.save()
 
-            # Update section status
-            if section.status == 'not_started':
-                section.status = 'in_progress'
-                section.save()
+            # Auto-update section status based on completeness
+            if section.status not in ['completed', 'not_applicable']:
+                if check_multiple_section_complete(section):
+                    section.status = 'completed'
+                    section.save()
+                    messages.success(request, f'{config["title"][:-1]} added. Section marked complete!')
+                elif section.status == 'not_started':
+                    section.status = 'in_progress'
+                    section.save()
+                    messages.success(request, f'{config["title"][:-1]} added.')
+                else:
+                    messages.success(request, f'{config["title"][:-1]} added.')
+            else:
+                messages.success(request, f'{config["title"][:-1]} added.')
 
-            messages.success(request, f'{config["title"][:-1]} added.')  # Remove 's' from plural
             return redirect('documents:section_edit',
                            document_id=document.id,
                            section_type=section_type)
