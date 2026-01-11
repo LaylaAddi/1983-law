@@ -561,12 +561,12 @@ document.addEventListener('DOMContentLoaded', function() {
     var recommendedBtn = document.getElementById('useRecommendedBtn');
     if (recommendedBtn) {
         recommendedBtn.addEventListener('click', function() {
-            // Check the recommended boxes
+            // Set the recommended checkboxes
             var checkboxes = {
                 'id_compensatory_damages': true,    // Money for losses - YES
                 'id_punitive_damages': true,        // Punish bad behavior - YES
                 'id_attorney_fees': true,           // Legal fees - ALWAYS YES
-                'id_injunctive_relief': false,      // Policy changes - Optional
+                'id_injunctive_relief': false,      // Policy changes - Optional (OFF)
                 'id_declaratory_relief': true,      // Official declaration - YES
                 'id_jury_trial_demanded': true      // Jury trial - YES
             };
@@ -575,16 +575,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 var checkbox = document.getElementById(id);
                 if (checkbox) {
                     checkbox.checked = checkboxes[id];
-                    // Trigger change event for any dependent fields
                     checkbox.dispatchEvent(new Event('change'));
                 }
             }
 
-            // Pre-fill declaratory description with common 1A audit language
+            // Clear amount fields (let court decide)
+            var compensatoryAmount = document.getElementById('id_compensatory_amount');
+            if (compensatoryAmount) compensatoryAmount.value = '';
+
+            var punitiveAmount = document.getElementById('id_punitive_amount');
+            if (punitiveAmount) punitiveAmount.value = '';
+
+            // Clear injunctive description (since it's turned off)
+            var injunctiveDesc = document.getElementById('id_injunctive_description');
+            if (injunctiveDesc) injunctiveDesc.value = '';
+
+            // Set declaratory description with standard 1A audit language
             var declaratoryDesc = document.getElementById('id_declaratory_description');
-            if (declaratoryDesc && !declaratoryDesc.value) {
+            if (declaratoryDesc) {
                 declaratoryDesc.value = 'Declare that the Plaintiff\'s First Amendment right to record police officers performing their official duties in public places was violated by the Defendants.';
             }
+
+            // Clear other relief
+            var otherRelief = document.getElementById('id_other_relief');
+            if (otherRelief) otherRelief.value = '';
 
             // Show success feedback
             this.innerHTML = '<i class="bi bi-check-lg me-1"></i>Applied!';
