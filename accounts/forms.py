@@ -137,3 +137,30 @@ class CustomPasswordChangeForm(PasswordChangeForm):
             'placeholder': 'Confirm new password',
         })
     )
+
+
+class ProfileEditForm(forms.ModelForm):
+    """Form for editing user profile information."""
+
+    first_name = forms.CharField(
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your first name',
+        }),
+        help_text='This will be used to pre-fill your name in legal documents.'
+    )
+    last_name = forms.CharField(
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your last name',
+        }),
+        help_text='This will be used to pre-fill your name in legal documents.'
+    )
+
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name')

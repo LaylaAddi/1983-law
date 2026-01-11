@@ -229,6 +229,7 @@ def section_edit(request, document_id, section_type):
     Model = config['model']
     Form = config['form']
     is_multiple = config.get('multiple', False)
+    profile_prefilled = False
 
     # Get or create the section data
     if is_multiple:
@@ -243,7 +244,26 @@ def section_edit(request, document_id, section_type):
         except Model.DoesNotExist:
             instance = None
         items = None
-        form = Form(instance=instance)
+
+        # Pre-fill plaintiff info from user profile if creating new
+        initial_data = {}
+        if section_type == 'plaintiff_info' and instance is None:
+            user = request.user
+            # Build full name from first_name and last_name if available
+            name_parts = []
+            if user.first_name:
+                name_parts.append(user.first_name)
+            if user.last_name:
+                name_parts.append(user.last_name)
+            if name_parts:
+                initial_data['full_name'] = ' '.join(name_parts)
+                profile_prefilled = True
+            # Also pre-fill email
+            if user.email:
+                initial_data['email'] = user.email
+                profile_prefilled = True
+
+        form = Form(instance=instance, initial=initial_data if initial_data else None)
 
     if request.method == 'POST':
         if 'save_and_continue' in request.POST or 'save' in request.POST:
@@ -301,6 +321,7 @@ def section_edit(request, document_id, section_type):
         'next_section': next_section,
         'status_form': SectionStatusForm(instance=section),
         'help_content': help_content,
+        'profile_prefilled': profile_prefilled,
     }
 
     return render(request, 'documents/section_edit.html', context)

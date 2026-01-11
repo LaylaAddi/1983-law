@@ -268,6 +268,22 @@
 
                 <p class="text-muted mb-4">{{ config.description }}</p>
 
+                {% if section.section_type == 'plaintiff_info' and profile_prefilled %}
+                <!-- Profile Pre-fill Notice -->
+                <div class="alert alert-success mb-4">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-person-check-fill me-2 mt-1"></i>
+                        <div>
+                            <strong>Your profile info has been pre-filled.</strong>
+                            <p class="mb-1 small">We've added your name and email from your account. You can edit these fields if needed.</p>
+                            <a href="{% url 'accounts:profile_edit' %}?next={{ request.path }}" class="small">
+                                <i class="bi bi-pencil me-1"></i>Update your profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 {% if section.section_type == 'relief_sought' %}
                 <!-- Recommended Settings for Relief Sought -->
                 <div class="alert alert-info mb-4">

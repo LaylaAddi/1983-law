@@ -21,6 +21,7 @@ from .forms import (
     CustomPasswordResetForm,
     CustomSetPasswordForm,
     CustomPasswordChangeForm,
+    ProfileEditForm,
 )
 
 
@@ -120,3 +121,25 @@ class CustomPasswordChangeDoneView(PasswordChangeDoneView):
 def profile(request):
     """User profile view."""
     return render(request, 'accounts/profile.html')
+
+
+@login_required
+def profile_edit(request):
+    """Edit user profile view."""
+    next_url = request.GET.get('next') or request.POST.get('next')
+
+    if request.method == 'POST':
+        form = ProfileEditForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your profile has been updated.')
+            if next_url:
+                return redirect(next_url)
+            return redirect('accounts:profile')
+    else:
+        form = ProfileEditForm(instance=request.user)
+
+    return render(request, 'accounts/profile_edit.html', {
+        'form': form,
+        'next_url': next_url,
+    })
