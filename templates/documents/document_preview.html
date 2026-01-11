@@ -154,11 +154,77 @@
         </div>
         <div class="col-md-6">
             <div class="data-field">
-                <div class="data-label">Pro Se (Self-Represented)</div>
-                <div class="data-value">{{ section_data.data.is_pro_se|yesno:"Yes,No" }}</div>
+                <div class="data-label">Representation</div>
+                <div class="data-value">
+                    {% if section_data.data.is_pro_se %}
+                        <span class="badge bg-secondary">Pro Se (Self-Represented)</span>
+                    {% else %}
+                        <span class="badge bg-primary">Represented by Attorney</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
+
+    {% if not section_data.data.is_pro_se %}
+    <!-- Attorney Information -->
+    <div class="mt-4 p-3 bg-light rounded">
+        <h5 class="mb-3"><i class="bi bi-briefcase me-2"></i>Attorney Information</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="data-field">
+                    <div class="data-label">Attorney Name</div>
+                    <div class="data-value">{{ section_data.data.attorney_name|default:"Not provided" }}</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="data-field">
+                    <div class="data-label">Bar Number</div>
+                    <div class="data-value">{{ section_data.data.attorney_bar_number|default:"Not provided" }}</div>
+                </div>
+            </div>
+            {% if section_data.data.attorney_firm_name %}
+            <div class="col-md-12">
+                <div class="data-field">
+                    <div class="data-label">Law Firm</div>
+                    <div class="data-value">{{ section_data.data.attorney_firm_name }}</div>
+                </div>
+            </div>
+            {% endif %}
+            <div class="col-md-12">
+                <div class="data-field">
+                    <div class="data-label">Attorney Address</div>
+                    <div class="data-value">
+                        {% if section_data.data.attorney_street_address %}
+                            {{ section_data.data.attorney_street_address }}<br>
+                            {{ section_data.data.attorney_city }}, {{ section_data.data.attorney_state }} {{ section_data.data.attorney_zip_code }}
+                        {% else %}
+                            Not provided
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="data-field">
+                    <div class="data-label">Phone</div>
+                    <div class="data-value">{{ section_data.data.attorney_phone|default:"Not provided" }}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="data-field">
+                    <div class="data-label">Fax</div>
+                    <div class="data-value">{{ section_data.data.attorney_fax|default:"-" }}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="data-field">
+                    <div class="data-label">Email</div>
+                    <div class="data-value">{{ section_data.data.attorney_email|default:"Not provided" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     {% else %}
     <p class="text-muted"><em>No information provided yet.</em></p>
     {% endif %}

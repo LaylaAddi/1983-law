@@ -98,6 +98,18 @@ class PlaintiffInfo(models.Model):
     email = models.EmailField(blank=True)
     is_pro_se = models.BooleanField(default=True, help_text='Representing yourself without an attorney')
 
+    # Attorney information (used when is_pro_se is False)
+    attorney_name = models.CharField(max_length=100, blank=True, help_text='Full name of attorney')
+    attorney_bar_number = models.CharField(max_length=50, blank=True, help_text='State bar number')
+    attorney_firm_name = models.CharField(max_length=200, blank=True, help_text='Law firm name')
+    attorney_street_address = models.CharField(max_length=255, blank=True)
+    attorney_city = models.CharField(max_length=100, blank=True)
+    attorney_state = models.CharField(max_length=50, blank=True)
+    attorney_zip_code = models.CharField(max_length=20, blank=True)
+    attorney_phone = models.CharField(max_length=20, blank=True)
+    attorney_fax = models.CharField(max_length=20, blank=True)
+    attorney_email = models.EmailField(blank=True)
+
     def __str__(self):
         return self.get_full_name() or "Plaintiff Info"
 
@@ -105,6 +117,16 @@ class PlaintiffInfo(models.Model):
         """Return the full name combining first, middle, and last names."""
         name_parts = [self.first_name, self.middle_name, self.last_name]
         return ' '.join(part for part in name_parts if part)
+
+    def get_attorney_full_address(self):
+        """Return the full attorney address."""
+        parts = [self.attorney_street_address]
+        city_state_zip = ', '.join(filter(None, [self.attorney_city, self.attorney_state]))
+        if city_state_zip:
+            if self.attorney_zip_code:
+                city_state_zip += ' ' + self.attorney_zip_code
+            parts.append(city_state_zip)
+        return '\n'.join(filter(None, parts))
 
 
 class IncidentOverview(models.Model):

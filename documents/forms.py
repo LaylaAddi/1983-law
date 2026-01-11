@@ -52,6 +52,7 @@ class PlaintiffInfoForm(forms.ModelForm):
         model = PlaintiffInfo
         exclude = ['section']
         widgets = {
+            # Plaintiff fields
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First name'}),
             'middle_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Middle name (optional)'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last name'}),
@@ -61,7 +62,31 @@ class PlaintiffInfoForm(forms.ModelForm):
             'zip_code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ZIP Code'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 123-4567'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'your.email@example.com'}),
-            'is_pro_se': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_pro_se': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'is_pro_se'}),
+            # Attorney fields
+            'attorney_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Attorney full name'}),
+            'attorney_bar_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State bar number'}),
+            'attorney_firm_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Law firm name (if applicable)'}),
+            'attorney_street_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Street address'}),
+            'attorney_city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City'}),
+            'attorney_state': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State'}),
+            'attorney_zip_code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ZIP Code'}),
+            'attorney_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 123-4567'}),
+            'attorney_fax': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 123-4568'}),
+            'attorney_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'attorney@lawfirm.com'}),
+        }
+        labels = {
+            'is_pro_se': 'Proceeding Pro Se (representing yourself)',
+            'attorney_name': 'Attorney Name',
+            'attorney_bar_number': 'Bar Number',
+            'attorney_firm_name': 'Law Firm',
+            'attorney_street_address': 'Street Address',
+            'attorney_city': 'City',
+            'attorney_state': 'State',
+            'attorney_zip_code': 'ZIP Code',
+            'attorney_phone': 'Phone',
+            'attorney_fax': 'Fax',
+            'attorney_email': 'Email',
         }
 
 

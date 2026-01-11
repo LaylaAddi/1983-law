@@ -100,6 +100,28 @@
     .relief-type strong {
         color: #0d6efd;
     }
+    /* Attorney fields section */
+    .attorney-section {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+    .attorney-section-header {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .attorney-section-header i {
+        color: #0d6efd;
+    }
+    .attorney-field {
+        /* Used to identify attorney fields for show/hide */
+    }
 </style>
 {% endblock %}
 
@@ -571,6 +593,63 @@ document.addEventListener('DOMContentLoaded', function() {
         helpContent.addEventListener('hide.bs.collapse', function () {
             helpChevron.style.transform = 'rotate(0deg)';
         });
+    }
+
+    // Pro Se / Attorney toggle for plaintiff_info section
+    var isProSeCheckbox = document.getElementById('id_is_pro_se');
+    if (isProSeCheckbox) {
+        // Get all attorney field containers
+        var attorneyFieldIds = [
+            'id_attorney_name', 'id_attorney_bar_number', 'id_attorney_firm_name',
+            'id_attorney_street_address', 'id_attorney_city', 'id_attorney_state',
+            'id_attorney_zip_code', 'id_attorney_phone', 'id_attorney_fax', 'id_attorney_email'
+        ];
+
+        // Create a wrapper div for attorney fields
+        var attorneySection = document.createElement('div');
+        attorneySection.id = 'attorney-section';
+        attorneySection.className = 'attorney-section';
+        attorneySection.innerHTML = '<div class="attorney-section-header"><i class="bi bi-briefcase me-2"></i>Attorney Information</div>';
+
+        var attorneyFieldsContainer = document.createElement('div');
+        attorneyFieldsContainer.id = 'attorney-fields-container';
+        attorneySection.appendChild(attorneyFieldsContainer);
+
+        // Find and move attorney fields into the container
+        var firstAttorneyField = null;
+        attorneyFieldIds.forEach(function(fieldId) {
+            var field = document.getElementById(fieldId);
+            if (field) {
+                var fieldContainer = field.closest('.mb-3');
+                if (fieldContainer) {
+                    if (!firstAttorneyField) {
+                        firstAttorneyField = fieldContainer;
+                    }
+                    attorneyFieldsContainer.appendChild(fieldContainer);
+                }
+            }
+        });
+
+        // Insert the attorney section after the is_pro_se checkbox container
+        var proSeContainer = isProSeCheckbox.closest('.mb-3');
+        if (proSeContainer && attorneyFieldsContainer.children.length > 0) {
+            proSeContainer.after(attorneySection);
+        }
+
+        // Function to toggle attorney fields visibility
+        function toggleAttorneyFields() {
+            if (isProSeCheckbox.checked) {
+                attorneySection.style.display = 'none';
+            } else {
+                attorneySection.style.display = 'block';
+            }
+        }
+
+        // Initial toggle based on checkbox state
+        toggleAttorneyFields();
+
+        // Listen for changes
+        isProSeCheckbox.addEventListener('change', toggleAttorneyFields);
     }
 
     // Use Recommended Settings button for Relief Sought section
