@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - 1983 Law{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+    <h1 class="display-4 mb-4">Welcome to 1983 Law</h1>
+    <p class="lead text-muted mb-5">Your legal document management solution.</p>
+
+    {% if user.is_authenticated %}
+        <div class="card mx-auto" style="max-width: 500px;">
+            <div class="card-body">
+                <h5 class="card-title">Hello, {{ user.get_short_name }}!</h5>
+                <p class="card-text text-muted">You are logged in.</p>
+                <a href="{% url 'accounts:profile' %}" class="btn btn-primary">
+                    <i class="bi bi-person me-1"></i>View Profile
+                </a>
+            </div>
+        </div>
+    {% else %}
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{% url 'accounts:login' %}" class="btn btn-primary btn-lg">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Login
+            </a>
+            <a href="{% url 'accounts:register' %}" class="btn btn-outline-primary btn-lg">
+                <i class="bi bi-person-plus me-2"></i>Register
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -20,7 +20,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Local apps
-
+    'accounts',
 ]
 
 MIDDLEWARE = [
@@ -117,3 +117,14 @@ ADDON_EXTRACTION_MINUTES = 15
 STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY', '')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+
+# Custom User Model
+AUTH_USER_MODEL = 'accounts.User'
+
+# Authentication
+LOGIN_URL = 'accounts:login'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'home'
+
+# Email (for development - prints to console)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
