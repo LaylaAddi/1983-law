@@ -48,9 +48,16 @@ class SectionStatusForm(forms.ModelForm):
 class PlaintiffInfoForm(forms.ModelForm):
     """Form for plaintiff information."""
 
+    # Custom field that inverts is_pro_se for better UX
+    has_attorney = forms.BooleanField(
+        required=False,
+        label='I have an attorney representing me',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_has_attorney'})
+    )
+
     class Meta:
         model = PlaintiffInfo
-        exclude = ['section']
+        exclude = ['section', 'is_pro_se']  # Exclude is_pro_se, we use has_attorney instead
         widgets = {
             # Plaintiff fields
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First name'}),
@@ -62,7 +69,6 @@ class PlaintiffInfoForm(forms.ModelForm):
             'zip_code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ZIP Code'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 123-4567'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'your.email@example.com'}),
-            'is_pro_se': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'is_pro_se'}),
             # Attorney fields
             'attorney_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Attorney full name'}),
             'attorney_bar_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State bar number'}),
@@ -76,7 +82,6 @@ class PlaintiffInfoForm(forms.ModelForm):
             'attorney_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'attorney@lawfirm.com'}),
         }
         labels = {
-            'is_pro_se': 'Proceeding Pro Se (representing yourself)',
             'attorney_name': 'Attorney Name',
             'attorney_bar_number': 'Bar Number',
             'attorney_firm_name': 'Law Firm',
@@ -88,6 +93,20 @@ class PlaintiffInfoForm(forms.ModelForm):
             'attorney_fax': 'Fax',
             'attorney_email': 'Email',
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set has_attorney based on existing is_pro_se value (inverted)
+        if self.instance and self.instance.pk:
+            self.fields['has_attorney'].initial = not self.instance.is_pro_se
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Invert has_attorney to set is_pro_se
+        instance.is_pro_se = not self.cleaned_data.get('has_attorney', False)
+        if commit:
+            instance.save()
+        return instance
 
 
 class IncidentOverviewForm(forms.ModelForm):

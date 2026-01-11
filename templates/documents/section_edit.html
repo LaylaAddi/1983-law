@@ -595,9 +595,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Pro Se / Attorney toggle for plaintiff_info section
-    var isProSeCheckbox = document.getElementById('id_is_pro_se');
-    if (isProSeCheckbox) {
+    // Attorney toggle for plaintiff_info section
+    var hasAttorneyCheckbox = document.getElementById('id_has_attorney');
+    if (hasAttorneyCheckbox) {
         // Get all attorney field containers
         var attorneyFieldIds = [
             'id_attorney_name', 'id_attorney_bar_number', 'id_attorney_firm_name',
@@ -630,18 +630,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Insert the attorney section after the is_pro_se checkbox container
-        var proSeContainer = isProSeCheckbox.closest('.mb-3');
-        if (proSeContainer && attorneyFieldsContainer.children.length > 0) {
-            proSeContainer.after(attorneySection);
+        // Insert the attorney section after the has_attorney checkbox container
+        var hasAttorneyContainer = hasAttorneyCheckbox.closest('.mb-3');
+        if (hasAttorneyContainer && attorneyFieldsContainer.children.length > 0) {
+            hasAttorneyContainer.after(attorneySection);
         }
 
         // Function to toggle attorney fields visibility
+        // Show when checked (has attorney), hide when unchecked (pro se)
         function toggleAttorneyFields() {
-            if (isProSeCheckbox.checked) {
-                attorneySection.style.display = 'none';
-            } else {
+            if (hasAttorneyCheckbox.checked) {
                 attorneySection.style.display = 'block';
+            } else {
+                attorneySection.style.display = 'none';
             }
         }
 
@@ -649,7 +650,7 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleAttorneyFields();
 
         // Listen for changes
-        isProSeCheckbox.addEventListener('change', toggleAttorneyFields);
+        hasAttorneyCheckbox.addEventListener('change', toggleAttorneyFields);
     }
 
     // Use Recommended Settings button for Relief Sought section
