@@ -23,6 +23,10 @@
     .interview-card.completed {
         border-left-color: #198754;
     }
+    .interview-card.not-applicable {
+        border-left-color: #6c757d;
+        background-color: #f8f9fa;
+    }
 </style>
 {% endblock %}
 
@@ -39,7 +43,7 @@
 <div class="row">
     <!-- Main Content -->
     <div class="col-lg-8">
-        <div class="card interview-card {% if section.status == 'needs_work' %}needs-work{% elif section.status == 'completed' %}completed{% endif %} shadow-sm mb-4">
+        <div class="card interview-card {% if section.status == 'needs_work' %}needs-work{% elif section.status == 'completed' %}completed{% elif section.status == 'not_applicable' %}not-applicable{% endif %} shadow-sm mb-4">
             <div class="card-header bg-white">
                 <div class="d-flex justify-content-between align-items-center">
                     <h4 class="mb-0">{{ config.title }}</h4>
@@ -55,6 +59,10 @@
                     {% elif section.status == 'completed' %}
                         <span class="badge bg-success section-status-badge">
                             <i class="bi bi-check-lg me-1"></i>Completed
+                        </span>
+                    {% elif section.status == 'not_applicable' %}
+                        <span class="badge bg-secondary section-status-badge">
+                            <i class="bi bi-dash-lg me-1"></i>N/A
                         </span>
                     {% endif %}
                 </div>
@@ -237,6 +245,8 @@
                             <i class="bi bi-exclamation-triangle-fill text-warning"></i>
                         {% elif s.status == 'in_progress' %}
                             <i class="bi bi-circle-half text-info"></i>
+                        {% elif s.status == 'not_applicable' %}
+                            <i class="bi bi-dash-circle-fill text-secondary"></i>
                         {% else %}
                             <i class="bi bi-circle text-muted"></i>
                         {% endif %}

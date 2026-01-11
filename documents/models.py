@@ -29,8 +29,9 @@ class Document(models.Model):
         sections = self.sections.all()
         if not sections:
             return 0
-        completed = sections.filter(status='completed').count()
-        return int((completed / sections.count()) * 100)
+        # Count both 'completed' and 'not_applicable' as done
+        done = sections.filter(status__in=['completed', 'not_applicable']).count()
+        return int((done / sections.count()) * 100)
 
     def get_sections_needing_work(self):
         """Return sections flagged as needing work."""
@@ -62,6 +63,7 @@ class DocumentSection(models.Model):
         ('in_progress', 'In Progress'),
         ('needs_work', 'Needs Work'),
         ('completed', 'Completed'),
+        ('not_applicable', 'Not Applicable'),
     ]
 
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='sections')
