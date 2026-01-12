@@ -656,6 +656,63 @@ def rewrite_text(request):
 
 
 @login_required
+@require_POST
+def analyze_rights(request, document_id):
+    """AJAX endpoint to analyze document and suggest rights violations."""
+    import json
+
+    try:
+        # Get the document and verify ownership
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        # Get the incident narrative section
+        try:
+            narrative_section = document.sections.get(section_type='incident_narrative')
+            narrative = narrative_section.incident_narrative
+        except (DocumentSection.DoesNotExist, AttributeError):
+            return JsonResponse({
+                'success': False,
+                'error': 'Please fill out the Incident Narrative section first. We need to know what happened before we can identify which rights were violated.',
+            })
+
+        # Build document data from incident narrative
+        document_data = {
+            'summary': narrative.summary or '',
+            'detailed_narrative': narrative.detailed_narrative or '',
+            'what_were_you_doing': narrative.what_were_you_doing or '',
+            'initial_contact': narrative.initial_contact or '',
+            'what_was_said': narrative.what_was_said or '',
+            'physical_actions': narrative.physical_actions or '',
+            'how_it_ended': narrative.how_it_ended or '',
+        }
+
+        # Check if there's any content to analyze
+        if not any(document_data.values()):
+            return JsonResponse({
+                'success': False,
+                'error': 'The Incident Narrative section is empty. Please describe what happened first.',
+            })
+
+        # Call OpenAI service to analyze
+        from .services.openai_service import OpenAIService
+        service = OpenAIService()
+        result = service.analyze_rights_violations(document_data)
+
+        return JsonResponse(result)
+
+    except ValueError as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}',
+        })
+
+
+@login_required
 def lookup_district_court(request):
     """AJAX endpoint to lookup federal district court based on city and state."""
     city = request.GET.get('city', '').strip()

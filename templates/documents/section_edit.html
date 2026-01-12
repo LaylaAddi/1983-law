@@ -6,6 +6,8 @@
 {% block extra_css %}
 {% if section.section_type == 'incident_narrative' %}
 <link rel="stylesheet" href="{% static 'css/rewrite.css' %}">
+{% elif section.section_type == 'rights_violated' %}
+<link rel="stylesheet" href="{% static 'css/rights-analyze.css' %}">
 {% endif %}
 <style>
     .section-status-badge {
@@ -323,6 +325,22 @@
                         </button>
                     </div>
                 </div>
+                {% endif %}
+
+                {% if section.section_type == 'rights_violated' %}
+                <!-- AI Analysis for Rights Violated -->
+                <div class="alert alert-primary mb-4">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <strong><i class="bi bi-stars me-2"></i>Not sure which rights were violated?</strong>
+                            <p class="mb-0 small">Let AI analyze your incident and suggest which constitutional rights apply to your case.</p>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" id="analyzeRightsBtn" data-document-id="{{ document.id }}">
+                            <i class="bi bi-search me-1"></i>Analyze My Case
+                        </button>
+                    </div>
+                </div>
+                <div id="rightsAnalysisContainer"></div>
                 {% endif %}
 
                 {% if is_multiple %}
@@ -886,5 +904,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% if section.section_type == 'incident_narrative' %}
 <script src="{% static 'js/rewrite.js' %}"></script>
+{% elif section.section_type == 'rights_violated' %}
+<script src="{% static 'js/rights-analyze.js' %}"></script>
 {% endif %}
 {% endblock %}

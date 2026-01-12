@@ -27,4 +27,7 @@ urlpatterns = [
 
     # AI rewrite endpoint
     path('rewrite-text/', views.rewrite_text, name='rewrite_text'),
+
+    # AI rights analysis endpoint
+    path('<int:document_id>/analyze-rights/', views.analyze_rights, name='analyze_rights'),
 ]
