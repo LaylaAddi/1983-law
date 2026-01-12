@@ -886,7 +886,11 @@ def apply_story_fields(request, document_id):
                             obj.state = value
                         saved_count += 1
                     obj.save()
-                    doc_section.status = 'in_progress'
+                    # Auto-complete if criteria met
+                    if check_section_complete(doc_section, obj):
+                        doc_section.status = 'completed'
+                    else:
+                        doc_section.status = 'in_progress'
                     doc_section.save()
 
                 elif section_type == 'incident_narrative':
@@ -898,7 +902,11 @@ def apply_story_fields(request, document_id):
                             setattr(obj, field_name, value)
                             saved_count += 1
                     obj.save()
-                    doc_section.status = 'in_progress'
+                    # Auto-complete if criteria met
+                    if check_section_complete(doc_section, obj):
+                        doc_section.status = 'completed'
+                    else:
+                        doc_section.status = 'in_progress'
                     doc_section.save()
 
                 elif section_type == 'defendants':
@@ -925,7 +933,11 @@ def apply_story_fields(request, document_id):
                                 defendant.description = value
                             defendant.save()
                             saved_count += 1
-                    doc_section.status = 'in_progress'
+                    # Auto-complete if at least one defendant with name
+                    if Defendant.objects.filter(section=doc_section, name__isnull=False).exclude(name='').exists():
+                        doc_section.status = 'completed'
+                    else:
+                        doc_section.status = 'in_progress'
                     doc_section.save()
 
                 elif section_type == 'witnesses':
@@ -948,7 +960,11 @@ def apply_story_fields(request, document_id):
                                 witness.what_they_witnessed = value
                             witness.save()
                             saved_count += 1
-                    doc_section.status = 'in_progress'
+                    # Auto-complete if at least one witness added
+                    if Witness.objects.filter(section=doc_section).exists():
+                        doc_section.status = 'completed'
+                    else:
+                        doc_section.status = 'in_progress'
                     doc_section.save()
 
                 elif section_type == 'evidence':
@@ -970,7 +986,11 @@ def apply_story_fields(request, document_id):
                                 evidence.description = value
                             evidence.save()
                             saved_count += 1
-                    doc_section.status = 'in_progress'
+                    # Auto-complete if at least one evidence item added
+                    if Evidence.objects.filter(section=doc_section).exists():
+                        doc_section.status = 'completed'
+                    else:
+                        doc_section.status = 'in_progress'
                     doc_section.save()
 
                 elif section_type == 'damages':
@@ -991,7 +1011,11 @@ def apply_story_fields(request, document_id):
                             obj.other_damages = value
                         saved_count += 1
                     obj.save()
-                    doc_section.status = 'in_progress'
+                    # Auto-complete if criteria met
+                    if check_section_complete(doc_section, obj):
+                        doc_section.status = 'completed'
+                    else:
+                        doc_section.status = 'in_progress'
                     doc_section.save()
 
                 elif section_type == 'rights_violated':
@@ -1023,7 +1047,11 @@ def apply_story_fields(request, document_id):
 
                         saved_count += 1
                     obj.save()
-                    doc_section.status = 'in_progress'
+                    # Auto-complete if criteria met
+                    if check_section_complete(doc_section, obj):
+                        doc_section.status = 'completed'
+                    else:
+                        doc_section.status = 'in_progress'
                     doc_section.save()
 
             except Exception as e:
