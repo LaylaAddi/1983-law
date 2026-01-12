@@ -332,10 +332,20 @@ Extract information for the following sections. Set any field to null if not exp
             }}
         ]
     }},
-    "questions_to_ask": [
-        "List questions to ask the user to fill in missing important information. DO NOT ask about items the user marked as 'Not applicable or unknown' - those are intentionally excluded."
-    ]
+    "questions_to_ask": []
 }}
+
+IMPORTANT: For "questions_to_ask", generate 3-8 specific questions about missing information that would help complete the complaint, such as:
+- What city and state did this happen in?
+- Do you know the officer's badge number?
+- What agency does the officer work for?
+- Did anyone witness the incident?
+- Do you have any video, photos, or documentation?
+- Were you physically injured? Did you seek medical treatment?
+- Did you miss work or lose income because of this?
+
+DO NOT ask about items the user marked as "Not applicable or unknown" - skip those topics entirely.
+Only ask about genuinely missing information that would strengthen the complaint.
 
 Respond with ONLY the JSON object, no additional text."""
 
