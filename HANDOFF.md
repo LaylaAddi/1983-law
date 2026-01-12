@@ -6,7 +6,7 @@ A web application to help people create Section 1983 civil rights complaints. Us
 
 ---
 
-## Current State (Latest Session)
+## Current State (Latest Commit: 8b5454d)
 
 The app is functional with the following features complete:
 
