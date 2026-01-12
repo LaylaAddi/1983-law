@@ -271,6 +271,7 @@ IMPORTANT RULES:
 - If information is not clearly provided, set the field to null
 - Use the exact wording from the story when possible
 - For dates/times, only extract if explicitly mentioned
+- If the story contains a section labeled "Not applicable or unknown:", DO NOT ask questions about those topics in questions_to_ask - the user has already indicated they don't have that information
 
 USER'S STORY:
 {story_text}
@@ -332,7 +333,7 @@ Extract information for the following sections. Set any field to null if not exp
         ]
     }},
     "questions_to_ask": [
-        "List questions to ask the user to fill in missing important information"
+        "List questions to ask the user to fill in missing important information. DO NOT ask about items the user marked as 'Not applicable or unknown' - those are intentionally excluded."
     ]
 }}
 
