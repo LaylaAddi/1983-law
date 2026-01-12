@@ -6,7 +6,7 @@ A web application to help people create Section 1983 civil rights complaints. Us
 
 ---
 
-## Current State (Latest Commit: 3e56cee)
+## Current State (Latest Commit: 4b140b8)
 
 The app is functional with the following features complete:
 
@@ -21,11 +21,20 @@ The app is functional with the following features complete:
 
 2. **Document Builder** (`documents` app)
    - Create new case documents
+   - **Tell Your Story is MANDATORY first step** (blocks section access until done)
    - 10 interview sections (see below)
    - Save progress, come back later
    - Section status tracking (not started, in progress, completed, needs work, N/A)
 
-3. **Interview Sections** (in order)
+3. **Document Flow**
+   ```
+   Create Document → Tell Your Story (mandatory) → Fill Sections → Preview → PDF
+   ```
+   - User MUST tell their story before accessing any section
+   - Story is saved to `Document.story_text` field
+   - Sections are blocked until `document.has_story()` returns True
+
+4. **Interview Sections** (in order)
    - Plaintiff Information (with attorney option)
    - Incident Overview (with court lookup)
    - Defendants (add multiple)
@@ -37,13 +46,13 @@ The app is functional with the following features complete:
    - Prior Complaints
    - Relief Sought (with recommended defaults)
 
-4. **AI Features** (OpenAI GPT-4o-mini)
+5. **AI Features** (OpenAI GPT-4o-mini)
    - **ChatGPT Rewrite** - Rewrites narrative text in legal format
    - **Rights Violation Analyzer** - Suggests which rights were violated based on narrative
    - **Tell Your Story** - User writes story, AI extracts data for all sections
    - **Parse Story API** - Backend endpoint for AI parsing (`/documents/{id}/parse-story/`)
 
-5. **Helper Features**
+6. **Helper Features**
    - Federal district court lookup by city/state
    - State dropdowns on all address forms
    - Contextual help tooltips
