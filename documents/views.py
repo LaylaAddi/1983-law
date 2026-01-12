@@ -221,6 +221,12 @@ def document_detail(request, document_id):
 def section_edit(request, document_id, section_type):
     """Edit a specific section of the document (interview style)."""
     document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Block section access until user tells their story
+    if not document.has_story():
+        messages.info(request, 'Please tell your story first. This helps us understand your case and pre-fill relevant sections.')
+        return redirect('documents:tell_your_story', document_id=document.id)
+
     section = get_object_or_404(DocumentSection, document=document, section_type=section_type)
 
     config = SECTION_CONFIG.get(section_type)
@@ -790,8 +796,16 @@ def parse_story(request, document_id):
             })
 
         from .services.openai_service import OpenAIService
+        from django.utils import timezone
+
         service = OpenAIService()
         result = service.parse_story(story_text)
+
+        # Save story text to document if parsing was successful
+        if result.get('success'):
+            document.story_text = story_text
+            document.story_told_at = timezone.now()
+            document.save(update_fields=['story_text', 'story_told_at'])
 
         return JsonResponse(result)
 

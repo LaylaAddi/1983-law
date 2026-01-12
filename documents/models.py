@@ -18,6 +18,10 @@ class Document(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Story - mandatory first step before filling sections
+    story_text = models.TextField(blank=True, help_text='Raw story text from user (voice or typed)')
+    story_told_at = models.DateTimeField(null=True, blank=True, help_text='When the story was submitted')
+
     class Meta:
         ordering = ['-updated_at']
 
@@ -40,6 +44,10 @@ class Document(models.Model):
     def has_sections_needing_work(self):
         """Check if any sections need work."""
         return self.sections.filter(status='needs_work').exists()
+
+    def has_story(self):
+        """Check if user has told their story (required before filling sections)."""
+        return bool(self.story_text and self.story_text.strip())
 
 
 class DocumentSection(models.Model):
