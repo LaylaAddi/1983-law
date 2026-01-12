@@ -803,6 +803,7 @@ def tell_your_story(request, document_id):
 def parse_story(request, document_id):
     """AJAX endpoint to parse user's story and extract structured data."""
     import json
+    from datetime import datetime
 
     try:
         # Verify document ownership
@@ -818,6 +819,7 @@ def parse_story(request, document_id):
             })
 
         from .services.openai_service import OpenAIService
+        from .services.court_lookup_service import CourtLookupService
         from django.utils import timezone
 
         service = OpenAIService()
@@ -828,6 +830,65 @@ def parse_story(request, document_id):
             document.story_text = story_text
             document.story_told_at = timezone.now()
             document.save(update_fields=['story_text', 'story_told_at'])
+
+            # Auto-apply incident_overview fields
+            extracted = result.get('data', {})
+            incident_data = extracted.get('incident_overview', {})
+
+            if incident_data:
+                doc_section = DocumentSection.objects.get(
+                    document=document, section_type='incident_overview'
+                )
+                obj, created = IncidentOverview.objects.get_or_create(section=doc_section)
+
+                # Apply extracted fields
+                if incident_data.get('incident_date'):
+                    try:
+                        obj.incident_date = datetime.strptime(
+                            incident_data['incident_date'], '%Y-%m-%d'
+                        ).date()
+                    except ValueError:
+                        pass
+                if incident_data.get('incident_time'):
+                    obj.incident_time = incident_data['incident_time']
+                if incident_data.get('incident_location'):
+                    obj.incident_location = incident_data['incident_location']
+                if incident_data.get('city'):
+                    obj.city = incident_data['city']
+                if incident_data.get('state'):
+                    obj.state = incident_data['state']
+                if incident_data.get('location_type'):
+                    obj.location_type = incident_data['location_type']
+                if incident_data.get('was_recording') is not None:
+                    obj.was_recording = incident_data['was_recording'] in [True, 'true', 'True']
+                if incident_data.get('recording_device'):
+                    obj.recording_device = incident_data['recording_device']
+
+                # Auto-lookup federal district court if city/state are provided
+                if obj.city and obj.state and not obj.federal_district_court:
+                    try:
+                        court_service = CourtLookupService()
+                        court_result = court_service.lookup_court(obj.city, obj.state)
+                        if court_result.get('success') and court_result.get('court'):
+                            obj.federal_district_court = court_result['court']
+                            obj.district_lookup_confidence = court_result.get('confidence', 'medium')
+                    except Exception:
+                        pass  # Don't fail if court lookup fails
+
+                obj.save()
+
+                # Update section status
+                if check_section_complete(doc_section, obj):
+                    doc_section.status = 'completed'
+                elif doc_section.status == 'not_started':
+                    doc_section.status = 'in_progress'
+                doc_section.save()
+
+                # Add auto-applied notice to result
+                result['auto_applied'] = {
+                    'incident_overview': True,
+                    'fields_applied': [k for k, v in incident_data.items() if v]
+                }
 
         return JsonResponse(result)
 
@@ -900,6 +961,12 @@ def apply_story_fields(request, document_id):
                             obj.city = value
                         elif field_name == 'state' and value:
                             obj.state = value
+                        elif field_name == 'location_type' and value:
+                            obj.location_type = value
+                        elif field_name == 'was_recording' and value is not None:
+                            obj.was_recording = value in [True, 'true', 'True', 1, '1']
+                        elif field_name == 'recording_device' and value:
+                            obj.recording_device = value
                         saved_count += 1
                     obj.save()
                     # Auto-complete if criteria met

@@ -284,7 +284,10 @@ Extract information for the following sections. Set any field to null if not exp
         "incident_time": "HH:MM format or description like 'afternoon', null if not mentioned",
         "incident_location": "specific address or location description, null if not mentioned",
         "city": "city name only if explicitly mentioned, null otherwise",
-        "state": "two-letter state code only if explicitly mentioned, null otherwise"
+        "state": "two-letter state code only if explicitly mentioned, null otherwise",
+        "location_type": "type of location like 'public sidewalk', 'government building', 'police station', 'courthouse', 'DMV', 'post office', 'public park', etc. - infer from context if location is described",
+        "was_recording": "true if the person mentions they were filming, recording, or had a camera, false if they explicitly say they weren't recording, null if not mentioned",
+        "recording_device": "device used for recording like 'cell phone', 'iPhone', 'GoPro', 'body camera', etc. if mentioned, null otherwise"
     }},
     "incident_narrative": {{
         "summary": "2-3 sentence summary of what happened, written in third person",
