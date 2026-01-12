@@ -344,6 +344,27 @@ docker-compose exec web python manage.py createsuperuser
 
 ---
 
+## Git Workflow
+
+### For User: Merge feature branch to master
+```bash
+git checkout master
+git pull origin master
+git merge claude/feature-branch-name
+git push origin master
+```
+
+### For Next Claude Session: Create new branch
+```bash
+git checkout master
+git pull origin master
+git checkout -b claude/new-feature-XYZ
+```
+
+Branch naming: `claude/<feature-description>-<random-id>`
+
+---
+
 ## Quick Commands
 
 ```powershell
