@@ -278,10 +278,24 @@
         const detailsField = document.getElementById(detailsId);
 
         if (detailsField && explanation) {
-            // Append to existing content with a newline if there's already text
+            // Check if field already has content
             if (detailsField.value.trim()) {
-                detailsField.value += '\n\n' + explanation;
+                // Show confirmation dialog
+                const choice = confirm(
+                    'This field already has content.\n\n' +
+                    'Click OK to REPLACE the existing text.\n' +
+                    'Click Cancel to APPEND to the existing text.'
+                );
+
+                if (choice) {
+                    // Replace
+                    detailsField.value = explanation;
+                } else {
+                    // Append
+                    detailsField.value += '\n\n' + explanation;
+                }
             } else {
+                // Field is empty, just set the value
                 detailsField.value = explanation;
             }
 
