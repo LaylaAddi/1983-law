@@ -103,15 +103,19 @@
 
         // Collect answers from missing info fields
         const additionalInfo = [];
+        const naItems = [];
+
         document.querySelectorAll('.missing-info-input').forEach(input => {
             const naCheckbox = document.getElementById(input.id + '-na');
+            const question = input.getAttribute('data-question');
+
             if (naCheckbox && naCheckbox.checked) {
-                // Skip N/A items
+                // Track N/A items so GPT won't ask again
+                naItems.push(question);
                 return;
             }
             const value = input.value.trim();
             if (value) {
-                const question = input.getAttribute('data-question');
                 additionalInfo.push(`${question}: ${value}`);
             }
         });
@@ -119,7 +123,15 @@
         // Append additional info to story if any
         if (additionalInfo.length > 0) {
             storyText += '\n\nAdditional information:\n' + additionalInfo.join('\n');
-            // Update the textarea with the combined story
+        }
+
+        // Append N/A items so GPT knows not to ask about them
+        if (naItems.length > 0) {
+            storyText += '\n\nNot applicable or unknown:\n' + naItems.map(q => `- ${q}`).join('\n');
+        }
+
+        // Update the textarea with the combined story
+        if (additionalInfo.length > 0 || naItems.length > 0) {
             document.getElementById('storyText').value = storyText;
         }
 
@@ -490,11 +502,44 @@
             });
         });
 
-        // Store selections in sessionStorage for use when filling sections
-        sessionStorage.setItem('storyParsedFields', JSON.stringify(fieldsToApply));
+        // Disable button and show saving state
+        const applyBtn = document.getElementById('applySelectedBtn');
+        applyBtn.disabled = true;
+        applyBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving...';
 
-        // Go directly to document - story is already saved
-        window.location.href = `/documents/${DOCUMENT_ID}/`;
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                          getCookie('csrftoken');
+
+        // Save fields to database
+        fetch(`/documents/${DOCUMENT_ID}/apply-story-fields/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ fields: fieldsToApply })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Store in sessionStorage as backup
+                sessionStorage.setItem('storyParsedFields', JSON.stringify(fieldsToApply));
+                // Go to document
+                window.location.href = `/documents/${DOCUMENT_ID}/`;
+            } else {
+                alert('Error saving fields: ' + (data.error || 'Unknown error'));
+                applyBtn.disabled = false;
+                applyBtn.innerHTML = '<i class="bi bi-arrow-right me-1"></i>Continue to Document';
+            }
+        })
+        .catch(error => {
+            console.error('Save error:', error);
+            alert('Network error. Please try again.');
+            applyBtn.disabled = false;
+            applyBtn.innerHTML = '<i class="bi bi-arrow-right me-1"></i>Continue to Document';
+        });
     }
 
     function escapeHtml(text) {

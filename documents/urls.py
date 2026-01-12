@@ -34,4 +34,5 @@ urlpatterns = [
     # Tell Your Story (AI-assisted form filling)
     path('<int:document_id>/tell-your-story/', views.tell_your_story, name='tell_your_story'),
     path('<int:document_id>/parse-story/', views.parse_story, name='parse_story'),
+    path('<int:document_id>/apply-story-fields/', views.apply_story_fields, name='apply_story_fields'),
 ]

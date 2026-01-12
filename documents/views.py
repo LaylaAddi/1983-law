@@ -830,3 +830,218 @@ def parse_story(request, document_id):
             'success': False,
             'error': f'An error occurred: {str(e)}',
         })
+
+
+@login_required
+@require_POST
+def apply_story_fields(request, document_id):
+    """Save selected fields from story parsing to the database."""
+    import json
+    from datetime import datetime
+
+    try:
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+        data = json.loads(request.body)
+        fields = data.get('fields', [])
+
+        if not fields:
+            return JsonResponse({
+                'success': False,
+                'error': 'No fields to apply.',
+            })
+
+        saved_count = 0
+        errors = []
+
+        # Group fields by section
+        sections_data = {}
+        for field in fields:
+            section = field.get('section')
+            if section not in sections_data:
+                sections_data[section] = []
+            sections_data[section].append(field)
+
+        # Process each section
+        for section_type, section_fields in sections_data.items():
+            try:
+                doc_section = DocumentSection.objects.get(document=document, section_type=section_type)
+
+                if section_type == 'incident_overview':
+                    obj, created = IncidentOverview.objects.get_or_create(section=doc_section)
+                    for f in section_fields:
+                        field_name = f.get('field')
+                        value = f.get('value')
+                        if field_name == 'incident_date' and value:
+                            try:
+                                obj.incident_date = datetime.strptime(value, '%Y-%m-%d').date()
+                            except ValueError:
+                                pass  # Skip invalid dates
+                        elif field_name == 'incident_time' and value:
+                            obj.incident_time = value
+                        elif field_name == 'incident_location' and value:
+                            obj.incident_location = value
+                        elif field_name == 'city' and value:
+                            obj.city = value
+                        elif field_name == 'state' and value:
+                            obj.state = value
+                        saved_count += 1
+                    obj.save()
+                    doc_section.status = 'in_progress'
+                    doc_section.save()
+
+                elif section_type == 'incident_narrative':
+                    obj, created = IncidentNarrative.objects.get_or_create(section=doc_section)
+                    for f in section_fields:
+                        field_name = f.get('field')
+                        value = f.get('value')
+                        if hasattr(obj, field_name) and value:
+                            setattr(obj, field_name, value)
+                            saved_count += 1
+                    obj.save()
+                    doc_section.status = 'in_progress'
+                    doc_section.save()
+
+                elif section_type == 'defendants':
+                    for f in section_fields:
+                        item_index = f.get('itemIndex')
+                        field_name = f.get('field')
+                        value = f.get('value')
+                        if item_index is not None and value:
+                            defendants = list(Defendant.objects.filter(section=doc_section))
+                            idx = int(item_index)
+                            if idx < len(defendants):
+                                defendant = defendants[idx]
+                            else:
+                                defendant = Defendant(section=doc_section, defendant_type='individual')
+                            if field_name == 'name':
+                                defendant.name = value
+                            elif field_name == 'badge_number':
+                                defendant.badge_number = value
+                            elif field_name == 'title':
+                                defendant.title_rank = value
+                            elif field_name == 'agency':
+                                defendant.agency_name = value
+                            elif field_name == 'description':
+                                defendant.description = value
+                            defendant.save()
+                            saved_count += 1
+                    doc_section.status = 'in_progress'
+                    doc_section.save()
+
+                elif section_type == 'witnesses':
+                    for f in section_fields:
+                        item_index = f.get('itemIndex')
+                        field_name = f.get('field')
+                        value = f.get('value')
+                        if item_index is not None and value:
+                            witnesses = list(Witness.objects.filter(section=doc_section))
+                            idx = int(item_index)
+                            if idx < len(witnesses):
+                                witness = witnesses[idx]
+                            else:
+                                witness = Witness(section=doc_section, name='Unknown')
+                            if field_name == 'name':
+                                witness.name = value
+                            elif field_name == 'description':
+                                witness.relationship = value
+                            elif field_name == 'what_they_saw':
+                                witness.what_they_witnessed = value
+                            witness.save()
+                            saved_count += 1
+                    doc_section.status = 'in_progress'
+                    doc_section.save()
+
+                elif section_type == 'evidence':
+                    for f in section_fields:
+                        item_index = f.get('itemIndex')
+                        field_name = f.get('field')
+                        value = f.get('value')
+                        if item_index is not None and value:
+                            evidence_items = list(Evidence.objects.filter(section=doc_section))
+                            idx = int(item_index)
+                            if idx < len(evidence_items):
+                                evidence = evidence_items[idx]
+                            else:
+                                evidence = Evidence(section=doc_section, evidence_type='other', title='Evidence')
+                            if field_name == 'type':
+                                evidence.evidence_type = value.lower()
+                                evidence.title = value
+                            elif field_name == 'description':
+                                evidence.description = value
+                            evidence.save()
+                            saved_count += 1
+                    doc_section.status = 'in_progress'
+                    doc_section.save()
+
+                elif section_type == 'damages':
+                    obj, created = Damages.objects.get_or_create(section=doc_section)
+                    for f in section_fields:
+                        field_name = f.get('field')
+                        value = f.get('value')
+                        if field_name == 'physical_injuries' and value:
+                            obj.physical_injury = True
+                            obj.physical_injury_description = value
+                        elif field_name == 'emotional_distress' and value:
+                            obj.emotional_distress = True
+                            obj.emotional_distress_description = value
+                        elif field_name == 'financial_losses' and value:
+                            obj.property_damage = True
+                            obj.property_damage_description = value
+                        elif field_name == 'other_damages' and value:
+                            obj.other_damages = value
+                        saved_count += 1
+                    obj.save()
+                    doc_section.status = 'in_progress'
+                    doc_section.save()
+
+                elif section_type == 'rights_violated':
+                    obj, created = RightsViolated.objects.get_or_create(section=doc_section)
+                    for f in section_fields:
+                        field_name = f.get('field')
+                        amendment = f.get('amendment')
+                        reason = f.get('reason', '')
+
+                        if hasattr(obj, field_name):
+                            setattr(obj, field_name, True)
+
+                        if amendment == 'first':
+                            obj.first_amendment = True
+                            if reason and not obj.first_amendment_details:
+                                obj.first_amendment_details = reason
+                        elif amendment == 'fourth':
+                            obj.fourth_amendment = True
+                            if reason and not obj.fourth_amendment_details:
+                                obj.fourth_amendment_details = reason
+                        elif amendment == 'fifth':
+                            obj.fifth_amendment = True
+                            if reason and not obj.fifth_amendment_details:
+                                obj.fifth_amendment_details = reason
+                        elif amendment == 'fourteenth':
+                            obj.fourteenth_amendment = True
+                            if reason and not obj.fourteenth_amendment_details:
+                                obj.fourteenth_amendment_details = reason
+
+                        saved_count += 1
+                    obj.save()
+                    doc_section.status = 'in_progress'
+                    doc_section.save()
+
+            except Exception as e:
+                errors.append(f"{section_type}: {str(e)}")
+
+        return JsonResponse({
+            'success': True,
+            'saved_count': saved_count,
+            'errors': errors if errors else None,
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid request format.',
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}',
+        })
