@@ -1,0 +1,200 @@
+/* ChatGPT Rewrite Feature Styles */
+
+/* Rewrite button next to fields */
+.rewrite-btn {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem;
+    margin-left: 0.5rem;
+    white-space: nowrap;
+}
+
+.rewrite-btn:disabled {
+    cursor: wait;
+}
+
+/* Side-by-side comparison panel */
+.rewrite-panel {
+    display: none;
+    margin-top: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    background: #f8f9fa;
+    overflow: hidden;
+}
+
+.rewrite-panel.active {
+    display: block;
+}
+
+.rewrite-panel-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    color: white;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.rewrite-panel-header h6 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.rewrite-panel-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.8;
+}
+
+.rewrite-panel-close:hover {
+    opacity: 1;
+}
+
+.rewrite-panel-body {
+    padding: 1rem;
+}
+
+/* Side-by-side layout */
+.rewrite-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .rewrite-comparison {
+        grid-template-columns: 1fr;
+    }
+}
+
+.rewrite-column {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.rewrite-column-header {
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.rewrite-column.original .rewrite-column-header {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.rewrite-column.suggested .rewrite-column-header {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.rewrite-column-content {
+    padding: 0.75rem;
+    min-height: 100px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.rewrite-column.suggested .rewrite-column-content {
+    background: #f8fff8;
+}
+
+/* Editable suggestion */
+.rewrite-column.suggested textarea {
+    width: 100%;
+    min-height: 150px;
+    border: 1px solid #c3e6cb;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    resize: vertical;
+}
+
+.rewrite-column.suggested textarea:focus {
+    outline: none;
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+/* Action buttons */
+.rewrite-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
+}
+
+.rewrite-actions .btn {
+    min-width: 140px;
+}
+
+/* Loading state */
+.rewrite-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: #6c757d;
+}
+
+.rewrite-loading .spinner-border {
+    width: 2rem;
+    height: 2rem;
+    margin-bottom: 1rem;
+}
+
+/* Error state */
+.rewrite-error {
+    color: #842029;
+    background: #f8d7da;
+    border: 1px solid #f5c2c7;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.rewrite-error i {
+    margin-right: 0.5rem;
+}
+
+/* Subtle indicator for rewritable fields */
+.rewritable-field-wrapper {
+    position: relative;
+}
+
+.rewritable-field-wrapper .form-label {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* Success feedback */
+.rewrite-success {
+    color: #0f5132;
+    background: #d1e7dd;
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.rewrite-success i {
+    margin-right: 0.5rem;
+}

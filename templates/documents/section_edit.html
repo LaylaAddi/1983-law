@@ -1,8 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{{ config.title }} - {{ document.title }} - 1983 Law{% endblock %}
 
 {% block extra_css %}
+{% if section.section_type == 'incident_narrative' %}
+<link rel="stylesheet" href="{% static 'css/rewrite.css' %}">
+{% endif %}
 <style>
     .section-status-badge {
         font-size: 0.9rem;
@@ -880,4 +884,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+{% if section.section_type == 'incident_narrative' %}
+<script src="{% static 'js/rewrite.js' %}"></script>
+{% endif %}
 {% endblock %}

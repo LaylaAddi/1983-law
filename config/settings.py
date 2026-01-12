@@ -129,3 +129,6 @@ LOGOUT_REDIRECT_URL = 'home'
 
 # Email (for development - prints to console)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# OpenAI API Configuration
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')

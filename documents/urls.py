@@ -24,4 +24,7 @@ urlpatterns = [
 
     # District court lookup
     path('lookup-district-court/', views.lookup_district_court, name='lookup_district_court'),
+
+    # AI rewrite endpoint
+    path('rewrite-text/', views.rewrite_text, name='rewrite_text'),
 ]
