@@ -323,6 +323,26 @@
 
                 {% if is_multiple %}
                     <!-- Multiple items section (defendants, witnesses, evidence) -->
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+                            <div>
+                                <strong>You can add multiple entries here.</strong>
+                                <p class="mb-0 small">
+                                    {% if section.section_type == 'defendants' %}
+                                        Add each officer and agency separately. For example, if two officers from different departments violated your rights, add all four entries: both individual officers AND both agencies.
+                                    {% elif section.section_type == 'witnesses' %}
+                                        Add each witness who saw or heard what happened. Include bystanders, fellow auditors, or anyone who can support your account.
+                                    {% elif section.section_type == 'evidence' %}
+                                        Add each piece of evidence separately - your video, body camera footage, police reports, medical records, etc.
+                                    {% else %}
+                                        Fill out the form below and click "Add" to save each entry. You can add as many as needed.
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     {% if items %}
                         <div class="mb-4">
                             <h5>Added Items</h5>
