@@ -368,7 +368,7 @@
                                 {% if help_content.fields %}
                                     {% for fname, fdata in help_content.fields.items %}
                                         {% if fname == field.name and fdata.help %}
-                                            <div class="form-text">{{ fdata.help }}</div>
+                                            <div class="form-text">{{ fdata.help|safe }}</div>
                                         {% endif %}
                                     {% endfor %}
                                 {% elif field.help_text %}
@@ -409,7 +409,7 @@
                                         {% if help_content.fields %}
                                             {% for fname, fdata in help_content.fields.items %}
                                                 {% if fname == field.name and fdata.help %}
-                                                    <div class="form-text">{{ fdata.help }}</div>
+                                                    <div class="form-text">{{ fdata.help|safe }}</div>
                                                 {% endif %}
                                             {% endfor %}
                                         {% elif field.help_text %}
@@ -435,7 +435,7 @@
                                     {% if help_content.fields %}
                                         {% for fname, fdata in help_content.fields.items %}
                                             {% if fname == field.name and fdata.help %}
-                                                <div class="form-text">{{ fdata.help }}</div>
+                                                <div class="form-text">{{ fdata.help|safe }}</div>
                                             {% endif %}
                                         {% endfor %}
                                     {% elif field.help_text %}
