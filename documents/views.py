@@ -86,7 +86,7 @@ def check_multiple_section_complete(section):
 
 
 from .forms import (
-    DocumentForm, PlaintiffInfoForm, IncidentOverviewForm,
+    DocumentForm, PlaintiffInfoForm, PlaintiffAttorneyForm, IncidentOverviewForm,
     DefendantForm, IncidentNarrativeForm, RightsViolatedForm,
     WitnessForm, EvidenceForm, DamagesForm, PriorComplaintsForm,
     ReliefSoughtForm, SectionStatusForm
@@ -97,9 +97,10 @@ from .forms import (
 SECTION_CONFIG = {
     'plaintiff_info': {
         'model': PlaintiffInfo,
-        'form': PlaintiffInfoForm,
+        'form': PlaintiffAttorneyForm,  # Only attorney form - plaintiff info from profile
         'title': 'Plaintiff Information',
-        'description': 'Tell us about yourself. This information will be used in the complaint.',
+        'description': 'Your information from your profile will be used. Select if you have an attorney.',
+        'profile_based': True,  # Flag to indicate this section uses profile data
     },
     'incident_overview': {
         'model': IncidentOverview,
@@ -171,6 +172,11 @@ def document_list(request):
 @login_required
 def document_create(request):
     """Create a new document with all sections."""
+    # Check if user has completed their profile
+    if not request.user.has_complete_profile():
+        messages.warning(request, 'Please complete your profile before creating a document. Your profile information will appear on legal documents.')
+        return redirect('accounts:profile_complete')
+
     if request.method == 'POST':
         form = DocumentForm(request.POST)
         if form.is_valid():
@@ -187,8 +193,27 @@ def document_create(request):
                     order=order
                 )
 
-            messages.success(request, 'Document created! Let\'s start with your information.')
-            return redirect('documents:section_edit', document_id=document.id, section_type='plaintiff_info')
+            # Auto-populate plaintiff info from user profile
+            plaintiff_section = document.sections.get(section_type='plaintiff_info')
+            PlaintiffInfo.objects.create(
+                section=plaintiff_section,
+                first_name=request.user.first_name,
+                middle_name=request.user.middle_name,
+                last_name=request.user.last_name,
+                street_address=request.user.street_address,
+                city=request.user.city,
+                state=request.user.state,
+                zip_code=request.user.zip_code,
+                phone=request.user.phone,
+                email=request.user.email,
+                is_pro_se=True  # Default to pro se
+            )
+            # Mark plaintiff_info as complete since we have all required data
+            plaintiff_section.status = 'completed'
+            plaintiff_section.save()
+
+            messages.success(request, 'Document created! Your information has been pre-filled from your profile.')
+            return redirect('documents:tell_your_story', document_id=document.id)
     else:
         form = DocumentForm()
 
@@ -246,6 +271,8 @@ def section_edit(request, document_id, section_type):
     profile_prefilled = False
 
     # Get or create the section data
+    is_profile_based = config.get('profile_based', False)
+
     if is_multiple:
         # For multiple items (defendants, witnesses, evidence)
         items = Model.objects.filter(section=section)
@@ -259,26 +286,26 @@ def section_edit(request, document_id, section_type):
             instance = None
         items = None
 
-        # Pre-fill plaintiff info from user profile if creating new
-        initial_data = {}
+        # For plaintiff_info, ensure the PlaintiffInfo record exists with profile data
         if section_type == 'plaintiff_info' and instance is None:
+            # Create PlaintiffInfo from user profile
             user = request.user
-            # Pre-fill name fields from profile
-            if user.first_name:
-                initial_data['first_name'] = user.first_name
-                profile_prefilled = True
-            if user.middle_name:
-                initial_data['middle_name'] = user.middle_name
-                profile_prefilled = True
-            if user.last_name:
-                initial_data['last_name'] = user.last_name
-                profile_prefilled = True
-            # Also pre-fill email
-            if user.email:
-                initial_data['email'] = user.email
-                profile_prefilled = True
+            instance = Model.objects.create(
+                section=section,
+                first_name=user.first_name,
+                middle_name=user.middle_name,
+                last_name=user.last_name,
+                street_address=user.street_address,
+                city=user.city,
+                state=user.state,
+                zip_code=user.zip_code,
+                phone=user.phone,
+                email=user.email,
+                is_pro_se=True
+            )
+            profile_prefilled = True
 
-        form = Form(instance=instance, initial=initial_data if initial_data else None)
+        form = Form(instance=instance)
 
     if request.method == 'POST':
         if 'save_and_continue' in request.POST or 'save' in request.POST:
@@ -287,22 +314,6 @@ def section_edit(request, document_id, section_type):
                 obj = form.save(commit=False)
                 obj.section = section
                 obj.save()
-
-                # Sync plaintiff name info back to user profile
-                if section_type == 'plaintiff_info':
-                    user = request.user
-                    name_updated = False
-                    if obj.first_name and obj.first_name != user.first_name:
-                        user.first_name = obj.first_name
-                        name_updated = True
-                    if obj.middle_name != user.middle_name:
-                        user.middle_name = obj.middle_name
-                        name_updated = True
-                    if obj.last_name and obj.last_name != user.last_name:
-                        user.last_name = obj.last_name
-                        name_updated = True
-                    if name_updated:
-                        user.save()
 
                 # Auto-update section status based on completeness
                 if section.status not in ['completed', 'not_applicable']:
@@ -359,7 +370,12 @@ def section_edit(request, document_id, section_type):
         'status_form': SectionStatusForm(instance=section),
         'help_content': help_content,
         'profile_prefilled': profile_prefilled,
+        'is_profile_based': is_profile_based,
     }
+
+    # For profile-based sections, add user profile data for read-only display
+    if is_profile_based:
+        context['user_profile'] = request.user
 
     return render(request, 'documents/section_edit.html', context)
 

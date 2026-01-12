@@ -22,6 +22,7 @@ from .forms import (
     CustomSetPasswordForm,
     CustomPasswordChangeForm,
     ProfileEditForm,
+    ProfileCompleteForm,
 )
 
 
@@ -55,7 +56,7 @@ class RegisterView(CreateView):
 
     form_class = UserRegistrationForm
     template_name = 'accounts/register.html'
-    success_url = reverse_lazy('home')
+    success_url = reverse_lazy('accounts:profile_complete')
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
@@ -65,7 +66,7 @@ class RegisterView(CreateView):
     def form_valid(self, form):
         user = form.save()
         login(self.request, user)
-        messages.success(self.request, 'Account created successfully! Welcome!')
+        messages.success(self.request, 'Account created! Please complete your profile to continue.')
         return redirect(self.success_url)
 
 
@@ -140,6 +141,35 @@ def profile_edit(request):
         form = ProfileEditForm(instance=request.user)
 
     return render(request, 'accounts/profile_edit.html', {
+        'form': form,
+        'next_url': next_url,
+    })
+
+
+@login_required
+def profile_complete(request):
+    """Complete user profile - required before creating documents."""
+    # If profile is already complete, redirect to home or next URL
+    next_url = request.GET.get('next') or request.POST.get('next')
+
+    if request.user.has_complete_profile():
+        messages.info(request, 'Your profile is already complete.')
+        if next_url:
+            return redirect(next_url)
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = ProfileCompleteForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile completed! You can now create documents.')
+            if next_url:
+                return redirect(next_url)
+            return redirect('home')
+    else:
+        form = ProfileCompleteForm(instance=request.user)
+
+    return render(request, 'accounts/profile_complete.html', {
         'form': form,
         'next_url': next_url,
     })

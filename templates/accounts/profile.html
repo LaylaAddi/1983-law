@@ -43,9 +43,44 @@
                             </div>
 
                             <div class="mb-3">
+                                <label class="form-label text-muted small">Address</label>
+                                {% if user.street_address %}
+                                <p class="mb-0">
+                                    {{ user.street_address }}<br>
+                                    {{ user.city }}, {{ user.state }} {{ user.zip_code }}
+                                </p>
+                                {% else %}
+                                <p class="mb-0 text-warning">Not set - <a href="{% url 'accounts:profile_edit' %}">Complete profile</a></p>
+                                {% endif %}
+                            </div>
+
+                            {% if user.use_different_mailing_address %}
+                            <div class="mb-3">
+                                <label class="form-label text-muted small">Mailing Address</label>
+                                <p class="mb-0">
+                                    {{ user.mailing_street_address }}<br>
+                                    {{ user.mailing_city }}, {{ user.mailing_state }} {{ user.mailing_zip_code }}
+                                </p>
+                            </div>
+                            {% endif %}
+
+                            <div class="mb-3">
+                                <label class="form-label text-muted small">Phone</label>
+                                <p class="mb-0">{{ user.phone|default:"-" }}</p>
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label text-muted small">Member Since</label>
                                 <p class="mb-0">{{ user.created_at|date:"F j, Y" }}</p>
                             </div>
+
+                            {% if not user.has_complete_profile %}
+                            <div class="alert alert-warning mb-3">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Profile incomplete.</strong> Please complete your profile to create documents.
+                                <a href="{% url 'accounts:profile_complete' %}" class="alert-link">Complete now</a>
+                            </div>
+                            {% endif %}
 
                             <hr>
 

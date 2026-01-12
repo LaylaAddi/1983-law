@@ -12,6 +12,7 @@ urlpatterns = [
     # Profile
     path('profile/', views.profile, name='profile'),
     path('profile/edit/', views.profile_edit, name='profile_edit'),
+    path('profile/complete/', views.profile_complete, name='profile_complete'),
 
     # Password Reset (forgot password)
     path('password-reset/', views.CustomPasswordResetView.as_view(), name='password_reset'),
