@@ -383,3 +383,121 @@ Respond with ONLY the JSON object, no additional text."""
                 'success': False,
                 'error': str(e),
             }
+
+    def suggest_case_law(self, document_data: dict, available_cases: list) -> dict:
+        """
+        Analyze document content and suggest relevant case law from the curated database.
+
+        Args:
+            document_data: Dict containing incident narrative, rights violated, etc.
+            available_cases: List of dicts with case info from CaseLaw model
+
+        Returns:
+            dict with 'success', 'suggestions' containing case matches with explanations
+        """
+        import json
+
+        # Build context from document data
+        context_parts = []
+
+        if document_data.get('story_text'):
+            context_parts.append(f"User's Story: {document_data['story_text']}")
+        if document_data.get('summary'):
+            context_parts.append(f"Summary: {document_data['summary']}")
+        if document_data.get('detailed_narrative'):
+            context_parts.append(f"What happened: {document_data['detailed_narrative']}")
+        if document_data.get('physical_actions'):
+            context_parts.append(f"Physical actions: {document_data['physical_actions']}")
+        if document_data.get('rights_violated'):
+            context_parts.append(f"Rights claimed violated: {document_data['rights_violated']}")
+
+        if not context_parts:
+            return {
+                'success': False,
+                'error': 'No incident information found. Please fill out your story or incident narrative first.',
+            }
+
+        context = "\n\n".join(context_parts)
+
+        # Format available cases for the prompt
+        cases_json = []
+        for case in available_cases:
+            cases_json.append({
+                'id': case['id'],
+                'case_name': case['case_name'],
+                'citation': case['citation'],
+                'amendment': case['amendment'],
+                'right_category': case['right_category'],
+                'key_holding': case['key_holding'],
+                'facts_summary': case['facts_summary'],
+                'relevance_keywords': case['relevance_keywords'],
+            })
+
+        cases_formatted = json.dumps(cases_json, indent=2)
+
+        prompt = f"""You are a legal research assistant helping with a Section 1983 civil rights complaint. Analyze the incident described below and select the most relevant case law citations from the provided database.
+
+INCIDENT DETAILS:
+{context}
+
+AVAILABLE CASE LAW DATABASE:
+{cases_formatted}
+
+Your task:
+1. Identify which cases from the database are most relevant to the specific facts of this incident
+2. For each relevant case, explain WHY it applies to these specific facts (2-3 sentences)
+3. Select 3-8 of the most relevant cases (prioritize landmark cases and direct factual matches)
+4. Order them by relevance (most relevant first)
+
+IMPORTANT GUIDELINES:
+- Only suggest cases that genuinely apply to the facts described
+- Write explanations that connect the case law to the SPECIFIC facts of this incident
+- Use language like "Here, the plaintiff..." or "In this case..." to connect to the facts
+- Do NOT suggest cases just because they involve similar amendments - the facts must align
+- If the incident involves recording police, include Glik v. Cunniffe or similar
+- If excessive force was used, include Graham v. Connor
+- If there was an unlawful arrest, include Dunaway v. New York
+- Always consider including a qualified immunity case to address that defense
+
+Respond in this exact JSON format:
+{{
+    "suggestions": [
+        {{
+            "case_id": 123,
+            "relevance_explanation": "Your explanation of why this case specifically applies to these facts..."
+        }}
+    ],
+    "overall_strategy": "A brief 2-3 sentence summary of the legal strategy these cases support."
+}}"""
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a civil rights legal research assistant specializing in Section 1983 cases. You select relevant case law from a curated database and explain how each case applies to specific facts. Your explanations should be professional, accurate, and tailored to the plaintiff's specific situation. Always respond with valid JSON."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.3,
+                max_tokens=3000,
+                response_format={"type": "json_object"}
+            )
+
+            result = json.loads(response.choices[0].message.content)
+
+            return {
+                'success': True,
+                'suggestions': result.get('suggestions', []),
+                'overall_strategy': result.get('overall_strategy', ''),
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+            }

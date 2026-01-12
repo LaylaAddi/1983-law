@@ -124,6 +124,25 @@
     {% endfor %}
 </div>
 
+<!-- Case Law Citations -->
+<div class="card mb-4 border-primary mt-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5 class="mb-1"><i class="bi bi-book text-primary me-2"></i>Case Law Citations</h5>
+                <p class="text-muted mb-0">
+                    Strengthen your complaint with relevant legal precedents. Our AI will suggest cases based on your facts.
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <a href="{% url 'documents:case_law_list' document.id %}" class="btn btn-outline-primary">
+                    <i class="bi bi-stars me-1"></i>Manage Case Law
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Actions -->
 <div class="card mt-4">
     <div class="card-body">

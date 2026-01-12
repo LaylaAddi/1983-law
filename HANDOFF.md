@@ -6,7 +6,7 @@ A web application to help people create Section 1983 civil rights complaints. Us
 
 ---
 
-## Current State (Latest Commit: 58c1764)
+## Current State (Latest Session)
 
 The app is functional with the following features complete:
 
@@ -62,6 +62,7 @@ The app is functional with the following features complete:
    - **Tell Your Story** - User writes story, AI extracts data for all sections
    - **Parse Story API** - Backend endpoint for AI parsing (`/documents/{id}/parse-story/`)
    - **Auto-apply incident_overview** - Extracted fields automatically saved to database
+   - **Case Law Suggestions (NEW)** - AI selects relevant case law from curated database
 
 7. **Helper Features**
    - Federal district court lookup by city/state (auto-lookup on story parse)
@@ -116,8 +117,10 @@ The app is functional with the following features complete:
 ## AI Features Detail
 
 ### Files
-- `documents/services/openai_service.py` - OpenAI API integration
+- `documents/services/openai_service.py` - OpenAI API integration (includes `suggest_case_law` method)
 - `documents/test_stories.py` - 20 sample test stories for testing AI parsing
+- `documents/management/commands/load_case_law.py` - Management command to populate case law database
+- `templates/documents/case_law_list.html` - Case law management UI
 - `static/js/tell-story.js` - Tell Your Story frontend
 - `static/js/rewrite.js` - Rewrite feature frontend
 - `static/js/rights-analyze.js` - Rights analysis frontend
@@ -237,6 +240,53 @@ docker-compose exec web python manage.py createsuperuser
 | Damages | Physical, emotional, financial harm |
 | PriorComplaints | Previous complaints filed |
 | ReliefSought | What the plaintiff wants (money, declaration, etc.) |
+| CaseLaw | Curated database of landmark Section 1983 cases (NEW) |
+| DocumentCaseLaw | Links case law citations to documents with explanations (NEW) |
+
+---
+
+## Case Law Citations (NEW)
+
+### Overview
+AI-assisted case law suggestion feature that strengthens Section 1983 complaints with relevant legal precedents.
+
+### How It Works
+1. User tells their story or fills out incident narrative
+2. User clicks "Get AI Suggestions" on the Case Law page
+3. AI analyzes the facts and selects relevant cases from our curated database
+4. User reviews suggestions and accepts/edits/rejects each one
+5. Accepted citations appear in the document preview
+
+### Database
+- **CaseLaw model** - Curated database of ~40 landmark Section 1983 cases
+- **DocumentCaseLaw model** - Links cases to documents with AI explanations
+- Cases organized by amendment and right category
+- All citations are verified and accurate
+
+### Key Cases Included
+- **Graham v. Connor** (excessive force standard)
+- **Glik v. Cunniffe** (right to record police)
+- **Terry v. Ohio** (stop and frisk)
+- **Monroe v. Pape** (Section 1983 foundation)
+- **Monell v. Dept. of Social Services** (municipal liability)
+- And many more...
+
+### URLs
+- `/documents/{id}/case-law/` - View and manage citations
+- `/documents/{id}/suggest-case-law/` - Get AI suggestions (POST)
+- `/documents/{id}/accept-case-law/` - Accept a suggestion (POST)
+- `/documents/{id}/case-law/{citation_id}/update/` - Edit explanation (POST)
+- `/documents/{id}/case-law/{citation_id}/remove/` - Remove citation (POST)
+
+### Setup Commands (MUST RUN)
+```powershell
+# Run migrations for new models
+docker-compose exec web python manage.py makemigrations documents
+docker-compose exec web python manage.py migrate
+
+# Load case law database
+docker-compose exec web python manage.py load_case_law
+```
 
 ---
 
@@ -244,7 +294,6 @@ docker-compose exec web python manage.py createsuperuser
 
 - PDF generation of the complaint
 - E-filing integration
-- Case law citations (AI could assist - needs research)
 - Payment/subscription (DO NOT BUILD - user doesn't want Stripe)
 - Video extraction (DO NOT BUILD - user didn't ask for this)
 
@@ -252,9 +301,9 @@ docker-compose exec web python manage.py createsuperuser
 
 ## Future Plans
 
-- **Case Law Citations** - AI-assisted relevant case law for each rights violation
 - **Mobile App Version** - Tell Your Story will be key feature
 - **Voice Input** - Add speech-to-text (Whisper) later
+- **More Case Law** - Expand database with circuit-specific cases
 
 ---
 

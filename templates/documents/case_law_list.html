@@ -1,0 +1,521 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Case Law Citations - {{ document.title }} - 1983 Law{% endblock %}
+
+{% block extra_css %}
+<style>
+.case-card {
+    transition: all 0.2s ease;
+}
+.case-card:hover {
+    border-color: #0d6efd !important;
+}
+.case-card.accepted {
+    border-left: 4px solid #198754;
+}
+.case-card.suggested {
+    border-left: 4px solid #ffc107;
+}
+.landmark-badge {
+    font-size: 0.7rem;
+}
+.case-citation {
+    font-style: italic;
+    color: #6c757d;
+}
+.suggestion-card {
+    border: 2px dashed #dee2e6;
+    background: #f8f9fa;
+}
+.suggestion-card:hover {
+    border-color: #0d6efd;
+    background: #fff;
+}
+.explanation-text {
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'documents:document_list' %}">Documents</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'documents:document_detail' document.id %}">{{ document.title|truncatechars:30 }}</a></li>
+        <li class="breadcrumb-item active">Case Law Citations</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Header Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="bi bi-book me-2"></i>Case Law Citations</h4>
+                    <button type="button" class="btn btn-light btn-sm" id="suggestCaseLawBtn" data-document-id="{{ document.id }}">
+                        <i class="bi bi-stars me-1"></i>Get AI Suggestions
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-0">
+                    <h5 class="alert-heading"><i class="bi bi-lightbulb me-2"></i>Why Case Law Matters</h5>
+                    <p class="mb-2">
+                        Citing relevant case law strengthens your Section 1983 complaint by showing that courts have
+                        ruled in favor of plaintiffs in similar situations. Each citation supports your legal arguments.
+                    </p>
+                    <hr>
+                    <p class="mb-0 small">
+                        <strong>How it works:</strong> Click "Get AI Suggestions" and our AI will analyze your story
+                        to recommend the most relevant cases from our verified database. You can accept, edit, or
+                        remove any suggestion.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Suggestions Panel (hidden initially) -->
+        <div id="suggestionsPanel" class="card shadow-sm mb-4" style="display: none;">
+            <div class="card-header bg-warning text-dark">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-stars me-2"></i>AI-Suggested Case Law</h5>
+                    <button type="button" class="btn btn-sm btn-outline-dark" id="closeSuggestionsBtn">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Loading state -->
+                <div id="suggestionsLoading" class="text-center py-4">
+                    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Analyzing...</span>
+                    </div>
+                    <p class="text-muted">Analyzing your case and finding relevant precedents...</p>
+                    <small class="text-muted">This may take a few seconds</small>
+                </div>
+
+                <!-- Suggestions content -->
+                <div id="suggestionsContent" style="display: none;">
+                    <!-- Strategy summary -->
+                    <div id="strategySection" class="alert alert-success mb-4" style="display: none;">
+                        <h6 class="alert-heading"><i class="bi bi-diagram-3 me-2"></i>Legal Strategy</h6>
+                        <p class="mb-0" id="strategyText"></p>
+                    </div>
+
+                    <!-- Suggestions list -->
+                    <div id="suggestionsList"></div>
+
+                    <div class="text-center mt-3 text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Click "Add to Document" on any case you want to include in your complaint
+                    </div>
+                </div>
+
+                <!-- Error state -->
+                <div id="suggestionsError" class="alert alert-danger" style="display: none;">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <span id="suggestionsErrorMessage"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Citations -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bookmark-check me-2"></i>Your Citations ({{ citations.count }})</h5>
+            </div>
+            <div class="card-body">
+                {% if has_citations %}
+                    {% for amendment, amendment_citations in citations_by_amendment.items %}
+                    <div class="mb-4">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            {% if amendment == 'first' %}First Amendment{% endif %}
+                            {% if amendment == 'fourth' %}Fourth Amendment{% endif %}
+                            {% if amendment == 'fifth' %}Fifth Amendment{% endif %}
+                            {% if amendment == 'fourteenth' %}Fourteenth Amendment{% endif %}
+                        </h6>
+
+                        {% for citation in amendment_citations %}
+                        <div class="case-card card mb-3 accepted" data-citation-id="{{ citation.id }}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            {{ citation.case_law.case_name }}
+                                            {% if citation.case_law.is_landmark %}
+                                            <span class="badge bg-warning text-dark landmark-badge ms-2">Landmark</span>
+                                            {% endif %}
+                                        </h6>
+                                        <div class="case-citation small">{{ citation.case_law.citation }}</div>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-secondary edit-citation-btn"
+                                                data-citation-id="{{ citation.id }}"
+                                                data-bs-toggle="modal" data-bs-target="#editModal">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger remove-citation-btn"
+                                                data-citation-id="{{ citation.id }}"
+                                                data-case-name="{{ citation.case_law.case_name }}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="explanation-text mb-2">
+                                    {{ citation.get_explanation }}
+                                </div>
+
+                                <div class="small text-muted">
+                                    <span class="badge bg-secondary">{{ citation.get_right_category_display }}</span>
+                                    {% if citation.status == 'edited' %}
+                                    <span class="badge bg-info ms-1">Edited</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-book" style="font-size: 3rem;"></i>
+                        <p class="mt-3">No case law citations yet.</p>
+                        <p class="small">Click "Get AI Suggestions" above to find relevant cases for your complaint.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Document
+            </a>
+            <a href="{% url 'documents:document_preview' document.id %}" class="btn btn-primary">
+                Preview Document<i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- About Case Law -->
+        <div class="card mb-4 border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>About Citations</h5>
+            </div>
+            <div class="card-body small">
+                <p>
+                    <strong>Case law</strong> refers to legal precedents set by previous court decisions.
+                    When you cite relevant cases in your complaint, you show the court that similar
+                    situations have been decided in favor of plaintiffs.
+                </p>
+                <p class="mb-0">
+                    Our database contains <strong>verified, accurate citations</strong> from landmark
+                    Section 1983 cases. The AI selects the most relevant cases based on your specific facts.
+                </p>
+            </div>
+        </div>
+
+        <!-- Common Case Types -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-tags me-2"></i>Types of Cases</h5>
+            </div>
+            <div class="card-body small">
+                <ul class="mb-0">
+                    <li class="mb-2"><strong>Excessive Force</strong> - Graham v. Connor, Tennessee v. Garner</li>
+                    <li class="mb-2"><strong>Recording Police</strong> - Glik v. Cunniffe, Turner v. Driver</li>
+                    <li class="mb-2"><strong>False Arrest</strong> - Dunaway v. New York</li>
+                    <li class="mb-2"><strong>Free Speech</strong> - City of Houston v. Hill</li>
+                    <li class="mb-2"><strong>Qualified Immunity</strong> - Harlow v. Fitzgerald</li>
+                    <li><strong>Municipal Liability</strong> - Monell v. Dept. of Social Services</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Citation Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Citation Explanation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">How this case applies to your facts:</label>
+                    <textarea id="editExplanation" class="form-control" rows="5"
+                        placeholder="Explain how this case law specifically applies to the facts of your incident..."></textarea>
+                    <div class="form-text">
+                        Edit the AI-generated explanation to better match your specific situation.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveEditBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const documentId = {{ document.id }};
+    const csrfToken = '{{ csrf_token }}';
+
+    // Elements
+    const suggestBtn = document.getElementById('suggestCaseLawBtn');
+    const suggestionsPanel = document.getElementById('suggestionsPanel');
+    const closeSuggestionsBtn = document.getElementById('closeSuggestionsBtn');
+    const suggestionsLoading = document.getElementById('suggestionsLoading');
+    const suggestionsContent = document.getElementById('suggestionsContent');
+    const suggestionsError = document.getElementById('suggestionsError');
+    const suggestionsList = document.getElementById('suggestionsList');
+    const strategySection = document.getElementById('strategySection');
+    const strategyText = document.getElementById('strategyText');
+
+    // Get AI Suggestions
+    suggestBtn.addEventListener('click', async function() {
+        suggestionsPanel.style.display = 'block';
+        suggestionsLoading.style.display = 'block';
+        suggestionsContent.style.display = 'none';
+        suggestionsError.style.display = 'none';
+
+        try {
+            const response = await fetch(`/documents/${documentId}/suggest-case-law/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+            });
+
+            const result = await response.json();
+            suggestionsLoading.style.display = 'none';
+
+            if (result.success) {
+                displaySuggestions(result.suggestions, result.overall_strategy);
+                suggestionsContent.style.display = 'block';
+            } else {
+                document.getElementById('suggestionsErrorMessage').textContent = result.error;
+                suggestionsError.style.display = 'block';
+            }
+        } catch (error) {
+            suggestionsLoading.style.display = 'none';
+            document.getElementById('suggestionsErrorMessage').textContent = 'An error occurred. Please try again.';
+            suggestionsError.style.display = 'block';
+        }
+    });
+
+    // Close suggestions panel
+    closeSuggestionsBtn.addEventListener('click', function() {
+        suggestionsPanel.style.display = 'none';
+    });
+
+    // Display suggestions
+    function displaySuggestions(suggestions, strategy) {
+        suggestionsList.innerHTML = '';
+
+        if (strategy) {
+            strategyText.textContent = strategy;
+            strategySection.style.display = 'block';
+        }
+
+        if (suggestions.length === 0) {
+            suggestionsList.innerHTML = `
+                <div class="text-center py-4 text-muted">
+                    <p>No relevant cases found for your specific facts.</p>
+                    <p class="small">Try adding more detail to your story or incident narrative.</p>
+                </div>
+            `;
+            return;
+        }
+
+        suggestions.forEach(function(suggestion) {
+            const card = document.createElement('div');
+            card.className = 'suggestion-card card mb-3';
+            card.innerHTML = `
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h6 class="mb-1">
+                                ${suggestion.case_name}
+                                ${suggestion.is_landmark ? '<span class="badge bg-warning text-dark landmark-badge ms-2">Landmark</span>' : ''}
+                            </h6>
+                            <div class="case-citation small">${suggestion.citation}</div>
+                        </div>
+                        <button type="button" class="btn btn-success btn-sm add-case-btn"
+                                data-case-id="${suggestion.case_id}"
+                                data-explanation="${escapeHtml(suggestion.relevance_explanation)}">
+                            <i class="bi bi-plus-lg me-1"></i>Add to Document
+                        </button>
+                    </div>
+
+                    <div class="mb-2">
+                        <span class="badge bg-primary">${suggestion.amendment_display}</span>
+                        <span class="badge bg-secondary ms-1">${suggestion.right_category_display}</span>
+                    </div>
+
+                    <div class="explanation-text mb-2">
+                        <strong>How it applies:</strong> ${suggestion.relevance_explanation}
+                    </div>
+
+                    <details class="small">
+                        <summary class="text-muted cursor-pointer">View key holding</summary>
+                        <p class="mt-2 mb-0 text-muted">${suggestion.key_holding}</p>
+                    </details>
+                </div>
+            `;
+            suggestionsList.appendChild(card);
+        });
+
+        // Add event listeners to add buttons
+        document.querySelectorAll('.add-case-btn').forEach(function(btn) {
+            btn.addEventListener('click', addCaseToDocument);
+        });
+    }
+
+    // Add case to document
+    async function addCaseToDocument(event) {
+        const btn = event.currentTarget;
+        const caseId = btn.dataset.caseId;
+        const explanation = btn.dataset.explanation;
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        try {
+            const response = await fetch(`/documents/${documentId}/accept-case-law/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({
+                    case_id: caseId,
+                    relevance_explanation: explanation,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Added!';
+                btn.className = 'btn btn-outline-success btn-sm';
+                // Reload page to show new citation
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Add to Document';
+                alert(result.error || 'Failed to add case');
+            }
+        } catch (error) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Add to Document';
+            alert('An error occurred. Please try again.');
+        }
+    }
+
+    // Remove citation
+    document.querySelectorAll('.remove-citation-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+            const citationId = this.dataset.citationId;
+            const caseName = this.dataset.caseName;
+
+            if (!confirm(`Remove "${caseName}" from your document?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/documents/${documentId}/case-law/${citationId}/remove/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                    },
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Remove the card from DOM
+                    const card = document.querySelector(`.case-card[data-citation-id="${citationId}"]`);
+                    if (card) {
+                        card.remove();
+                    }
+                } else {
+                    alert(result.error || 'Failed to remove citation');
+                }
+            } catch (error) {
+                alert('An error occurred. Please try again.');
+            }
+        });
+    });
+
+    // Edit citation
+    let currentEditCitationId = null;
+
+    document.querySelectorAll('.edit-citation-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            currentEditCitationId = this.dataset.citationId;
+            const card = document.querySelector(`.case-card[data-citation-id="${currentEditCitationId}"]`);
+            const explanation = card.querySelector('.explanation-text').textContent.trim();
+            document.getElementById('editExplanation').value = explanation;
+        });
+    });
+
+    document.getElementById('saveEditBtn').addEventListener('click', async function() {
+        if (!currentEditCitationId) return;
+
+        const explanation = document.getElementById('editExplanation').value.trim();
+
+        try {
+            const response = await fetch(`/documents/${documentId}/case-law/${currentEditCitationId}/update/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({
+                    user_explanation: explanation,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Update the explanation in the card
+                const card = document.querySelector(`.case-card[data-citation-id="${currentEditCitationId}"]`);
+                card.querySelector('.explanation-text').textContent = explanation;
+
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+            } else {
+                alert(result.error || 'Failed to update citation');
+            }
+        } catch (error) {
+            alert('An error occurred. Please try again.');
+        }
+    });
+
+    // Utility function to escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML.replace(/"/g, '&quot;');
+    }
+});
+</script>
+{% endblock %}

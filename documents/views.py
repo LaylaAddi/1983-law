@@ -3,11 +3,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.db import models as db_models
 from .help_content import get_section_help
 from .models import (
     Document, DocumentSection, PlaintiffInfo, IncidentOverview,
     Defendant, IncidentNarrative, RightsViolated, Witness,
-    Evidence, Damages, PriorComplaints, ReliefSought
+    Evidence, Damages, PriorComplaints, ReliefSought,
+    CaseLaw, DocumentCaseLaw
 )
 
 
@@ -547,10 +549,17 @@ def document_preview(request, document_id):
                 'is_multiple': is_multiple,
             }
 
+    # Get case law citations for this document
+    case_law_citations = DocumentCaseLaw.objects.filter(
+        document=document,
+        status__in=['accepted', 'edited']
+    ).select_related('case_law').order_by('amendment', 'order')
+
     context = {
         'document': document,
         'sections_data': sections_data,
         'section_config': SECTION_CONFIG,
+        'case_law_citations': case_law_citations,
     }
 
     return render(request, 'documents/document_preview.html', context)
@@ -1151,6 +1160,267 @@ def apply_story_fields(request, document_id):
             'success': False,
             'error': 'Invalid request format.',
         })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}',
+        })
+
+
+# ============================================================
+# CASE LAW VIEWS
+# ============================================================
+
+@login_required
+def case_law_list(request, document_id):
+    """View and manage case law citations for a document."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Get existing citations for this document
+    citations = DocumentCaseLaw.objects.filter(document=document).select_related('case_law')
+
+    # Group by amendment for display
+    citations_by_amendment = {}
+    for citation in citations:
+        amendment = citation.amendment
+        if amendment not in citations_by_amendment:
+            citations_by_amendment[amendment] = []
+        citations_by_amendment[amendment].append(citation)
+
+    context = {
+        'document': document,
+        'citations': citations,
+        'citations_by_amendment': citations_by_amendment,
+        'has_citations': citations.exists(),
+    }
+
+    return render(request, 'documents/case_law_list.html', context)
+
+
+@login_required
+@require_POST
+def suggest_case_law(request, document_id):
+    """AJAX endpoint to get AI-suggested case law based on document facts."""
+    import json
+
+    try:
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        # Build document context from various sources
+        document_data = {
+            'story_text': document.story_text or '',
+        }
+
+        # Get incident narrative if available
+        try:
+            narrative_section = document.sections.get(section_type='incident_narrative')
+            narrative = narrative_section.incident_narrative
+            document_data.update({
+                'summary': narrative.summary or '',
+                'detailed_narrative': narrative.detailed_narrative or '',
+                'physical_actions': narrative.physical_actions or '',
+            })
+        except (DocumentSection.DoesNotExist, AttributeError):
+            pass
+
+        # Get rights violated if available
+        try:
+            rights_section = document.sections.get(section_type='rights_violated')
+            rights = rights_section.rights_violated
+            rights_list = []
+            if rights.first_amendment:
+                rights_list.append('First Amendment')
+            if rights.fourth_amendment:
+                rights_list.append('Fourth Amendment')
+            if rights.fifth_amendment:
+                rights_list.append('Fifth Amendment')
+            if rights.fourteenth_amendment:
+                rights_list.append('Fourteenth Amendment')
+            document_data['rights_violated'] = ', '.join(rights_list)
+        except (DocumentSection.DoesNotExist, AttributeError):
+            pass
+
+        # Check if we have enough context
+        if not document_data.get('story_text') and not document_data.get('detailed_narrative'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Please tell your story or fill out the incident narrative before getting case law suggestions.',
+            })
+
+        # Get available cases from database
+        available_cases = list(CaseLaw.objects.filter(is_active=True).values(
+            'id', 'case_name', 'citation', 'amendment', 'right_category',
+            'key_holding', 'facts_summary', 'relevance_keywords'
+        ))
+
+        if not available_cases:
+            return JsonResponse({
+                'success': False,
+                'error': 'Case law database is not yet populated. Please run: python manage.py load_case_law',
+            })
+
+        # Call AI to suggest cases
+        from .services.openai_service import OpenAIService
+        service = OpenAIService()
+        result = service.suggest_case_law(document_data, available_cases)
+
+        if result.get('success'):
+            # Enrich suggestions with full case data
+            suggestions = result.get('suggestions', [])
+            enriched = []
+            for suggestion in suggestions:
+                case_id = suggestion.get('case_id')
+                try:
+                    case = CaseLaw.objects.get(id=case_id)
+                    enriched.append({
+                        'case_id': case.id,
+                        'case_name': case.case_name,
+                        'citation': case.citation,
+                        'amendment': case.amendment,
+                        'amendment_display': case.get_amendment_display(),
+                        'right_category': case.right_category,
+                        'right_category_display': case.get_right_category_display(),
+                        'key_holding': case.key_holding,
+                        'citation_text': case.citation_text,
+                        'is_landmark': case.is_landmark,
+                        'relevance_explanation': suggestion.get('relevance_explanation', ''),
+                    })
+                except CaseLaw.DoesNotExist:
+                    continue
+
+            return JsonResponse({
+                'success': True,
+                'suggestions': enriched,
+                'overall_strategy': result.get('overall_strategy', ''),
+            })
+
+        return JsonResponse(result)
+
+    except ValueError as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}',
+        })
+
+
+@login_required
+@require_POST
+def accept_case_law(request, document_id):
+    """AJAX endpoint to accept suggested case law citations."""
+    import json
+
+    try:
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+        data = json.loads(request.body)
+
+        case_id = data.get('case_id')
+        relevance_explanation = data.get('relevance_explanation', '')
+
+        if not case_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'No case specified.',
+            })
+
+        case = get_object_or_404(CaseLaw, id=case_id)
+
+        # Check if already added
+        existing = DocumentCaseLaw.objects.filter(document=document, case_law=case).first()
+        if existing:
+            return JsonResponse({
+                'success': False,
+                'error': 'This case has already been added to your document.',
+            })
+
+        # Get the next order number
+        max_order = DocumentCaseLaw.objects.filter(document=document).aggregate(
+            max_order=db_models.Max('order')
+        )['max_order'] or 0
+
+        # Create the citation
+        citation = DocumentCaseLaw.objects.create(
+            document=document,
+            case_law=case,
+            amendment=case.amendment,
+            right_category=case.right_category,
+            relevance_explanation=relevance_explanation,
+            status='accepted',
+            order=max_order + 1,
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'{case.case_name} added to your document.',
+            'citation_id': citation.id,
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid request format.',
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}',
+        })
+
+
+@login_required
+@require_POST
+def update_case_law(request, document_id, citation_id):
+    """AJAX endpoint to update a case law citation (edit explanation)."""
+    import json
+
+    try:
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+        citation = get_object_or_404(DocumentCaseLaw, id=citation_id, document=document)
+
+        data = json.loads(request.body)
+        user_explanation = data.get('user_explanation', '').strip()
+
+        citation.user_explanation = user_explanation
+        citation.status = 'edited' if user_explanation else 'accepted'
+        citation.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Citation updated.',
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid request format.',
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}',
+        })
+
+
+@login_required
+@require_POST
+def remove_case_law(request, document_id, citation_id):
+    """AJAX endpoint to remove a case law citation from a document."""
+    try:
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+        citation = get_object_or_404(DocumentCaseLaw, id=citation_id, document=document)
+
+        case_name = citation.case_law.case_name
+        citation.delete()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'{case_name} removed from your document.',
+        })
+
     except Exception as e:
         return JsonResponse({
             'success': False,
