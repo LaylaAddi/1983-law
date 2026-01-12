@@ -7,7 +7,7 @@
 
     let DOCUMENT_ID = '';
     let PARSE_URL = '';
-    let selectedFields = new Set();
+    let parsedSections = null; // Store all parsed sections for auto-apply
     let currentQuestions = []; // Store questions for re-analysis
     let markedNaItems = []; // Store N/A items to filter from future questions
 
@@ -75,14 +75,12 @@
     function initStoryParsing() {
         const analyzeBtn = document.getElementById('analyzeStoryBtn');
         const closeResultsBtn = document.getElementById('closeResultsBtn');
-        const selectAllBtn = document.getElementById('selectAllBtn');
         const applySelectedBtn = document.getElementById('applySelectedBtn');
         const reanalyzeBtn = document.getElementById('reanalyzeBtn');
 
         analyzeBtn.addEventListener('click', handleAnalyzeClick);
         closeResultsBtn.addEventListener('click', hideResults);
-        selectAllBtn.addEventListener('click', handleSelectAll);
-        applySelectedBtn.addEventListener('click', handleApplySelected);
+        applySelectedBtn.addEventListener('click', handleApplyAll);
 
         if (reanalyzeBtn) {
             reanalyzeBtn.addEventListener('click', handleReanalyze);
@@ -220,9 +218,8 @@
         resultsError.style.display = 'none';
         resultsContent.style.display = 'block';
 
-        // Reset selections
-        selectedFields.clear();
-        updateSelectedCount();
+        // Store sections for auto-apply
+        parsedSections = sections;
 
         // Show questions with input fields if any
         if (sections.questions_to_ask && sections.questions_to_ask.length > 0) {
@@ -268,7 +265,7 @@
             questionsSection.style.display = 'none';
         }
 
-        // Build accordion sections
+        // Build accordion sections (display only, no checkboxes)
         accordion.innerHTML = '';
         let sectionIndex = 0;
 
@@ -281,19 +278,6 @@
                 sectionIndex++;
             }
         }
-
-        // Add event listeners to checkboxes
-        accordion.querySelectorAll('.field-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const fieldId = this.getAttribute('data-field-id');
-                if (this.checked) {
-                    selectedFields.add(fieldId);
-                } else {
-                    selectedFields.delete(fieldId);
-                }
-                updateSelectedCount();
-            });
-        });
 
         // Re-enable analyze button
         const analyzeBtn = document.getElementById('analyzeStoryBtn');
@@ -340,11 +324,13 @@
             if (sectionData.length === 0) return '';
 
             let itemsHtml = '';
+            let fieldCount = 0;
             sectionData.forEach((item, itemIndex) => {
                 const itemFields = buildFieldsList(item, sectionKey, itemIndex);
                 if (itemFields) {
+                    fieldCount += Object.values(item).filter(v => v !== null && v !== '' && v !== undefined).length;
                     itemsHtml += `
-                        <div class="mb-3 p-3 bg-light rounded">
+                        <div class="mb-3 p-3 border rounded">
                             <h6 class="text-muted mb-3">${sectionName} #${itemIndex + 1}</h6>
                             ${itemFields}
                         </div>
@@ -354,7 +340,7 @@
 
             if (!itemsHtml) return '';
 
-            return buildAccordionItem(sectionName, collapseId, isExpanded, itemsHtml, sectionKey);
+            return buildAccordionItem(sectionName, collapseId, isExpanded, itemsHtml, sectionKey, fieldCount);
         }
 
         // Handle object sections (incident_overview, incident_narrative, damages)
@@ -363,19 +349,20 @@
             if (sectionKey === 'rights_violated' && sectionData.suggested_violations) {
                 const violationsHtml = buildRightsViolatedSection(sectionData.suggested_violations);
                 if (!violationsHtml) return '';
-                return buildAccordionItem(sectionName, collapseId, isExpanded, violationsHtml, sectionKey);
+                const fieldCount = sectionData.suggested_violations.length;
+                return buildAccordionItem(sectionName, collapseId, isExpanded, violationsHtml, sectionKey, fieldCount);
             }
 
             const fieldsHtml = buildFieldsList(sectionData, sectionKey);
             if (!fieldsHtml) return '';
-            return buildAccordionItem(sectionName, collapseId, isExpanded, fieldsHtml, sectionKey);
+            const fieldCount = Object.values(sectionData).filter(v => v !== null && v !== '' && v !== undefined).length;
+            return buildAccordionItem(sectionName, collapseId, isExpanded, fieldsHtml, sectionKey, fieldCount);
         }
 
         return '';
     }
 
-    function buildAccordionItem(title, collapseId, isExpanded, content, sectionKey) {
-        const fieldCount = (content.match(/field-checkbox/g) || []).length;
+    function buildAccordionItem(title, collapseId, isExpanded, content, sectionKey, fieldCount = 0) {
         const badge = fieldCount > 0 ? `<span class="badge bg-primary ms-2">${fieldCount} fields</span>` : '';
 
         return `
@@ -403,30 +390,12 @@
             if (fieldValue === null || fieldValue === '' || fieldValue === undefined) continue;
 
             const fieldName = FIELD_NAMES[fieldKey] || fieldKey;
-            const fieldId = itemIndex !== null
-                ? `${sectionKey}-${itemIndex}-${fieldKey}`
-                : `${sectionKey}-${fieldKey}`;
 
             fieldsHtml += `
-                <div class="field-item mb-3 p-2 border rounded">
-                    <div class="d-flex align-items-start">
-                        <div class="form-check me-3">
-                            <input class="form-check-input field-checkbox" type="checkbox"
-                                   id="check-${fieldId}"
-                                   data-field-id="${fieldId}"
-                                   data-section="${sectionKey}"
-                                   data-field="${fieldKey}"
-                                   data-value="${escapeHtml(String(fieldValue))}"
-                                   ${itemIndex !== null ? `data-item-index="${itemIndex}"` : ''}>
-                        </div>
-                        <div class="flex-grow-1">
-                            <label class="form-check-label fw-bold" for="check-${fieldId}">
-                                ${fieldName}
-                            </label>
-                            <div class="field-value mt-1 text-muted small">
-                                ${escapeHtml(String(fieldValue))}
-                            </div>
-                        </div>
+                <div class="field-item mb-2 p-2 border rounded bg-light">
+                    <div class="fw-bold small text-primary">${fieldName}</div>
+                    <div class="field-value text-dark">
+                        ${escapeHtml(String(fieldValue))}
                     </div>
                 </div>
             `;
@@ -441,29 +410,13 @@
         let html = '<p class="text-muted small mb-3">Based on your story, these rights may have been violated:</p>';
 
         violations.forEach((violation, index) => {
-            const fieldId = `rights_violated-${index}-${violation.right}`;
             const rightName = violation.right.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
             html += `
-                <div class="field-item mb-3 p-2 border rounded">
-                    <div class="d-flex align-items-start">
-                        <div class="form-check me-3">
-                            <input class="form-check-input field-checkbox" type="checkbox"
-                                   id="check-${fieldId}"
-                                   data-field-id="${fieldId}"
-                                   data-section="rights_violated"
-                                   data-field="${violation.right}"
-                                   data-amendment="${violation.amendment}"
-                                   data-reason="${escapeHtml(violation.reason)}">
-                        </div>
-                        <div class="flex-grow-1">
-                            <label class="form-check-label fw-bold" for="check-${fieldId}">
-                                ${rightName}
-                            </label>
-                            <div class="text-muted small mt-1">
-                                ${escapeHtml(violation.reason)}
-                            </div>
-                        </div>
+                <div class="field-item mb-2 p-2 border rounded bg-light">
+                    <div class="fw-bold text-primary">${rightName}</div>
+                    <div class="text-muted small mt-1">
+                        ${escapeHtml(violation.reason)}
                     </div>
                 </div>
             `;
@@ -494,49 +447,60 @@
         resultsPanel.style.display = 'none';
     }
 
-    function handleSelectAll() {
-        const checkboxes = document.querySelectorAll('.field-checkbox');
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-
-        checkboxes.forEach(cb => {
-            cb.checked = !allChecked;
-            const fieldId = cb.getAttribute('data-field-id');
-            if (cb.checked) {
-                selectedFields.add(fieldId);
-            } else {
-                selectedFields.delete(fieldId);
-            }
-        });
-
-        updateSelectedCount();
-    }
-
-    function updateSelectedCount() {
-        const countSpan = document.getElementById('acceptedCount');
-        const applyBtn = document.getElementById('applySelectedBtn');
-
-        countSpan.textContent = `${selectedFields.size} field${selectedFields.size !== 1 ? 's' : ''} selected`;
-        applyBtn.disabled = selectedFields.size === 0;
-    }
-
-    function handleApplySelected() {
-        if (selectedFields.size === 0) {
-            alert('Please select at least one field to apply.');
+    function handleApplyAll() {
+        if (!parsedSections) {
+            alert('No analysis results to apply. Please analyze your story first.');
             return;
         }
 
-        // Collect all selected field data
+        // Convert parsed sections to fields array for the API
         const fieldsToApply = [];
-        document.querySelectorAll('.field-checkbox:checked').forEach(cb => {
-            fieldsToApply.push({
-                section: cb.getAttribute('data-section'),
-                field: cb.getAttribute('data-field'),
-                value: cb.getAttribute('data-value'),
-                itemIndex: cb.getAttribute('data-item-index'),
-                amendment: cb.getAttribute('data-amendment'),
-                reason: cb.getAttribute('data-reason')
-            });
-        });
+
+        for (const [sectionKey, sectionData] of Object.entries(parsedSections)) {
+            if (sectionKey === 'questions_to_ask') continue;
+
+            // Handle array sections (defendants, witnesses, evidence)
+            if (Array.isArray(sectionData)) {
+                sectionData.forEach((item, itemIndex) => {
+                    for (const [fieldKey, fieldValue] of Object.entries(item)) {
+                        if (fieldValue === null || fieldValue === '' || fieldValue === undefined) continue;
+                        fieldsToApply.push({
+                            section: sectionKey,
+                            field: fieldKey,
+                            value: String(fieldValue),
+                            itemIndex: String(itemIndex)
+                        });
+                    }
+                });
+            }
+            // Handle rights_violated specially
+            else if (sectionKey === 'rights_violated' && sectionData.suggested_violations) {
+                sectionData.suggested_violations.forEach((violation) => {
+                    fieldsToApply.push({
+                        section: 'rights_violated',
+                        field: violation.right,
+                        amendment: violation.amendment,
+                        reason: violation.reason
+                    });
+                });
+            }
+            // Handle object sections (incident_overview, incident_narrative, damages)
+            else if (typeof sectionData === 'object') {
+                for (const [fieldKey, fieldValue] of Object.entries(sectionData)) {
+                    if (fieldValue === null || fieldValue === '' || fieldValue === undefined) continue;
+                    fieldsToApply.push({
+                        section: sectionKey,
+                        field: fieldKey,
+                        value: String(fieldValue)
+                    });
+                }
+            }
+        }
+
+        if (fieldsToApply.length === 0) {
+            alert('No fields found to apply.');
+            return;
+        }
 
         // Disable button and show saving state
         const applyBtn = document.getElementById('applySelectedBtn');
@@ -560,8 +524,8 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Store in sessionStorage as backup
-                sessionStorage.setItem('storyParsedFields', JSON.stringify(fieldsToApply));
+                // Clear N/A items since we're done with this story
+                sessionStorage.removeItem(`naItems-${DOCUMENT_ID}`);
                 // Go to document
                 window.location.href = `/documents/${DOCUMENT_ID}/`;
             } else {
