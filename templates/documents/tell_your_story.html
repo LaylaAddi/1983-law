@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tell Your Story - {{ document.title }} - 1983 Law{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/tell-story.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'documents:document_list' %}">Documents</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'documents:document_detail' document.id %}">{{ document.title|truncatechars:30 }}</a></li>
+        <li class="breadcrumb-item active">Tell Your Story</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-chat-quote me-2"></i>Tell Your Story</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    Describe what happened in your own words. Don't worry about legal language - just tell us your story naturally.
+                    Our AI will analyze your account and help fill out the relevant sections of your complaint.
+                </p>
+
+                <div class="mb-4">
+                    <label for="storyText" class="form-label fw-bold">What happened?</label>
+                    <textarea
+                        id="storyText"
+                        class="form-control"
+                        rows="12"
+                        placeholder="Example: I was recording outside the library on the sidewalk when a lady came up to me and said I couldn't record. She called the cops. Officer Higgins arrived and said I needed to move or I would be arrested. I had to leave because I didn't want to be arrested. This happened around 1:15 PM on August 8th..."
+                    ></textarea>
+                    <div class="form-text">
+                        <i class="bi bi-lightbulb me-1"></i>
+                        Include details like: when and where it happened, who was involved (names, badge numbers),
+                        what was said, what actions were taken, and any witnesses or evidence you have.
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Document
+                    </a>
+                    <button type="button" id="analyzeStoryBtn" class="btn btn-primary btn-lg" data-document-id="{{ document.id }}">
+                        <i class="bi bi-stars me-1"></i>Analyze My Story
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Panel (hidden initially) -->
+        <div id="resultsPanel" class="card shadow-sm mb-4" style="display: none;">
+            <div class="card-header bg-success text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-check-circle me-2"></i>Analysis Results</h5>
+                    <button type="button" class="btn btn-sm btn-outline-light" id="closeResultsBtn">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Loading state -->
+                <div id="resultsLoading" class="text-center py-4">
+                    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Analyzing...</span>
+                    </div>
+                    <p class="text-muted">Analyzing your story...</p>
+                    <small class="text-muted">This may take a few seconds</small>
+                </div>
+
+                <!-- Results content -->
+                <div id="resultsContent" style="display: none;">
+                    <!-- Questions to ask -->
+                    <div id="questionsSection" class="mb-4" style="display: none;">
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading"><i class="bi bi-question-circle me-2"></i>Missing Information</h6>
+                            <p class="mb-2 small">We couldn't find the following information in your story. Consider adding these details:</p>
+                            <ul id="questionsList" class="mb-0 small"></ul>
+                        </div>
+                    </div>
+
+                    <!-- Sections accordion -->
+                    <div class="accordion" id="sectionsAccordion"></div>
+
+                    <!-- Actions -->
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small" id="acceptedCount">0 fields selected</span>
+                            <div>
+                                <button type="button" class="btn btn-outline-secondary me-2" id="selectAllBtn">
+                                    <i class="bi bi-check-all me-1"></i>Select All
+                                </button>
+                                <button type="button" class="btn btn-success" id="applySelectedBtn" disabled>
+                                    <i class="bi bi-save me-1"></i>Apply Selected to Document
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error state -->
+                <div id="resultsError" class="alert alert-danger" style="display: none;">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <span id="errorMessage"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Tips -->
+        <div class="card mb-4 border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Tips for a Good Story</h5>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0 small">
+                    <li class="mb-2"><strong>Be specific about dates and times</strong> - "August 8th at 1:15 PM" instead of "last week"</li>
+                    <li class="mb-2"><strong>Name the people involved</strong> - Include officer names, badge numbers if you know them</li>
+                    <li class="mb-2"><strong>Describe the location</strong> - Include the city, state, and specific location</li>
+                    <li class="mb-2"><strong>Quote what was said</strong> - Include dialogue as accurately as you can remember</li>
+                    <li class="mb-2"><strong>Describe physical actions</strong> - Did anyone push, grab, handcuff, or touch you?</li>
+                    <li class="mb-2"><strong>Mention witnesses</strong> - Were there other people who saw what happened?</li>
+                    <li><strong>Note any evidence</strong> - Do you have video, photos, or documents?</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- What happens next -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>What Happens Next</h5>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0 small">
+                    <li class="mb-2">Write your story in the text box</li>
+                    <li class="mb-2">Click "Analyze My Story"</li>
+                    <li class="mb-2">AI extracts information for each section</li>
+                    <li class="mb-2">Review suggestions - accept or skip each one</li>
+                    <li class="mb-2">Apply selected fields to your document</li>
+                    <li>Continue editing sections to add any missing details</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/tell-story.js' %}"></script>
+{% endblock %}

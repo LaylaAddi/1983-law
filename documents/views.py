@@ -751,3 +751,55 @@ def lookup_district_court(request):
             'success': False,
             'error': str(e),
         })
+
+
+@login_required
+def tell_your_story(request, document_id):
+    """Page for users to tell their story and have AI extract form fields."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    return render(request, 'documents/tell_your_story.html', {
+        'document': document,
+    })
+
+
+@login_required
+@require_POST
+def parse_story(request, document_id):
+    """AJAX endpoint to parse user's story and extract structured data."""
+    import json
+
+    try:
+        # Verify document ownership
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        data = json.loads(request.body)
+        story_text = data.get('story', '').strip()
+
+        if not story_text:
+            return JsonResponse({
+                'success': False,
+                'error': 'Please enter your story first.',
+            })
+
+        from .services.openai_service import OpenAIService
+        service = OpenAIService()
+        result = service.parse_story(story_text)
+
+        return JsonResponse(result)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid request format.',
+        })
+    except ValueError as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}',
+        })

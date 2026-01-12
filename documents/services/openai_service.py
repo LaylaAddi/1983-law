@@ -246,3 +246,126 @@ Only include rights that are clearly supported by the facts. Be accurate - don't
                 'success': False,
                 'error': str(e),
             }
+
+    def parse_story(self, story_text: str) -> dict:
+        """
+        Parse a user's story/narrative and extract structured data for all document sections.
+
+        Args:
+            story_text: Raw text from user describing their incident
+
+        Returns:
+            dict with 'success', 'sections' containing extracted fields per section
+        """
+        if not story_text or not story_text.strip():
+            return {
+                'success': False,
+                'error': 'No story text provided',
+            }
+
+        prompt = f"""Analyze this personal account of a civil rights incident and extract specific information that can be used to fill out a Section 1983 complaint form.
+
+IMPORTANT RULES:
+- ONLY extract information that is EXPLICITLY stated in the text
+- DO NOT guess, infer, or make up any information
+- If information is not clearly provided, set the field to null
+- Use the exact wording from the story when possible
+- For dates/times, only extract if explicitly mentioned
+
+USER'S STORY:
+{story_text}
+
+Extract information for the following sections. Set any field to null if not explicitly mentioned:
+
+{{
+    "incident_overview": {{
+        "incident_date": "YYYY-MM-DD format or partial date if only month/day given, null if not mentioned",
+        "incident_time": "HH:MM format or description like 'afternoon', null if not mentioned",
+        "incident_location": "specific address or location description, null if not mentioned",
+        "city": "city name only if explicitly mentioned, null otherwise",
+        "state": "two-letter state code only if explicitly mentioned, null otherwise"
+    }},
+    "incident_narrative": {{
+        "summary": "2-3 sentence summary of what happened, written in third person",
+        "detailed_narrative": "full chronological account, written in third person",
+        "what_were_you_doing": "what the plaintiff was doing before/during incident",
+        "initial_contact": "how the encounter with officials began",
+        "what_was_said": "dialogue or statements made by parties",
+        "physical_actions": "any physical actions taken by anyone",
+        "how_it_ended": "how the encounter concluded"
+    }},
+    "defendants": [
+        {{
+            "name": "officer/official name if mentioned, null otherwise",
+            "badge_number": "badge number if mentioned, null otherwise",
+            "title": "title like 'Officer', 'Sergeant', etc. if mentioned",
+            "agency": "department or agency name if mentioned, null otherwise",
+            "description": "description of this defendant's role/actions"
+        }}
+    ],
+    "witnesses": [
+        {{
+            "name": "witness name if mentioned, null otherwise",
+            "description": "description like 'a woman', 'my friend', etc.",
+            "what_they_saw": "what this witness observed"
+        }}
+    ],
+    "evidence": [
+        {{
+            "type": "video, photo, document, etc.",
+            "description": "description of the evidence"
+        }}
+    ],
+    "damages": {{
+        "physical_injuries": "description of physical injuries, null if none mentioned",
+        "emotional_distress": "description of emotional harm, null if none mentioned",
+        "financial_losses": "description of financial losses, null if none mentioned",
+        "other_damages": "any other damages mentioned"
+    }},
+    "rights_violated": {{
+        "suggested_violations": [
+            {{
+                "right": "field name like first_amendment_speech",
+                "amendment": "first, fourth, fifth, or fourteenth",
+                "reason": "brief explanation of why this right may have been violated"
+            }}
+        ]
+    }},
+    "questions_to_ask": [
+        "List questions to ask the user to fill in missing important information"
+    ]
+}}
+
+Respond with ONLY the JSON object, no additional text."""
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a legal document assistant that extracts structured information from personal narratives. Be extremely accurate - only extract what is explicitly stated. Never guess or infer. If information isn't clearly provided, use null. Always respond with valid JSON."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.1,  # Very low temperature for accuracy
+                max_tokens=3000,
+                response_format={"type": "json_object"}
+            )
+
+            import json
+            result = json.loads(response.choices[0].message.content)
+
+            return {
+                'success': True,
+                'sections': result,
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+            }

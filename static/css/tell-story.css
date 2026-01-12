@@ -1,0 +1,166 @@
+/* Tell Your Story Page Styles */
+
+/* Story textarea */
+#storyText {
+    font-size: 1rem;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 250px;
+}
+
+#storyText::placeholder {
+    color: #adb5bd;
+    font-style: italic;
+}
+
+#storyText:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+/* Analyze button */
+#analyzeStoryBtn {
+    min-width: 200px;
+}
+
+#analyzeStoryBtn:disabled {
+    cursor: wait;
+}
+
+/* Results panel */
+#resultsPanel {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Loading spinner */
+#resultsLoading .spinner-border {
+    color: #0d6efd;
+}
+
+/* Accordion sections */
+.accordion-button:not(.collapsed) {
+    background-color: #e7f1ff;
+    color: #0d6efd;
+}
+
+.accordion-button .badge {
+    font-size: 0.7rem;
+}
+
+/* Field items */
+.field-item {
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.field-item:hover {
+    background: #f8f9fa;
+    border-color: #0d6efd !important;
+}
+
+.field-item .form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.15rem;
+}
+
+.field-item .form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.field-item .form-check-label {
+    color: #212529;
+}
+
+.field-value {
+    background: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    border-left: 3px solid #0d6efd;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Selected state */
+.field-item:has(.form-check-input:checked) {
+    background: #d1e7dd;
+    border-color: #198754 !important;
+}
+
+.field-item:has(.form-check-input:checked) .field-value {
+    border-left-color: #198754;
+}
+
+/* Questions section */
+#questionsSection ul {
+    padding-left: 1.25rem;
+}
+
+#questionsSection li {
+    margin-bottom: 0.25rem;
+}
+
+/* Action buttons */
+#selectAllBtn,
+#applySelectedBtn {
+    min-width: 150px;
+}
+
+#applySelectedBtn:disabled {
+    cursor: not-allowed;
+}
+
+/* Tips card */
+.card-body ul li strong {
+    color: #0d6efd;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #storyText {
+        min-height: 200px;
+    }
+
+    #analyzeStoryBtn {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    #selectAllBtn,
+    #applySelectedBtn {
+        width: 100%;
+    }
+}
+
+/* Error state */
+#resultsError {
+    margin: 0;
+}
+
+/* Multiple items in array sections */
+.accordion-body > .mb-3.p-3.bg-light {
+    border: 1px solid #dee2e6;
+}
+
+.accordion-body > .mb-3.p-3.bg-light h6 {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
