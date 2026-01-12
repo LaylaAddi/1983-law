@@ -758,9 +758,16 @@ def tell_your_story(request, document_id):
     """Page for users to tell their story and have AI extract form fields."""
     document = get_object_or_404(Document, id=document_id, user=request.user)
 
-    return render(request, 'documents/tell_your_story.html', {
+    context = {
         'document': document,
-    })
+    }
+
+    # Include test stories for test users
+    if request.user.is_test_user:
+        from .test_stories import get_test_stories
+        context['test_stories'] = get_test_stories()
+
+    return render(request, 'documents/tell_your_story.html', context)
 
 
 @login_required

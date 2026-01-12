@@ -29,6 +29,25 @@
                     Our AI will analyze your account and help fill out the relevant sections of your complaint.
                 </p>
 
+                {% if test_stories %}
+                <!-- Test User: Sample Stories Dropdown -->
+                <div class="mb-4">
+                    <div class="alert alert-info py-2">
+                        <i class="bi bi-lightning me-1"></i>
+                        <strong>Test Mode:</strong> Select a sample story to test the AI parsing
+                    </div>
+                    <label for="testStorySelect" class="form-label fw-bold">Select Sample Story</label>
+                    <select id="testStorySelect" class="form-select mb-2">
+                        <option value="">-- Choose a test story --</option>
+                        {% for story in test_stories %}
+                        <option value="{{ story.id }}" data-story="{{ story.story|escapejs }}">
+                            {{ story.id }}. {{ story.title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
                 <div class="mb-4">
                     <label for="storyText" class="form-label fw-bold">What happened?</label>
                     <textarea
@@ -156,4 +175,24 @@
 
 {% block extra_js %}
 <script src="{% static 'js/tell-story.js' %}"></script>
+{% if test_stories %}
+<script>
+// Test story dropdown handler
+document.addEventListener('DOMContentLoaded', function() {
+    const storySelect = document.getElementById('testStorySelect');
+    const storyText = document.getElementById('storyText');
+
+    if (storySelect && storyText) {
+        storySelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const story = selectedOption.getAttribute('data-story');
+            if (story) {
+                storyText.value = story;
+                storyText.focus();
+            }
+        });
+    }
+});
+</script>
+{% endif %}
 {% endblock %}
