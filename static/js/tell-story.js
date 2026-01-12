@@ -9,6 +9,7 @@
     let PARSE_URL = '';
     let selectedFields = new Set();
     let currentQuestions = []; // Store questions for re-analysis
+    let markedNaItems = []; // Store N/A items to filter from future questions
 
     // Section display names
     const SECTION_NAMES = {
@@ -60,6 +61,13 @@
         if (analyzeBtn) {
             DOCUMENT_ID = analyzeBtn.getAttribute('data-document-id');
             PARSE_URL = `/documents/${DOCUMENT_ID}/parse-story/`;
+
+            // Load previously marked N/A items from sessionStorage
+            const storedNaItems = sessionStorage.getItem(`naItems-${DOCUMENT_ID}`);
+            if (storedNaItems) {
+                markedNaItems = JSON.parse(storedNaItems);
+            }
+
             initStoryParsing();
         }
     });
@@ -103,7 +111,7 @@
 
         // Collect answers from missing info fields
         const additionalInfo = [];
-        const naItems = [];
+        const newNaItems = [];
 
         document.querySelectorAll('.missing-info-input').forEach(input => {
             const naCheckbox = document.getElementById(input.id + '-na');
@@ -111,7 +119,7 @@
 
             if (naCheckbox && naCheckbox.checked) {
                 // Track N/A items so GPT won't ask again
-                naItems.push(question);
+                newNaItems.push(question);
                 return;
             }
             const value = input.value.trim();
@@ -120,18 +128,28 @@
             }
         });
 
+        // Add new N/A items to persistent list (avoid duplicates)
+        newNaItems.forEach(item => {
+            if (!markedNaItems.includes(item)) {
+                markedNaItems.push(item);
+            }
+        });
+
+        // Save N/A items to sessionStorage for persistence
+        sessionStorage.setItem(`naItems-${DOCUMENT_ID}`, JSON.stringify(markedNaItems));
+
         // Append additional info to story if any
         if (additionalInfo.length > 0) {
             storyText += '\n\nAdditional information:\n' + additionalInfo.join('\n');
         }
 
         // Append N/A items so GPT knows not to ask about them
-        if (naItems.length > 0) {
-            storyText += '\n\nNot applicable or unknown:\n' + naItems.map(q => `- ${q}`).join('\n');
+        if (markedNaItems.length > 0) {
+            storyText += '\n\nNot applicable or unknown:\n' + markedNaItems.map(q => `- ${q}`).join('\n');
         }
 
         // Update the textarea with the combined story
-        if (additionalInfo.length > 0 || naItems.length > 0) {
+        if (additionalInfo.length > 0 || markedNaItems.length > 0) {
             document.getElementById('storyText').value = storyText;
         }
 
@@ -208,26 +226,44 @@
 
         // Show questions with input fields if any
         if (sections.questions_to_ask && sections.questions_to_ask.length > 0) {
-            currentQuestions = sections.questions_to_ask;
-            questionsList.innerHTML = buildQuestionsInputs(sections.questions_to_ask);
-            questionsSection.style.display = 'block';
-
-            // Add event listeners for N/A checkboxes
-            document.querySelectorAll('.na-checkbox').forEach(cb => {
-                cb.addEventListener('change', function() {
-                    const inputId = this.id.replace('-na', '');
-                    const input = document.getElementById(inputId);
-                    if (input) {
-                        input.disabled = this.checked;
-                        if (this.checked) {
-                            input.value = '';
-                            input.classList.add('bg-light');
-                        } else {
-                            input.classList.remove('bg-light');
-                        }
-                    }
+            // Filter out questions that match previously marked N/A items
+            const filteredQuestions = sections.questions_to_ask.filter(question => {
+                // Check if this question matches any N/A item (case-insensitive partial match)
+                return !markedNaItems.some(naItem => {
+                    const naLower = naItem.toLowerCase();
+                    const questionLower = question.toLowerCase();
+                    // Check for substantial overlap (either contains the other or similar keywords)
+                    return naLower.includes(questionLower.slice(0, 20)) ||
+                           questionLower.includes(naLower.slice(0, 20)) ||
+                           naLower === questionLower;
                 });
             });
+
+            currentQuestions = filteredQuestions;
+
+            if (filteredQuestions.length > 0) {
+                questionsList.innerHTML = buildQuestionsInputs(filteredQuestions);
+                questionsSection.style.display = 'block';
+
+                // Add event listeners for N/A checkboxes
+                document.querySelectorAll('.na-checkbox').forEach(cb => {
+                    cb.addEventListener('change', function() {
+                        const inputId = this.id.replace('-na', '');
+                        const input = document.getElementById(inputId);
+                        if (input) {
+                            input.disabled = this.checked;
+                            if (this.checked) {
+                                input.value = '';
+                                input.classList.add('bg-light');
+                            } else {
+                                input.classList.remove('bg-light');
+                            }
+                        }
+                    });
+                });
+            } else {
+                questionsSection.style.display = 'none';
+            }
         } else {
             questionsSection.style.display = 'none';
         }
