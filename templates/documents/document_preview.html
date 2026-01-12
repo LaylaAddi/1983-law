@@ -331,9 +331,9 @@
                         {% endif %}
                     </p>
                     {% if defendant.badge_number %}<p class="mb-1"><strong>Badge:</strong> {{ defendant.badge_number }}</p>{% endif %}
-                    {% if defendant.title_position %}<p class="mb-1"><strong>Position:</strong> {{ defendant.title_position }}</p>{% endif %}
-                    {% if defendant.department_agency %}<p class="mb-1"><strong>Department:</strong> {{ defendant.department_agency }}</p>{% endif %}
-                    {% if defendant.actions_taken %}<p class="mb-0"><strong>Actions:</strong> {{ defendant.actions_taken }}</p>{% endif %}
+                    {% if defendant.title_rank %}<p class="mb-1"><strong>Position:</strong> {{ defendant.title_rank }}</p>{% endif %}
+                    {% if defendant.agency_name %}<p class="mb-1"><strong>Agency:</strong> {{ defendant.agency_name }}</p>{% endif %}
+                    {% if defendant.description %}<p class="mb-0"><strong>Description:</strong> {{ defendant.description }}</p>{% endif %}
                 </div>
                 <div class="item-actions">
                     <button class="btn btn-sm btn-outline-danger" onclick="deleteItem('defendants', {{ defendant.id }})">
@@ -363,24 +363,30 @@
     {% if section_data.data %}
     <div class="data-field">
         <div class="data-label">What Happened</div>
-        <div class="data-value">{{ section_data.data.narrative|default:"Not provided"|linebreaks }}</div>
+        <div class="data-value">{{ section_data.data.detailed_narrative|default:"Not provided"|linebreaks }}</div>
     </div>
-    {% if section_data.data.what_you_were_doing %}
+    {% if section_data.data.what_were_you_doing %}
     <div class="data-field">
         <div class="data-label">What You Were Doing Before the Incident</div>
-        <div class="data-value">{{ section_data.data.what_you_were_doing|linebreaks }}</div>
+        <div class="data-value">{{ section_data.data.what_were_you_doing|linebreaks }}</div>
     </div>
     {% endif %}
-    {% if section_data.data.officer_statements %}
+    {% if section_data.data.what_was_said %}
     <div class="data-field">
-        <div class="data-label">Officer Statements</div>
-        <div class="data-value">{{ section_data.data.officer_statements|linebreaks }}</div>
+        <div class="data-label">What Was Said</div>
+        <div class="data-value">{{ section_data.data.what_was_said|linebreaks }}</div>
     </div>
     {% endif %}
-    {% if section_data.data.your_statements %}
+    {% if section_data.data.physical_actions %}
     <div class="data-field">
-        <div class="data-label">Your Statements</div>
-        <div class="data-value">{{ section_data.data.your_statements|linebreaks }}</div>
+        <div class="data-label">Physical Actions</div>
+        <div class="data-value">{{ section_data.data.physical_actions|linebreaks }}</div>
+    </div>
+    {% endif %}
+    {% if section_data.data.how_it_ended %}
+    <div class="data-field">
+        <div class="data-label">How It Ended</div>
+        <div class="data-value">{{ section_data.data.how_it_ended|linebreaks }}</div>
     </div>
     {% endif %}
     {% else %}
@@ -519,51 +525,51 @@
     </div>
     {% if section_data.data %}
     <div class="row">
-        {% if section_data.data.physical_injuries %}
+        {% if section_data.data.physical_injury_description %}
         <div class="col-md-6">
             <div class="data-field">
                 <div class="data-label">Physical Injuries</div>
-                <div class="data-value">{{ section_data.data.physical_injuries|linebreaks }}</div>
+                <div class="data-value">{{ section_data.data.physical_injury_description|linebreaks }}</div>
             </div>
         </div>
         {% endif %}
-        {% if section_data.data.emotional_distress %}
+        {% if section_data.data.emotional_distress_description %}
         <div class="col-md-6">
             <div class="data-field">
                 <div class="data-label">Emotional Distress</div>
-                <div class="data-value">{{ section_data.data.emotional_distress|linebreaks }}</div>
+                <div class="data-value">{{ section_data.data.emotional_distress_description|linebreaks }}</div>
             </div>
         </div>
         {% endif %}
-        {% if section_data.data.medical_treatment %}
+        {% if section_data.data.medical_treatment_description %}
         <div class="col-md-6">
             <div class="data-field">
                 <div class="data-label">Medical Treatment</div>
-                <div class="data-value">{{ section_data.data.medical_treatment|linebreaks }}</div>
+                <div class="data-value">{{ section_data.data.medical_treatment_description|linebreaks }}</div>
             </div>
         </div>
         {% endif %}
-        {% if section_data.data.financial_losses %}
+        {% if section_data.data.property_damage_description %}
         <div class="col-md-6">
             <div class="data-field">
-                <div class="data-label">Financial Losses</div>
-                <div class="data-value">{{ section_data.data.financial_losses|linebreaks }}</div>
-            </div>
-        </div>
-        {% endif %}
-        {% if section_data.data.property_damage %}
-        <div class="col-md-12">
-            <div class="data-field">
                 <div class="data-label">Property Damage</div>
-                <div class="data-value">{{ section_data.data.property_damage|linebreaks }}</div>
+                <div class="data-value">{{ section_data.data.property_damage_description|linebreaks }}</div>
             </div>
         </div>
         {% endif %}
-        {% if section_data.data.other_damages %}
+        {% if section_data.data.lost_wages %}
+        <div class="col-md-6">
+            <div class="data-field">
+                <div class="data-label">Lost Wages</div>
+                <div class="data-value">${{ section_data.data.lost_wages_amount|floatformat:2|default:"Amount not specified" }}</div>
+            </div>
+        </div>
+        {% endif %}
+        {% if section_data.data.other_expenses_description %}
         <div class="col-md-12">
             <div class="data-field">
-                <div class="data-label">Other Damages</div>
-                <div class="data-value">{{ section_data.data.other_damages|linebreaks }}</div>
+                <div class="data-label">Other Expenses</div>
+                <div class="data-value">{{ section_data.data.other_expenses_description|linebreaks }}</div>
             </div>
         </div>
         {% endif %}
