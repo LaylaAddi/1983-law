@@ -199,6 +199,12 @@ def document_create(request):
 def document_detail(request, document_id):
     """Overview of document with all sections and their status."""
     document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Redirect to Tell Your Story if not completed
+    if not document.has_story():
+        messages.info(request, 'Please tell your story first. This helps us understand your case and pre-fill relevant sections.')
+        return redirect('documents:tell_your_story', document_id=document.id)
+
     sections = document.sections.all()
 
     # Add config info to each section
