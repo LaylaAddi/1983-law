@@ -8,6 +8,7 @@
     let DOCUMENT_ID = '';
     let PARSE_URL = '';
     let selectedFields = new Set();
+    let currentQuestions = []; // Store questions for re-analysis
 
     // Section display names
     const SECTION_NAMES = {
@@ -68,11 +69,16 @@
         const closeResultsBtn = document.getElementById('closeResultsBtn');
         const selectAllBtn = document.getElementById('selectAllBtn');
         const applySelectedBtn = document.getElementById('applySelectedBtn');
+        const reanalyzeBtn = document.getElementById('reanalyzeBtn');
 
         analyzeBtn.addEventListener('click', handleAnalyzeClick);
         closeResultsBtn.addEventListener('click', hideResults);
         selectAllBtn.addEventListener('click', handleSelectAll);
         applySelectedBtn.addEventListener('click', handleApplySelected);
+
+        if (reanalyzeBtn) {
+            reanalyzeBtn.addEventListener('click', handleReanalyze);
+        }
     }
 
     function handleAnalyzeClick() {
@@ -88,6 +94,39 @@
             return;
         }
 
+        analyzeStory(storyText);
+    }
+
+    function handleReanalyze() {
+        // Get original story text
+        let storyText = document.getElementById('storyText').value.trim();
+
+        // Collect answers from missing info fields
+        const additionalInfo = [];
+        document.querySelectorAll('.missing-info-input').forEach(input => {
+            const naCheckbox = document.getElementById(input.id + '-na');
+            if (naCheckbox && naCheckbox.checked) {
+                // Skip N/A items
+                return;
+            }
+            const value = input.value.trim();
+            if (value) {
+                const question = input.getAttribute('data-question');
+                additionalInfo.push(`${question}: ${value}`);
+            }
+        });
+
+        // Append additional info to story if any
+        if (additionalInfo.length > 0) {
+            storyText += '\n\nAdditional information:\n' + additionalInfo.join('\n');
+            // Update the textarea with the combined story
+            document.getElementById('storyText').value = storyText;
+        }
+
+        analyzeStory(storyText);
+    }
+
+    function analyzeStory(storyText) {
         // Show results panel and loading state
         showLoading();
 
@@ -155,12 +194,28 @@
         selectedFields.clear();
         updateSelectedCount();
 
-        // Show questions if any
+        // Show questions with input fields if any
         if (sections.questions_to_ask && sections.questions_to_ask.length > 0) {
-            questionsList.innerHTML = sections.questions_to_ask
-                .map(q => `<li>${escapeHtml(q)}</li>`)
-                .join('');
+            currentQuestions = sections.questions_to_ask;
+            questionsList.innerHTML = buildQuestionsInputs(sections.questions_to_ask);
             questionsSection.style.display = 'block';
+
+            // Add event listeners for N/A checkboxes
+            document.querySelectorAll('.na-checkbox').forEach(cb => {
+                cb.addEventListener('change', function() {
+                    const inputId = this.id.replace('-na', '');
+                    const input = document.getElementById(inputId);
+                    if (input) {
+                        input.disabled = this.checked;
+                        if (this.checked) {
+                            input.value = '';
+                            input.classList.add('bg-light');
+                        } else {
+                            input.classList.remove('bg-light');
+                        }
+                    }
+                });
+            });
         } else {
             questionsSection.style.display = 'none';
         }
@@ -168,8 +223,6 @@
         // Build accordion sections
         accordion.innerHTML = '';
         let sectionIndex = 0;
-        let totalFields = 0;
-        let filledFields = 0;
 
         for (const [sectionKey, sectionData] of Object.entries(sections)) {
             if (sectionKey === 'questions_to_ask') continue;
@@ -198,6 +251,33 @@
         const analyzeBtn = document.getElementById('analyzeStoryBtn');
         analyzeBtn.disabled = false;
         analyzeBtn.innerHTML = '<i class="bi bi-stars me-1"></i>Analyze My Story';
+    }
+
+    function buildQuestionsInputs(questions) {
+        let html = '';
+        questions.forEach((question, index) => {
+            const inputId = `missing-info-${index}`;
+            html += `
+                <div class="mb-3">
+                    <label for="${inputId}" class="form-label small fw-bold">${escapeHtml(question)}</label>
+                    <div class="input-group">
+                        <input type="text"
+                               class="form-control missing-info-input"
+                               id="${inputId}"
+                               data-question="${escapeHtml(question)}"
+                               placeholder="Enter your answer...">
+                        <div class="input-group-text">
+                            <input class="form-check-input mt-0 na-checkbox"
+                                   type="checkbox"
+                                   id="${inputId}-na"
+                                   title="Not applicable / Don't know">
+                            <label class="ms-1 small" for="${inputId}-na">N/A</label>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        return html;
     }
 
     function buildSectionAccordion(sectionKey, sectionData, index) {
@@ -410,18 +490,11 @@
             });
         });
 
-        // For now, show a summary and redirect to document
-        // In the future, this could save directly via AJAX
-        const message = `Selected ${fieldsToApply.length} field(s) to apply.\n\n` +
-            `Note: In this version, you'll need to manually enter the suggested values into each section. ` +
-            `The values have been analyzed and are shown above.\n\n` +
-            `Click OK to go to your document and start filling in the sections.`;
+        // Store selections in sessionStorage for use when filling sections
+        sessionStorage.setItem('storyParsedFields', JSON.stringify(fieldsToApply));
 
-        if (confirm(message)) {
-            // Store selections in sessionStorage for potential future use
-            sessionStorage.setItem('storyParsedFields', JSON.stringify(fieldsToApply));
-            window.location.href = `/documents/${DOCUMENT_ID}/`;
-        }
+        // Go directly to document - story is already saved
+        window.location.href = `/documents/${DOCUMENT_ID}/`;
     }
 
     function escapeHtml(text) {
