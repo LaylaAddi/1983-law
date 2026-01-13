@@ -1,26 +1,45 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
+from decimal import Decimal
 
 
 class Document(models.Model):
     """Main document representing a Section 1983 civil rights complaint."""
 
-    STATUS_CHOICES = [
+    PAYMENT_STATUS_CHOICES = [
         ('draft', 'Draft'),
-        ('in_progress', 'In Progress'),
-        ('review', 'Ready for Review'),
-        ('complete', 'Complete'),
+        ('expired', 'Expired'),
+        ('paid', 'Paid'),
+        ('finalized', 'Finalized'),
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='documents')
     title = models.CharField(max_length=255)  # Required field
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='draft')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     # Story - mandatory first step before filling sections
     story_text = models.TextField(blank=True, help_text='Raw story text from user (voice or typed)')
     story_told_at = models.DateTimeField(null=True, blank=True, help_text='When the story was submitted')
+
+    # Payment tracking
+    stripe_payment_id = models.CharField(max_length=255, blank=True, help_text='Stripe Payment Intent ID')
+    promo_code_used = models.ForeignKey(
+        'PromoCode', on_delete=models.SET_NULL, null=True, blank=True, related_name='documents_used'
+    )
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    finalized_at = models.DateTimeField(null=True, blank=True)
+
+    # AI usage tracking
+    ai_generations_used = models.IntegerField(default=0, help_text='Free tier: count of generations used')
+    ai_cost_used = models.DecimalField(
+        max_digits=10, decimal_places=4, default=0,
+        help_text='Paid tier: actual API cost in dollars'
+    )
 
     class Meta:
         ordering = ['-updated_at']
@@ -48,6 +67,118 @@ class Document(models.Model):
     def has_story(self):
         """Check if user has told their story (required before filling sections)."""
         return bool(self.story_text and self.story_text.strip())
+
+    # Payment and access control methods
+
+    def get_expiry_time(self):
+        """Get the expiry datetime based on payment status."""
+        if self.payment_status == 'draft':
+            return self.created_at + timedelta(hours=settings.DRAFT_EXPIRY_HOURS)
+        elif self.payment_status == 'paid' and self.paid_at:
+            return self.paid_at + timedelta(days=settings.PAID_EXPIRY_DAYS)
+        return None
+
+    def get_time_remaining(self):
+        """Get time remaining as a timedelta, or None if expired/finalized."""
+        expiry = self.get_expiry_time()
+        if expiry:
+            remaining = expiry - timezone.now()
+            if remaining.total_seconds() > 0:
+                return remaining
+        return None
+
+    def get_time_remaining_display(self):
+        """Get human-readable time remaining."""
+        remaining = self.get_time_remaining()
+        if not remaining:
+            return "Expired"
+
+        total_seconds = int(remaining.total_seconds())
+        days = total_seconds // 86400
+        hours = (total_seconds % 86400) // 3600
+
+        if days > 0:
+            return f"{days} day{'s' if days != 1 else ''}, {hours} hour{'s' if hours != 1 else ''}"
+        elif hours > 0:
+            minutes = (total_seconds % 3600) // 60
+            return f"{hours} hour{'s' if hours != 1 else ''}, {minutes} min"
+        else:
+            minutes = total_seconds // 60
+            return f"{minutes} minute{'s' if minutes != 1 else ''}"
+
+    def is_expired(self):
+        """Check if document has expired."""
+        if self.payment_status in ['finalized']:
+            return False
+        if self.payment_status == 'expired':
+            return True
+        expiry = self.get_expiry_time()
+        if expiry and timezone.now() > expiry:
+            return True
+        return False
+
+    def check_and_update_expiry(self):
+        """Check expiry and update status if needed. Call this on document access."""
+        if self.payment_status == 'draft' and self.is_expired():
+            self.payment_status = 'expired'
+            self.save(update_fields=['payment_status'])
+            return True
+        return False
+
+    def can_edit(self):
+        """Check if document can be edited."""
+        if self.payment_status == 'finalized':
+            return False
+        if self.payment_status == 'expired':
+            return False
+        if self.is_expired():
+            return False
+        return True
+
+    def can_use_ai(self):
+        """Check if AI features are available."""
+        if not self.can_edit():
+            return False
+        if self.payment_status == 'draft':
+            return self.ai_generations_used < settings.FREE_AI_GENERATIONS
+        elif self.payment_status == 'paid':
+            return float(self.ai_cost_used) < settings.PAID_AI_BUDGET
+        return False
+
+    def get_ai_usage_display(self):
+        """Get AI usage display string."""
+        if self.payment_status == 'draft':
+            remaining = settings.FREE_AI_GENERATIONS - self.ai_generations_used
+            return f"{remaining} of {settings.FREE_AI_GENERATIONS} free AI uses remaining"
+        elif self.payment_status == 'paid':
+            budget = Decimal(str(settings.PAID_AI_BUDGET))
+            remaining_pct = max(0, int(((budget - self.ai_cost_used) / budget) * 100))
+            return f"AI: {remaining_pct}% remaining"
+        return "AI unavailable"
+
+    def get_ai_remaining_percent(self):
+        """Get AI remaining as percentage (for paid tier)."""
+        if self.payment_status == 'paid':
+            budget = Decimal(str(settings.PAID_AI_BUDGET))
+            return max(0, int(((budget - self.ai_cost_used) / budget) * 100))
+        return 0
+
+    def record_ai_usage(self, cost=None):
+        """Record AI usage. For draft: increment count. For paid: add cost."""
+        if self.payment_status == 'draft':
+            self.ai_generations_used += 1
+            self.save(update_fields=['ai_generations_used'])
+        elif self.payment_status == 'paid' and cost:
+            self.ai_cost_used += Decimal(str(cost))
+            self.save(update_fields=['ai_cost_used'])
+
+    def get_price(self, promo_code=None):
+        """Calculate price with optional promo code discount."""
+        base_price = Decimal(str(settings.DOCUMENT_PRICE))
+        if promo_code:
+            discount = base_price * Decimal(str(settings.PROMO_DISCOUNT_PERCENT)) / 100
+            return base_price - discount
+        return base_price
 
 
 class DocumentSection(models.Model):
@@ -562,3 +693,79 @@ class DocumentCaseLaw(models.Model):
     def get_explanation(self):
         """Return user explanation if edited, otherwise AI explanation."""
         return self.user_explanation if self.user_explanation else self.relevance_explanation
+
+
+class PromoCode(models.Model):
+    """Referral/promo codes created by users."""
+
+    owner = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='promo_code'
+    )
+    code = models.CharField(max_length=20, unique=True, help_text='Unique promo code (e.g., SMITH25)')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Stats (denormalized for quick display)
+    times_used = models.IntegerField(default=0)
+    total_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.code} ({self.owner.email})"
+
+    def record_usage(self, amount_earned):
+        """Record a successful use of this promo code."""
+        self.times_used += 1
+        self.total_earned += Decimal(str(amount_earned))
+        self.save(update_fields=['times_used', 'total_earned'])
+
+
+class PromoCodeUsage(models.Model):
+    """Tracks each use of a promo code for payout management."""
+
+    PAYOUT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+    ]
+
+    promo_code = models.ForeignKey(PromoCode, on_delete=models.CASCADE, related_name='usages')
+    document = models.OneToOneField(Document, on_delete=models.CASCADE, related_name='promo_usage')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='promo_code_usages'
+    )
+
+    # Payment details
+    stripe_payment_id = models.CharField(max_length=255)
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
+    referral_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, default=settings.REFERRAL_PAYOUT
+    )
+
+    # Payout tracking
+    payout_status = models.CharField(max_length=20, choices=PAYOUT_STATUS_CHOICES, default='pending')
+    payout_reference = models.CharField(
+        max_length=255, blank=True,
+        help_text='Reference for payout (PayPal transaction ID, check number, etc.)'
+    )
+    payout_date = models.DateTimeField(null=True, blank=True)
+    payout_notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Promo Code Usage'
+        verbose_name_plural = 'Promo Code Usages'
+
+    def __str__(self):
+        return f"{self.promo_code.code} used by {self.user.email}"
+
+    def mark_paid(self, reference, notes=''):
+        """Mark this usage as paid out."""
+        self.payout_status = 'paid'
+        self.payout_reference = reference
+        self.payout_date = timezone.now()
+        self.payout_notes = notes
+        self.save()

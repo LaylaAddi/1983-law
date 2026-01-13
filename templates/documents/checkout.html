@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}Checkout - {{ document.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="bi bi-credit-card me-2"></i>Complete Your Purchase</h4>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ document.title }}</h5>
+                    <p class="text-muted">Complete legal document with AI assistance, ready for federal court filing.</p>
+
+                    <hr>
+
+                    <!-- Pricing -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Document Price:</span>
+                            <span class="h5 mb-0">${{ base_price }}</span>
+                        </div>
+                        <div id="discount-display" class="d-flex justify-content-between align-items-center text-success" style="display: none !important;">
+                            <span>Promo Discount ({{ discount_percent }}%):</span>
+                            <span class="h5 mb-0">-$<span id="discount-amount">{{ base_price|floatformat:2 }}</span></span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="h5 mb-0">Total:</span>
+                            <span class="h4 mb-0 text-primary" id="total-price">${{ base_price }}</span>
+                        </div>
+                    </div>
+
+                    <form method="post" id="checkout-form">
+                        {% csrf_token %}
+
+                        <!-- Promo Code Section -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Have a promo code?</label>
+                            <div class="input-group mb-2">
+                                <input type="text"
+                                       class="form-control"
+                                       name="promo_code"
+                                       id="promo-code-input"
+                                       placeholder="Enter code (e.g., SMITH25)"
+                                       style="text-transform: uppercase;">
+                                <button type="button" class="btn btn-outline-secondary" id="validate-promo-btn">
+                                    Apply
+                                </button>
+                            </div>
+                            <div id="promo-feedback" class="small"></div>
+                        </div>
+
+                        <!-- No Promo Confirmation -->
+                        <div class="mb-4" id="no-promo-section">
+                            <div class="form-check">
+                                <input type="checkbox"
+                                       class="form-check-input"
+                                       name="no_promo_confirmed"
+                                       id="no-promo-confirmed">
+                                <label class="form-check-label" for="no-promo-confirmed">
+                                    I confirm I do not have a promo code
+                                </label>
+                            </div>
+                            <small class="text-muted">
+                                Check this box if you don't have a promo code to proceed with checkout.
+                            </small>
+                        </div>
+
+                        <!-- What's Included -->
+                        <div class="mb-4 p-3 bg-light rounded">
+                            <h6 class="fw-bold mb-2"><i class="bi bi-check-circle text-success me-1"></i>What's Included:</h6>
+                            <ul class="mb-0 small">
+                                <li>Full access to AI-powered document generation</li>
+                                <li>45 days to edit and refine your document</li>
+                                <li>Court-ready PDF download</li>
+                                <li>Case law citations integrated automatically</li>
+                            </ul>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100" id="checkout-btn" disabled>
+                            <i class="bi bi-lock me-2"></i>Proceed to Payment
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            <i class="bi bi-shield-check me-1"></i>Secure payment powered by Stripe
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-3">
+                <a href="{% url 'documents:document_detail' document.id %}" class="text-muted">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Document
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const promoInput = document.getElementById('promo-code-input');
+    const validateBtn = document.getElementById('validate-promo-btn');
+    const promoFeedback = document.getElementById('promo-feedback');
+    const noPromoCheckbox = document.getElementById('no-promo-confirmed');
+    const noPromoSection = document.getElementById('no-promo-section');
+    const checkoutBtn = document.getElementById('checkout-btn');
+    const discountDisplay = document.getElementById('discount-display');
+    const totalPrice = document.getElementById('total-price');
+
+    const basePrice = {{ base_price }};
+    const discountedPrice = {{ discounted_price }};
+    let promoValid = false;
+
+    function updateCheckoutButton() {
+        checkoutBtn.disabled = !(promoValid || noPromoCheckbox.checked);
+    }
+
+    function showPromoApplied() {
+        discountDisplay.style.display = 'flex';
+        totalPrice.textContent = '$' + discountedPrice.toFixed(2);
+        noPromoSection.style.display = 'none';
+        promoValid = true;
+        updateCheckoutButton();
+    }
+
+    function resetPromo() {
+        discountDisplay.style.display = 'none';
+        totalPrice.textContent = '$' + basePrice.toFixed(2);
+        noPromoSection.style.display = 'block';
+        promoValid = false;
+        updateCheckoutButton();
+    }
+
+    validateBtn.addEventListener('click', function() {
+        const code = promoInput.value.trim().toUpperCase();
+        if (!code) {
+            promoFeedback.innerHTML = '<span class="text-danger">Please enter a code</span>';
+            return;
+        }
+
+        promoFeedback.innerHTML = '<span class="text-muted">Validating...</span>';
+
+        fetch('{% url "documents:validate_promo_code" %}?code=' + encodeURIComponent(code))
+            .then(response => response.json())
+            .then(data => {
+                if (data.valid) {
+                    promoFeedback.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Code applied! ' + data.discount_percent + '% discount</span>';
+                    showPromoApplied();
+                } else {
+                    promoFeedback.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle me-1"></i>' + data.error + '</span>';
+                    resetPromo();
+                }
+            })
+            .catch(error => {
+                promoFeedback.innerHTML = '<span class="text-danger">Error validating code</span>';
+                resetPromo();
+            });
+    });
+
+    promoInput.addEventListener('input', function() {
+        if (promoValid) {
+            resetPromo();
+            promoFeedback.innerHTML = '';
+        }
+    });
+
+    noPromoCheckbox.addEventListener('change', updateCheckoutButton);
+
+    // Enter key on promo input
+    promoInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            validateBtn.click();
+        }
+    });
+});
+</script>
+{% endblock %}

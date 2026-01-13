@@ -42,4 +42,17 @@ urlpatterns = [
     path('<int:document_id>/accept-case-law/', views.accept_case_law, name='accept_case_law'),
     path('<int:document_id>/case-law/<int:citation_id>/update/', views.update_case_law, name='update_case_law'),
     path('<int:document_id>/case-law/<int:citation_id>/remove/', views.remove_case_law, name='remove_case_law'),
+
+    # Payment
+    path('<int:document_id>/checkout/', views.checkout, name='checkout'),
+    path('<int:document_id>/checkout/success/', views.checkout_success, name='checkout_success'),
+    path('<int:document_id>/checkout/cancel/', views.checkout_cancel, name='checkout_cancel'),
+    path('webhook/stripe/', views.stripe_webhook, name='stripe_webhook'),
+
+    # Finalization
+    path('<int:document_id>/finalize/', views.finalize_document, name='finalize'),
+
+    # Promo codes
+    path('my-referral-code/', views.my_referral_code, name='my_referral_code'),
+    path('validate-promo-code/', views.validate_promo_code, name='validate_promo_code'),
 ]

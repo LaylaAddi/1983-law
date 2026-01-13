@@ -2,7 +2,8 @@ from django.contrib import admin
 from .models import (
     Document, DocumentSection, PlaintiffInfo, IncidentOverview,
     Defendant, IncidentNarrative, RightsViolated, Witness,
-    Evidence, Damages, PriorComplaints, ReliefSought
+    Evidence, Damages, PriorComplaints, ReliefSought,
+    PromoCode, PromoCodeUsage
 )
 
 
@@ -14,10 +15,30 @@ class DocumentSectionInline(admin.TabularInline):
 
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
-    list_display = ['title', 'user', 'status', 'get_completion_percentage', 'created_at', 'updated_at']
-    list_filter = ['status', 'created_at']
+    list_display = [
+        'title', 'user', 'payment_status', 'get_completion_percentage',
+        'ai_generations_used', 'amount_paid', 'created_at'
+    ]
+    list_filter = ['payment_status', 'created_at']
     search_fields = ['title', 'user__email']
+    readonly_fields = ['stripe_payment_id', 'paid_at', 'finalized_at', 'ai_cost_used']
     inlines = [DocumentSectionInline]
+
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'title', 'payment_status')
+        }),
+        ('Story', {
+            'fields': ('story_text', 'story_told_at'),
+            'classes': ('collapse',)
+        }),
+        ('Payment', {
+            'fields': ('stripe_payment_id', 'promo_code_used', 'amount_paid', 'paid_at', 'finalized_at')
+        }),
+        ('AI Usage', {
+            'fields': ('ai_generations_used', 'ai_cost_used')
+        }),
+    )
 
     def get_completion_percentage(self, obj):
         return f"{obj.get_completion_percentage()}%"
@@ -50,3 +71,46 @@ class WitnessAdmin(admin.ModelAdmin):
 class EvidenceAdmin(admin.ModelAdmin):
     list_display = ['title', 'evidence_type', 'is_in_possession', 'needs_subpoena']
     list_filter = ['evidence_type', 'is_in_possession', 'needs_subpoena']
+
+
+class PromoCodeUsageInline(admin.TabularInline):
+    model = PromoCodeUsage
+    extra = 0
+    readonly_fields = ['document', 'user', 'stripe_payment_id', 'amount_paid', 'referral_amount', 'created_at']
+    fields = ['document', 'user', 'amount_paid', 'referral_amount', 'payout_status', 'payout_reference', 'created_at']
+    can_delete = False
+
+
+@admin.register(PromoCode)
+class PromoCodeAdmin(admin.ModelAdmin):
+    list_display = ['code', 'owner', 'is_active', 'times_used', 'total_earned', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['code', 'owner__email']
+    readonly_fields = ['times_used', 'total_earned', 'created_at']
+    inlines = [PromoCodeUsageInline]
+
+
+@admin.register(PromoCodeUsage)
+class PromoCodeUsageAdmin(admin.ModelAdmin):
+    list_display = [
+        'promo_code', 'user', 'amount_paid', 'referral_amount',
+        'payout_status', 'payout_date', 'created_at'
+    ]
+    list_filter = ['payout_status', 'created_at']
+    search_fields = ['promo_code__code', 'user__email', 'stripe_payment_id']
+    readonly_fields = ['promo_code', 'document', 'user', 'stripe_payment_id', 'amount_paid', 'referral_amount', 'created_at']
+    actions = ['mark_as_paid']
+
+    fieldsets = (
+        ('Usage Details', {
+            'fields': ('promo_code', 'document', 'user', 'stripe_payment_id', 'amount_paid', 'referral_amount', 'created_at')
+        }),
+        ('Payout', {
+            'fields': ('payout_status', 'payout_reference', 'payout_date', 'payout_notes')
+        }),
+    )
+
+    @admin.action(description='Mark selected usages as paid')
+    def mark_as_paid(self, request, queryset):
+        updated = queryset.filter(payout_status='pending').update(payout_status='paid')
+        self.message_user(request, f'{updated} usage(s) marked as paid.')

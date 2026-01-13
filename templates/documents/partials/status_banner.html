@@ -1,0 +1,52 @@
+{% load static %}
+
+{# Document Status Banner - shows time remaining, AI usage, and actions #}
+
+{% if document.payment_status == 'draft' %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <i class="bi bi-clock me-2"></i>
+        <strong>DRAFT</strong> - {{ document.get_time_remaining_display }} remaining
+        <span class="mx-2">|</span>
+        <i class="bi bi-robot me-1"></i>{{ document.get_ai_usage_display }}
+    </div>
+    <a href="{% url 'documents:checkout' document.id %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-credit-card me-1"></i>Upgrade Now - $79
+    </a>
+</div>
+
+{% elif document.payment_status == 'expired' %}
+<div class="alert alert-danger d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>EXPIRED</strong> - Document is locked
+    </div>
+    <a href="{% url 'documents:checkout' document.id %}" class="btn btn-danger btn-sm">
+        <i class="bi bi-unlock me-1"></i>Unlock Now - $79
+    </a>
+</div>
+
+{% elif document.payment_status == 'paid' %}
+<div class="alert alert-success d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <i class="bi bi-check-circle me-2"></i>
+        <strong>PAID</strong> - {{ document.get_time_remaining_display }} remaining
+        <span class="mx-2">|</span>
+        <i class="bi bi-robot me-1"></i>{{ document.get_ai_usage_display }}
+    </div>
+    <a href="{% url 'documents:finalize' document.id %}" class="btn btn-success btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i>Finalize & Download PDF
+    </a>
+</div>
+
+{% elif document.payment_status == 'finalized' %}
+<div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <i class="bi bi-file-earmark-check me-2"></i>
+        <strong>FINALIZED</strong> - This document is complete and locked
+    </div>
+    <a href="{% url 'documents:document_preview' document.id %}?generate=true" class="btn btn-info btn-sm">
+        <i class="bi bi-printer me-1"></i>Print / Save as PDF
+    </a>
+</div>
+{% endif %}

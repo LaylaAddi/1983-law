@@ -1,16 +1,26 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.csrf import csrf_exempt
 from django.db import models as db_models
+from django.conf import settings
+from django.utils import timezone
+from django.urls import reverse
+from decimal import Decimal
+import stripe
+import json
 from .help_content import get_section_help
 from .models import (
     Document, DocumentSection, PlaintiffInfo, IncidentOverview,
     Defendant, IncidentNarrative, RightsViolated, Witness,
     Evidence, Damages, PriorComplaints, ReliefSought,
-    CaseLaw, DocumentCaseLaw
+    CaseLaw, DocumentCaseLaw, PromoCode, PromoCodeUsage
 )
+
+# Initialize Stripe
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 def check_section_complete(section, obj):
@@ -1712,3 +1722,310 @@ def remove_case_law(request, document_id, citation_id):
             'success': False,
             'error': f'An error occurred: {str(e)}',
         })
+
+
+# ============================================================================
+# Payment Views
+# ============================================================================
+
+@login_required
+def checkout(request, document_id):
+    """Display checkout page with promo code option."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Check/update expiry status
+    document.check_and_update_expiry()
+
+    # Allow checkout for draft or expired documents
+    if document.payment_status not in ['draft', 'expired']:
+        messages.info(request, 'This document has already been paid for.')
+        return redirect('documents:document_detail', document_id=document.id)
+
+    # Calculate prices
+    base_price = Decimal(str(settings.DOCUMENT_PRICE))
+    discount_percent = Decimal(str(settings.PROMO_DISCOUNT_PERCENT))
+    discounted_price = base_price - (base_price * discount_percent / 100)
+
+    context = {
+        'document': document,
+        'base_price': base_price,
+        'discounted_price': discounted_price,
+        'discount_percent': int(discount_percent),
+        'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
+    }
+
+    if request.method == 'POST':
+        promo_code_str = request.POST.get('promo_code', '').strip().upper()
+        no_promo_confirmed = request.POST.get('no_promo_confirmed') == 'on'
+
+        # Validate promo code or confirmation
+        promo_code = None
+        final_price = base_price
+
+        if promo_code_str:
+            try:
+                promo_code = PromoCode.objects.get(code=promo_code_str, is_active=True)
+                # Check user hasn't already used a promo code
+                if PromoCodeUsage.objects.filter(user=request.user).exists():
+                    messages.error(request, 'You have already used a promo code on a previous purchase.')
+                    return render(request, 'documents/checkout.html', context)
+                # Check user isn't using their own code
+                if promo_code.owner == request.user:
+                    messages.error(request, 'You cannot use your own referral code.')
+                    return render(request, 'documents/checkout.html', context)
+                final_price = discounted_price
+            except PromoCode.DoesNotExist:
+                messages.error(request, 'Invalid promo code.')
+                return render(request, 'documents/checkout.html', context)
+        elif not no_promo_confirmed:
+            messages.error(request, 'Please enter a promo code or confirm you do not have one.')
+            return render(request, 'documents/checkout.html', context)
+
+        # Create Stripe Checkout Session
+        try:
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{
+                    'price_data': {
+                        'currency': 'usd',
+                        'unit_amount': int(final_price * 100),  # Stripe uses cents
+                        'product_data': {
+                            'name': f'Section 1983 Complaint: {document.title}',
+                            'description': 'Complete legal document with AI assistance',
+                        },
+                    },
+                    'quantity': 1,
+                }],
+                mode='payment',
+                success_url=request.build_absolute_uri(
+                    reverse('documents:checkout_success', args=[document.id])
+                ) + '?session_id={CHECKOUT_SESSION_ID}',
+                cancel_url=request.build_absolute_uri(
+                    reverse('documents:checkout_cancel', args=[document.id])
+                ),
+                metadata={
+                    'document_id': str(document.id),
+                    'user_id': str(request.user.id),
+                    'promo_code': promo_code.code if promo_code else '',
+                },
+            )
+
+            # Store promo code in session for later use
+            if promo_code:
+                request.session['pending_promo_code'] = promo_code.code
+
+            return redirect(checkout_session.url)
+
+        except stripe.error.StripeError as e:
+            messages.error(request, f'Payment error: {str(e)}')
+            return render(request, 'documents/checkout.html', context)
+
+    return render(request, 'documents/checkout.html', context)
+
+
+@login_required
+def checkout_success(request, document_id):
+    """Handle successful payment."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    session_id = request.GET.get('session_id')
+    if not session_id:
+        messages.error(request, 'Invalid checkout session.')
+        return redirect('documents:document_detail', document_id=document.id)
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+
+        if session.payment_status == 'paid':
+            # Update document status
+            document.payment_status = 'paid'
+            document.stripe_payment_id = session.payment_intent
+            document.amount_paid = Decimal(str(session.amount_total / 100))
+            document.paid_at = timezone.now()
+
+            # Handle promo code
+            promo_code_str = session.metadata.get('promo_code', '')
+            if promo_code_str:
+                try:
+                    promo_code = PromoCode.objects.get(code=promo_code_str)
+                    document.promo_code_used = promo_code
+
+                    # Record promo usage
+                    PromoCodeUsage.objects.create(
+                        promo_code=promo_code,
+                        document=document,
+                        user=request.user,
+                        stripe_payment_id=session.payment_intent,
+                        amount_paid=document.amount_paid,
+                        referral_amount=Decimal(str(settings.REFERRAL_PAYOUT)),
+                    )
+
+                    # Update promo code stats
+                    promo_code.record_usage(settings.REFERRAL_PAYOUT)
+
+                except PromoCode.DoesNotExist:
+                    pass
+
+            document.save()
+
+            # Clear session data
+            if 'pending_promo_code' in request.session:
+                del request.session['pending_promo_code']
+
+            messages.success(request, 'Payment successful! You now have full access to edit and finalize your document.')
+            return redirect('documents:document_detail', document_id=document.id)
+
+    except stripe.error.StripeError as e:
+        messages.error(request, f'Error verifying payment: {str(e)}')
+
+    return redirect('documents:document_detail', document_id=document.id)
+
+
+@login_required
+def checkout_cancel(request, document_id):
+    """Handle cancelled payment."""
+    messages.info(request, 'Payment was cancelled. You can try again when ready.')
+    return redirect('documents:checkout', document_id=document_id)
+
+
+@csrf_exempt
+@require_POST
+def stripe_webhook(request):
+    """Handle Stripe webhooks for payment confirmation."""
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError:
+        return HttpResponse(status=400)
+
+    # Handle the checkout.session.completed event
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+
+        # Get document and update status
+        document_id = session['metadata'].get('document_id')
+        if document_id:
+            try:
+                document = Document.objects.get(id=document_id)
+                if document.payment_status in ['draft', 'expired']:
+                    document.payment_status = 'paid'
+                    document.stripe_payment_id = session.get('payment_intent', '')
+                    document.amount_paid = Decimal(str(session['amount_total'] / 100))
+                    document.paid_at = timezone.now()
+                    document.save()
+            except Document.DoesNotExist:
+                pass
+
+    return HttpResponse(status=200)
+
+
+@login_required
+def finalize_document(request, document_id):
+    """Display finalization confirmation and handle PDF generation."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    if document.payment_status != 'paid':
+        messages.error(request, 'You must complete payment before finalizing your document.')
+        return redirect('documents:checkout', document_id=document.id)
+
+    if request.method == 'POST':
+        confirmed = request.POST.get('confirm_finalize') == 'on'
+
+        if not confirmed:
+            messages.error(request, 'Please confirm that you have reviewed your document.')
+            return render(request, 'documents/finalize.html', {'document': document})
+
+        # Finalize the document
+        document.payment_status = 'finalized'
+        document.finalized_at = timezone.now()
+        document.save()
+
+        messages.success(request, 'Your document has been finalized! You can now download or print your PDF.')
+        return redirect('documents:document_preview', document_id=document.id)
+
+    return render(request, 'documents/finalize.html', {'document': document})
+
+
+# ============================================================================
+# Promo Code Views
+# ============================================================================
+
+@login_required
+def my_referral_code(request):
+    """Manage user's referral/promo code."""
+    # Get or create promo code for user
+    promo_code = PromoCode.objects.filter(owner=request.user).first()
+
+    if request.method == 'POST':
+        if promo_code:
+            messages.info(request, 'You already have a referral code.')
+        else:
+            new_code = request.POST.get('code', '').strip().upper()
+
+            if not new_code:
+                messages.error(request, 'Please enter a code.')
+            elif len(new_code) < 4:
+                messages.error(request, 'Code must be at least 4 characters.')
+            elif len(new_code) > 20:
+                messages.error(request, 'Code must be 20 characters or less.')
+            elif not new_code.isalnum():
+                messages.error(request, 'Code can only contain letters and numbers.')
+            elif PromoCode.objects.filter(code=new_code).exists():
+                messages.error(request, 'This code is already taken. Please choose another.')
+            else:
+                promo_code = PromoCode.objects.create(
+                    owner=request.user,
+                    code=new_code,
+                )
+                messages.success(request, f'Your referral code "{new_code}" has been created!')
+
+    # Get usage stats
+    usages = []
+    if promo_code:
+        usages = promo_code.usages.all().order_by('-created_at')[:10]
+
+    context = {
+        'promo_code': promo_code,
+        'usages': usages,
+        'referral_payout': settings.REFERRAL_PAYOUT,
+        'discount_percent': settings.PROMO_DISCOUNT_PERCENT,
+    }
+
+    return render(request, 'documents/my_referral_code.html', context)
+
+
+@require_GET
+def validate_promo_code(request):
+    """AJAX endpoint to validate a promo code."""
+    code = request.GET.get('code', '').strip().upper()
+
+    if not code:
+        return JsonResponse({'valid': False, 'error': 'No code provided'})
+
+    try:
+        promo_code = PromoCode.objects.get(code=code, is_active=True)
+
+        # Check if user is logged in and trying to use their own code
+        if request.user.is_authenticated and promo_code.owner == request.user:
+            return JsonResponse({'valid': False, 'error': 'You cannot use your own referral code'})
+
+        # Check if user has already used a promo code
+        if request.user.is_authenticated and PromoCodeUsage.objects.filter(user=request.user).exists():
+            return JsonResponse({'valid': False, 'error': 'You have already used a promo code'})
+
+        discounted_price = Decimal(str(settings.DOCUMENT_PRICE)) * (100 - settings.PROMO_DISCOUNT_PERCENT) / 100
+
+        return JsonResponse({
+            'valid': True,
+            'discount_percent': settings.PROMO_DISCOUNT_PERCENT,
+            'discounted_price': float(discounted_price),
+        })
+
+    except PromoCode.DoesNotExist:
+        return JsonResponse({'valid': False, 'error': 'Invalid promo code'})

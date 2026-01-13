@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Finalize Document - {{ document.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Finalize Your Document</h4>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ document.title }}</h5>
+
+                    <div class="alert alert-warning">
+                        <h6 class="alert-heading"><i class="bi bi-info-circle me-1"></i>Important: This Action is Final</h6>
+                        <p class="mb-0">Once you finalize your document:</p>
+                        <ul class="mb-0 mt-2">
+                            <li><strong>No further edits</strong> will be allowed</li>
+                            <li>This document <strong>cannot be changed</strong></li>
+                            <li>You will receive your <strong>PDF download</strong></li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-4 p-3 bg-light rounded">
+                        <h6 class="fw-bold mb-3">Before Finalizing, Please Verify:</h6>
+                        <ul class="mb-0">
+                            <li>All plaintiff information is accurate</li>
+                            <li>Defendant names and details are correct</li>
+                            <li>Your narrative accurately describes the incident</li>
+                            <li>All constitutional violations are properly identified</li>
+                            <li>Relief sought reflects your desired outcome</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2 mb-4">
+                        <a href="{% url 'documents:document_preview' document.id %}?generate=true"
+                           class="btn btn-outline-primary"
+                           target="_blank">
+                            <i class="bi bi-eye me-1"></i>Preview Document (Opens in New Tab)
+                        </a>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="form-check mb-4">
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   name="confirm_finalize"
+                                   id="confirm-finalize"
+                                   required>
+                            <label class="form-check-label fw-bold" for="confirm-finalize">
+                                I have reviewed my document and confirm it is ready for filing
+                            </label>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg" id="finalize-btn" disabled>
+                                <i class="bi bi-file-earmark-pdf me-2"></i>Finalize & Generate PDF
+                            </button>
+                            <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>Go Back and Edit
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkbox = document.getElementById('confirm-finalize');
+    const submitBtn = document.getElementById('finalize-btn');
+
+    checkbox.addEventListener('change', function() {
+        submitBtn.disabled = !this.checked;
+    });
+});
+</script>
+{% endblock %}

@@ -137,8 +137,10 @@
 {% endblock %}
 
 {% block content %}
+{% if document.payment_status != 'finalized' %}
 <!-- Draft Watermark -->
 <div class="draft-watermark">DRAFT - {{ app_name }}</div>
+{% endif %}
 
 <!-- Preview Controls -->
 <div class="preview-controls no-print">
