@@ -628,9 +628,13 @@
                     <a href="{% url 'documents:section_edit' document.id s.section_type %}"
                        class="list-group-item list-group-item-action d-flex justify-content-between align-items-center
                               {% if s.section_type == section.section_type %}active{% endif %}
-                              {% if s.status == 'needs_work' %}list-group-item-warning{% endif %}">
-                        <span class="{% if s.section_type == section.section_type %}fw-bold{% endif %}">
+                              {% if s.status == 'needs_work' %}list-group-item-warning{% endif %}
+                              {% if s.story_relevance == 'may_not_apply' and s.status == 'not_started' %}opacity-75{% endif %}">
+                        <span class="{% if s.section_type == section.section_type %}fw-bold{% elif s.story_relevance == 'may_not_apply' and s.status == 'not_started' %}text-muted{% endif %}">
                             {{ s.get_section_type_display }}
+                            {% if s.story_relevance == 'may_not_apply' and s.status == 'not_started' %}
+                                <small class="d-block text-muted" style="font-size: 0.7rem;">May not apply</small>
+                            {% endif %}
                         </span>
                         {% if s.status == 'completed' %}
                             <i class="bi bi-check-circle-fill text-success"></i>
