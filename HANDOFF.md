@@ -6,7 +6,7 @@ A web application to help people create Section 1983 civil rights complaints. Us
 
 ---
 
-## Current State (Latest Commit: 58c1764)
+## Current State (Latest Commit: f9dc4b2)
 
 The app is functional with the following features complete:
 
@@ -20,7 +20,7 @@ The app is functional with the following features complete:
    - **Profile completion required before creating documents**
    - `is_test_user` flag for testing features
 
-2. **Profile Completion Flow** (NEW)
+2. **Profile Completion Flow**
    - After registration → redirect to profile completion page
    - User must provide: name, address, phone
    - Optional: mailing address if different
@@ -62,6 +62,8 @@ The app is functional with the following features complete:
    - **Tell Your Story** - User writes story, AI extracts data for all sections
    - **Parse Story API** - Backend endpoint for AI parsing (`/documents/{id}/parse-story/`)
    - **Auto-apply incident_overview** - Extracted fields automatically saved to database
+   - **Case Law Suggestions** - AI selects relevant case law from curated database
+   - **Legal Document Generator** - AI writes court-ready federal complaint with case law integrated
 
 7. **Helper Features**
    - Federal district court lookup by city/state (auto-lookup on story parse)
@@ -69,10 +71,12 @@ The app is functional with the following features complete:
    - Contextual help tooltips
    - "Use Recommended" button for Relief Sought
    - Test user mode for demo data
+   - **"May not apply" indicator** for sections based on story analysis
+   - **Preview Document button** in section edit sidebar
 
 ---
 
-## Auto-Apply Features (NEW)
+## Auto-Apply Features
 
 ### Plaintiff Information
 - **Source:** User profile
@@ -116,8 +120,11 @@ The app is functional with the following features complete:
 ## AI Features Detail
 
 ### Files
-- `documents/services/openai_service.py` - OpenAI API integration
+- `documents/services/openai_service.py` - OpenAI API integration (includes `suggest_case_law` method)
+- `documents/services/document_generator.py` - Legal document generation
 - `documents/test_stories.py` - 20 sample test stories for testing AI parsing
+- `documents/management/commands/load_case_law.py` - Management command to populate case law database
+- `templates/documents/case_law_list.html` - Case law management UI
 - `static/js/tell-story.js` - Tell Your Story frontend
 - `static/js/rewrite.js` - Rewrite feature frontend
 - `static/js/rights-analyze.js` - Rights analysis frontend
@@ -127,6 +134,7 @@ The app is functional with the following features complete:
 1. `rewrite_text(text, field_name)` - Rewrites text in legal format
 2. `analyze_rights_violations(document_data)` - Suggests rights violated
 3. `parse_story(story_text)` - Extracts structured data from user's story
+4. `suggest_case_law(document_data)` - Suggests relevant case law citations
 
 ### Story Parsing Extracts
 - incident_overview: date, time, location, city, state, location_type, was_recording, recording_device
@@ -164,7 +172,11 @@ docker-compose up -d
 
 # Run migrations (IMPORTANT after pulling new code)
 docker-compose exec web python manage.py makemigrations accounts
+docker-compose exec web python manage.py makemigrations documents
 docker-compose exec web python manage.py migrate
+
+# Load case law database (required for case law feature)
+docker-compose exec web python manage.py load_case_law
 
 # Create superuser (first time only)
 docker-compose exec web python manage.py createsuperuser
@@ -185,28 +197,35 @@ docker-compose exec web python manage.py createsuperuser
 │   └── forms.py        # Auth forms, ProfileEditForm, ProfileCompleteForm
 │
 ├── documents/          # Main document builder app
-│   ├── models.py       # Document, Section, PlaintiffInfo, etc.
+│   ├── models.py       # Document, Section, PlaintiffInfo, CaseLaw, etc.
 │   ├── views.py        # Section edit, preview, AJAX endpoints, auto-apply logic
 │   ├── forms.py        # All section forms + PlaintiffAttorneyForm + US_STATES dropdown
 │   ├── help_content.py # Tooltips and help text for each field
 │   ├── test_stories.py # 20 sample stories for testing AI
 │   ├── urls.py         # URL routing
+│   ├── management/
+│   │   └── commands/
+│   │       └── load_case_law.py  # Populate case law database
 │   └── services/
 │       ├── court_lookup_service.py
-│       └── openai_service.py  # AI integration
+│       ├── openai_service.py      # AI integration
+│       └── document_generator.py  # Legal document generation
 │
 ├── templates/
 │   ├── base.html
 │   ├── accounts/
 │   │   ├── profile.html
 │   │   ├── profile_edit.html
-│   │   └── profile_complete.html  # NEW - profile completion page
+│   │   └── profile_complete.html
 │   └── documents/
 │       ├── document_list.html
 │       ├── document_detail.html
-│       ├── document_preview.html
-│       ├── section_edit.html
-│       └── tell_your_story.html  # AI story parsing page
+│       ├── document_preview.html      # Legal document display
+│       ├── section_edit.html          # With preview button & may-not-apply indicator
+│       ├── tell_your_story.html
+│       ├── case_law_list.html         # Case law management
+│       └── partials/
+│           └── relief_sought_form.html # Redesigned relief form
 │
 ├── static/
 │   ├── js/
@@ -237,14 +256,135 @@ docker-compose exec web python manage.py createsuperuser
 | Damages | Physical, emotional, financial harm |
 | PriorComplaints | Previous complaints filed |
 | ReliefSought | What the plaintiff wants (money, declaration, etc.) |
+| **CaseLaw** | Curated database of landmark Section 1983 cases |
+| **DocumentCaseLaw** | Links case law citations to documents with explanations |
+
+---
+
+## Case Law Citations Feature
+
+### Overview
+AI-assisted case law suggestion feature that strengthens Section 1983 complaints with relevant legal precedents.
+
+### How It Works
+1. User tells their story or fills out incident narrative
+2. User clicks "Get AI Suggestions" on the Case Law page
+3. AI analyzes the facts and selects relevant cases from our curated database
+4. User reviews suggestions and accepts/edits/rejects each one
+5. Accepted citations appear in the document preview
+
+### Database
+- **CaseLaw model** - Curated database of ~40 landmark Section 1983 cases
+- **DocumentCaseLaw model** - Links cases to documents with AI explanations
+- Cases organized by amendment and right category
+- All citations are verified and accurate
+
+### Key Cases Included
+- **Graham v. Connor** (excessive force standard)
+- **Glik v. Cunniffe** (right to record police)
+- **Terry v. Ohio** (stop and frisk)
+- **Monroe v. Pape** (Section 1983 foundation)
+- **Monell v. Dept. of Social Services** (municipal liability)
+- And many more...
+
+### URLs
+- `/documents/{id}/case-law/` - View and manage citations
+- `/documents/{id}/suggest-case-law/` - Get AI suggestions (POST)
+- `/documents/{id}/accept-case-law/` - Accept a suggestion (POST)
+- `/documents/{id}/case-law/{citation_id}/update/` - Edit explanation (POST)
+- `/documents/{id}/case-law/{citation_id}/remove/` - Remove citation (POST)
+
+### Setup Commands (MUST RUN)
+```powershell
+# Run migrations for new models
+docker-compose exec web python manage.py makemigrations documents
+docker-compose exec web python manage.py migrate
+
+# Load case law database
+docker-compose exec web python manage.py load_case_law
+```
+
+---
+
+## Legal Document Generator
+
+### Overview
+AI-powered document generation that creates a professionally written Section 1983 federal complaint with case law properly integrated into legal arguments.
+
+### How It Works
+1. User fills out document sections (plaintiff info, narrative, rights violated, etc.)
+2. User accepts case law citations
+3. User visits Preview page (`/documents/{id}/preview/`)
+4. System generates complete legal complaint with:
+   - Proper caption (court name, parties, case number placeholder)
+   - Jurisdiction and venue statement
+   - Parties section identifying all plaintiffs and defendants
+   - Statement of facts written in professional legal prose
+   - **Causes of action with case law woven into legal arguments** (like a lawyer would write)
+   - Prayer for relief
+   - Jury demand (if requested)
+   - Signature block (pro se or attorney)
+
+### Key Features
+- **Case Law Integration** - Cases cited inline where they belong, not just listed at the end
+- **Professional Legal Prose** - AI writes each section in formal legal style
+- **Third Person** - "Plaintiff" not "I"
+- **Numbered Paragraphs** - Following federal court conventions
+- **Print-Ready** - Document formatted for court filing
+
+### Files
+- `documents/services/document_generator.py` - Main generation service
+- `documents/views.py` - `document_preview` view and `_collect_document_data` helper
+- `templates/documents/document_preview.html` - Legal document display template
+
+### Requirements for Generation
+Document must have:
+- Plaintiff name (first and last)
+- Incident narrative (from story or detailed_narrative)
+- At least one constitutional right selected as violated
+
+### URL
+- `/documents/{id}/preview/` - View generated legal document
+- `/documents/{id}/preview/?generate=false` - View raw data only
+
+---
+
+## Relief Sought Section (Redesigned)
+
+### Smart Defaults
+- Pre-selects common relief types
+- "Use Recommended" button for one-click defaults
+- Calculated suggested amounts based on incident severity
+
+### Form Fields
+- Compensatory damages (checkbox + amount)
+- Punitive damages (checkbox + amount)
+- Declaratory relief
+- Injunctive relief
+- Attorney's fees
+- Jury trial demand
+- Other relief (text field)
+
+---
+
+## Section Sidebar Features
+
+### "May Not Apply" Indicator
+- Based on AI analysis of story
+- Grayed-out badge shows sections that likely don't apply
+- Example: "Witnesses" shows "may not apply" if no witnesses mentioned
+- User can still access and fill out these sections
+
+### Preview Document Button
+- Quick link to document preview from any section
+- Opens in new tab
 
 ---
 
 ## What's NOT Built Yet
 
-- PDF generation of the complaint
+- PDF generation of the complaint (HTML output is court-ready for printing)
 - E-filing integration
-- Case law citations (AI could assist - needs research)
 - Payment/subscription (DO NOT BUILD - user doesn't want Stripe)
 - Video extraction (DO NOT BUILD - user didn't ask for this)
 
@@ -252,9 +392,9 @@ docker-compose exec web python manage.py createsuperuser
 
 ## Future Plans
 
-- **Case Law Citations** - AI-assisted relevant case law for each rights violation
 - **Mobile App Version** - Tell Your Story will be key feature
 - **Voice Input** - Add speech-to-text (Whisper) later
+- **More Case Law** - Expand database with circuit-specific cases
 
 ---
 
@@ -290,6 +430,9 @@ docker-compose logs -f web
 # Run migrations
 docker-compose exec web python manage.py makemigrations
 docker-compose exec web python manage.py migrate
+
+# Load case law (required once)
+docker-compose exec web python manage.py load_case_law
 
 # Django shell
 docker-compose exec web python manage.py shell
