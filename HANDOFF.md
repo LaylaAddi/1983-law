@@ -6,7 +6,7 @@ A web application to help people create Section 1983 civil rights complaints. Us
 
 ---
 
-## Current State (Latest Commit: 8b5454d)
+## Current State (Latest Commit: see git log)
 
 The app is functional with the following features complete:
 
@@ -62,7 +62,8 @@ The app is functional with the following features complete:
    - **Tell Your Story** - User writes story, AI extracts data for all sections
    - **Parse Story API** - Backend endpoint for AI parsing (`/documents/{id}/parse-story/`)
    - **Auto-apply incident_overview** - Extracted fields automatically saved to database
-   - **Case Law Suggestions (NEW)** - AI selects relevant case law from curated database
+   - **Case Law Suggestions** - AI selects relevant case law from curated database
+   - **Legal Document Generator (NEW)** - AI writes court-ready federal complaint with case law integrated
 
 7. **Helper Features**
    - Federal district court lookup by city/state (auto-lookup on story parse)
@@ -196,7 +197,8 @@ docker-compose exec web python manage.py createsuperuser
 │   ├── urls.py         # URL routing
 │   └── services/
 │       ├── court_lookup_service.py
-│       └── openai_service.py  # AI integration
+│       ├── openai_service.py  # AI integration
+│       └── document_generator.py  # Legal document generation (NEW)
 │
 ├── templates/
 │   ├── base.html
@@ -290,9 +292,52 @@ docker-compose exec web python manage.py load_case_law
 
 ---
 
+## Legal Document Generator (NEW)
+
+### Overview
+AI-powered document generation that creates a professionally written Section 1983 federal complaint with case law properly integrated into legal arguments.
+
+### How It Works
+1. User fills out document sections (plaintiff info, narrative, rights violated, etc.)
+2. User accepts case law citations
+3. User visits Preview page (`/documents/{id}/preview/`)
+4. System generates complete legal complaint with:
+   - Proper caption (court name, parties, case number placeholder)
+   - Jurisdiction and venue statement
+   - Parties section identifying all plaintiffs and defendants
+   - Statement of facts written in professional legal prose
+   - **Causes of action with case law woven into legal arguments** (like a lawyer would write)
+   - Prayer for relief
+   - Jury demand (if requested)
+   - Signature block (pro se or attorney)
+
+### Key Features
+- **Case Law Integration** - Cases cited inline where they belong, not just listed at the end
+- **Professional Legal Prose** - AI writes each section in formal legal style
+- **Third Person** - "Plaintiff" not "I"
+- **Numbered Paragraphs** - Following federal court conventions
+- **Print-Ready** - Document formatted for court filing
+
+### Files
+- `documents/services/document_generator.py` - Main generation service
+- `documents/views.py` - `document_preview` view and `_collect_document_data` helper
+- `templates/documents/document_preview.html` - Legal document display template
+
+### Requirements for Generation
+Document must have:
+- Plaintiff name (first and last)
+- Incident narrative (from story or detailed_narrative)
+- At least one constitutional right selected as violated
+
+### URL
+- `/documents/{id}/preview/` - View generated legal document
+- `/documents/{id}/preview/?generate=false` - View raw data only
+
+---
+
 ## What's NOT Built Yet
 
-- PDF generation of the complaint
+- PDF generation of the complaint (HTML output is court-ready for printing)
 - E-filing integration
 - Payment/subscription (DO NOT BUILD - user doesn't want Stripe)
 - Video extraction (DO NOT BUILD - user didn't ask for this)

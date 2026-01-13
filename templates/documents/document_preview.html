@@ -4,1306 +4,393 @@
 
 {% block extra_css %}
 <style>
-    .preview-section {
+    /* Legal document styling */
+    .legal-document {
+        font-family: 'Times New Roman', Times, serif;
+        font-size: 14px;
+        line-height: 2;
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 60px 72px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+
+    .legal-document .caption {
+        text-align: center;
+        white-space: pre-line;
+        margin-bottom: 2rem;
+        line-height: 1.8;
+    }
+
+    .legal-document .section-header {
+        text-align: center;
+        font-weight: bold;
+        text-decoration: underline;
+        margin: 2rem 0 1rem 0;
+    }
+
+    .legal-document .cause-header {
+        text-align: center;
+        font-weight: bold;
+        margin: 2rem 0 1rem 0;
+    }
+
+    .legal-document p {
+        text-indent: 0.5in;
+        margin-bottom: 0;
+        text-align: justify;
+    }
+
+    .legal-document .no-indent {
+        text-indent: 0;
+    }
+
+    .legal-document .signature-block {
+        margin-top: 3rem;
+        white-space: pre-line;
+        line-height: 1.5;
+    }
+
+    .legal-document .prayer-item {
+        margin-left: 0.5in;
+        text-indent: -0.25in;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Preview controls */
+    .preview-controls {
+        position: sticky;
+        top: 0;
+        background: #f8f9fa;
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        z-index: 100;
+        margin-bottom: 2rem;
+    }
+
+    /* Missing data alert */
+    .missing-data-card {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    /* Tab styling */
+    .nav-tabs .nav-link {
+        color: #6c757d;
+    }
+    .nav-tabs .nav-link.active {
+        font-weight: 600;
+    }
+
+    /* Raw data view styling */
+    .raw-data-section {
         border-left: 4px solid #dee2e6;
         padding-left: 1.5rem;
         margin-bottom: 2rem;
     }
-    .preview-section.completed {
+    .raw-data-section.completed {
         border-left-color: #198754;
     }
-    .preview-section.in-progress {
-        border-left-color: #0dcaf0;
-    }
-    .preview-section.needs-work {
-        border-left-color: #ffc107;
-    }
-    .preview-section.not-applicable {
-        border-left-color: #6c757d;
-        opacity: 0.7;
-    }
-    .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-    }
-    .data-field {
-        margin-bottom: 0.75rem;
-    }
-    .data-label {
-        font-weight: 600;
-        color: #6c757d;
-        font-size: 0.875rem;
-        margin-bottom: 0.25rem;
-    }
-    .data-value {
-        color: #212529;
-    }
-    .data-value.empty {
-        color: #adb5bd;
-        font-style: italic;
-    }
-    .item-card {
-        background: #f8f9fa;
-        border-radius: 0.375rem;
-        padding: 1rem;
-        margin-bottom: 0.75rem;
-    }
-    .item-card .item-actions {
-        opacity: 0;
-        transition: opacity 0.2s;
-    }
-    .item-card:hover .item-actions {
-        opacity: 1;
-    }
-    .document-header {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 0.5rem;
-        margin-bottom: 2rem;
-    }
-    .print-view .btn, .print-view .item-actions {
-        display: none !important;
-    }
+
+    /* Print styles */
     @media print {
-        .btn, .item-actions, .navbar, .no-print {
+        .no-print, .preview-controls, .nav-tabs {
             display: none !important;
         }
-        .preview-section {
-            break-inside: avoid;
+        .legal-document {
+            box-shadow: none;
+            padding: 0;
+            max-width: none;
+        }
+        body {
+            background: white;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="no-print mb-3">
-    <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left me-1"></i>Back to Document
-    </a>
-    <button class="btn btn-outline-primary ms-2" onclick="window.print()">
-        <i class="bi bi-printer me-1"></i>Print Preview
-    </button>
+<!-- Preview Controls -->
+<div class="preview-controls no-print">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Document
+                </a>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'documents:case_law_list' document.id %}" class="btn btn-outline-primary">
+                    <i class="bi bi-book me-1"></i>Manage Case Law
+                </a>
+                <button class="btn btn-outline-primary" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i>Print
+                </button>
+                {% if generated_document %}
+                <a href="?generate=false" class="btn btn-outline-secondary">
+                    <i class="bi bi-eye me-1"></i>View Raw Data
+                </a>
+                {% else %}
+                <a href="?generate=true" class="btn btn-primary">
+                    <i class="bi bi-file-earmark-text me-1"></i>Generate Legal Document
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Document Header -->
-<div class="document-header">
-    <h1 class="mb-2">{{ document.title }}</h1>
-    <p class="mb-0 opacity-75">
-        Section 1983 Civil Rights Complaint |
-        Created {{ document.created_at|date:"F j, Y" }}
-    </p>
-</div>
+<div class="container-fluid py-4">
+    {% if generated_document %}
+    <!-- GENERATED LEGAL DOCUMENT VIEW -->
+    <div class="legal-document">
+        <!-- Caption -->
+        <div class="caption">
+{{ generated_document.caption }}
+        </div>
 
-<!-- Plaintiff Information -->
-{% with section_data=sections_data.plaintiff_info %}
-{% if section_data %}
-<div class="preview-section {% if section_data.section.status == 'completed' %}completed{% elif section_data.section.status == 'needs_work' %}needs-work{% elif section_data.section.status == 'in_progress' %}in-progress{% elif section_data.section.status == 'not_applicable' %}not-applicable{% endif %}">
-    <div class="section-header">
-        <h3><i class="bi bi-person me-2"></i>{{ section_data.config.title }}</h3>
-        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-plaintiff_info">
-            <i class="bi bi-pencil me-1"></i>Edit
-        </button>
-    </div>
-    {% if section_data.data %}
-    <div class="row">
-        <div class="col-md-4">
-            <div class="data-field">
-                <div class="data-label">First Name</div>
-                <div class="data-value">{{ section_data.data.first_name|default:"Not provided" }}</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="data-field">
-                <div class="data-label">Middle Name</div>
-                <div class="data-value">{{ section_data.data.middle_name|default:"-" }}</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="data-field">
-                <div class="data-label">Last Name</div>
-                <div class="data-value">{{ section_data.data.last_name|default:"Not provided" }}</div>
-            </div>
-        </div>
-        <div class="col-md-12">
-            <div class="data-field">
-                <div class="data-label">Address</div>
-                <div class="data-value">
-                    {% if section_data.data.street_address %}
-                        {{ section_data.data.street_address }}<br>
-                        {{ section_data.data.city }}, {{ section_data.data.state }} {{ section_data.data.zip_code }}
-                    {% else %}
-                        Not provided
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="data-field">
-                <div class="data-label">Phone</div>
-                <div class="data-value">{{ section_data.data.phone|default:"Not provided" }}</div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="data-field">
-                <div class="data-label">Email</div>
-                <div class="data-value">{{ section_data.data.email|default:"Not provided" }}</div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="data-field">
-                <div class="data-label">Representation</div>
-                <div class="data-value">
-                    {% if section_data.data.is_pro_se %}
-                        <span class="badge bg-secondary">Pro Se (Self-Represented)</span>
-                    {% else %}
-                        <span class="badge bg-primary">Represented by Attorney</span>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
+        <!-- Introduction -->
+        <p class="no-indent">{{ generated_document.introduction }}</p>
 
-    {% if not section_data.data.is_pro_se and section_data.data.attorney_name %}
-    <!-- Attorney Information - Only show if attorney info is provided -->
-    <div class="mt-4 p-3 bg-light rounded">
-        <h5 class="mb-3"><i class="bi bi-briefcase me-2"></i>Attorney Information</h5>
-        <div class="row">
-            <div class="col-md-6">
-                <div class="data-field">
-                    <div class="data-label">Attorney Name</div>
-                    <div class="data-value">{{ section_data.data.attorney_name }}</div>
-                </div>
-            </div>
-            {% if section_data.data.attorney_bar_number %}
-            <div class="col-md-6">
-                <div class="data-field">
-                    <div class="data-label">Bar Number</div>
-                    <div class="data-value">{{ section_data.data.attorney_bar_number }}</div>
-                </div>
-            </div>
-            {% endif %}
-            {% if section_data.data.attorney_firm_name %}
-            <div class="col-md-12">
-                <div class="data-field">
-                    <div class="data-label">Law Firm</div>
-                    <div class="data-value">{{ section_data.data.attorney_firm_name }}</div>
-                </div>
-            </div>
-            {% endif %}
-            {% if section_data.data.attorney_street_address %}
-            <div class="col-md-12">
-                <div class="data-field">
-                    <div class="data-label">Attorney Address</div>
-                    <div class="data-value">
-                        {{ section_data.data.attorney_street_address }}<br>
-                        {{ section_data.data.attorney_city }}, {{ section_data.data.attorney_state }} {{ section_data.data.attorney_zip_code }}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-            {% if section_data.data.attorney_phone %}
-            <div class="col-md-4">
-                <div class="data-field">
-                    <div class="data-label">Phone</div>
-                    <div class="data-value">{{ section_data.data.attorney_phone }}</div>
-                </div>
-            </div>
-            {% endif %}
-            {% if section_data.data.attorney_fax %}
-            <div class="col-md-4">
-                <div class="data-field">
-                    <div class="data-label">Fax</div>
-                    <div class="data-value">{{ section_data.data.attorney_fax }}</div>
-                </div>
-            </div>
-            {% endif %}
-            {% if section_data.data.attorney_email %}
-            <div class="col-md-4">
-                <div class="data-field">
-                    <div class="data-label">Email</div>
-                    <div class="data-value">{{ section_data.data.attorney_email }}</div>
-                </div>
-            </div>
-            {% endif %}
+        <!-- Jurisdiction and Venue -->
+        <div class="section">
+{{ generated_document.jurisdiction|linebreaks }}
         </div>
-    </div>
-    {% endif %}
-    {% else %}
-    <p class="text-muted"><em>No information provided yet.</em></p>
-    {% endif %}
-</div>
-{% endif %}
-{% endwith %}
 
-<!-- Incident Overview -->
-{% with section_data=sections_data.incident_overview %}
-{% if section_data %}
-<div class="preview-section {% if section_data.section.status == 'completed' %}completed{% elif section_data.section.status == 'needs_work' %}needs-work{% elif section_data.section.status == 'in_progress' %}in-progress{% elif section_data.section.status == 'not_applicable' %}not-applicable{% endif %}">
-    <div class="section-header">
-        <h3><i class="bi bi-calendar-event me-2"></i>{{ section_data.config.title }}</h3>
-        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-incident_overview">
-            <i class="bi bi-pencil me-1"></i>Edit
-        </button>
-    </div>
-    {% if section_data.data %}
-    <div class="row">
-        <div class="col-md-6">
-            <div class="data-field">
-                <div class="data-label">Date of Incident</div>
-                <div class="data-value">{{ section_data.data.incident_date|date:"F j, Y"|default:"Not provided" }}</div>
-            </div>
+        <!-- Parties -->
+        <div class="section">
+{{ generated_document.parties|linebreaks }}
         </div>
-        <div class="col-md-6">
-            <div class="data-field">
-                <div class="data-label">Time of Incident</div>
-                <div class="data-value">{{ section_data.data.incident_time|time:"g:i A"|default:"Not provided" }}</div>
-            </div>
+
+        <!-- Statement of Facts -->
+        <div class="section">
+{{ generated_document.facts|linebreaks }}
         </div>
-        <div class="col-md-12">
-            <div class="data-field">
-                <div class="data-label">Location</div>
-                <div class="data-value">
-                    {% if section_data.data.incident_location %}
-                        {{ section_data.data.incident_location }}<br>
-                        {{ section_data.data.city }}, {{ section_data.data.state }}
-                        {% if section_data.data.location_type %}<br><small class="text-muted">({{ section_data.data.location_type }})</small>{% endif %}
-                    {% else %}
-                        Not provided
-                    {% endif %}
-                </div>
-            </div>
+
+        <!-- Causes of Action -->
+        <div class="section-header">CAUSES OF ACTION</div>
+        {% for cause in generated_document.causes_of_action %}
+        <div class="section">
+{{ cause.content|linebreaks }}
         </div>
-        {% if section_data.data.federal_district_court %}
-        <div class="col-md-12">
-            <div class="data-field">
-                <div class="data-label">Federal District Court</div>
-                <div class="data-value">
-                    <i class="bi bi-bank me-1 text-primary"></i>{{ section_data.data.federal_district_court }}
-                </div>
-            </div>
+        {% empty %}
+        <p class="text-muted"><em>No causes of action generated. Please ensure you have selected which constitutional rights were violated.</em></p>
+        {% endfor %}
+
+        <!-- Prayer for Relief -->
+        <div class="section">
+{{ generated_document.prayer|linebreaks }}
+        </div>
+
+        <!-- Jury Demand -->
+        {% if generated_document.jury_demand %}
+        <div class="section">
+{{ generated_document.jury_demand|linebreaks }}
         </div>
         {% endif %}
-        <div class="col-md-6">
-            <div class="data-field">
-                <div class="data-label">Recording</div>
-                <div class="data-value">
-                    {% if section_data.data.was_recording %}
-                        <span class="badge bg-success">Yes</span>
-                        {% if section_data.data.recording_device %} - {{ section_data.data.recording_device }}{% endif %}
-                    {% else %}
-                        <span class="badge bg-secondary">No</span>
-                    {% endif %}
-                </div>
-            </div>
+
+        <!-- Signature Block -->
+        <div class="signature-block">
+{{ generated_document.signature }}
         </div>
     </div>
-    {% else %}
-    <p class="text-muted"><em>No information provided yet.</em></p>
-    {% endif %}
-</div>
-{% endif %}
-{% endwith %}
 
-<!-- Defendants -->
-{% with section_data=sections_data.defendants %}
-{% if section_data %}
-<div class="preview-section {% if section_data.section.status == 'completed' %}completed{% elif section_data.section.status == 'needs_work' %}needs-work{% elif section_data.section.status == 'in_progress' %}in-progress{% elif section_data.section.status == 'not_applicable' %}not-applicable{% endif %}">
-    <div class="section-header">
-        <h3><i class="bi bi-shield-exclamation me-2"></i>{{ section_data.config.title }}</h3>
-        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-defendants">
-            <i class="bi bi-plus-lg me-1"></i>Add Defendant
-        </button>
-    </div>
-    {% if section_data.data %}
-        {% for defendant in section_data.data %}
-        <div class="item-card">
-            <div class="d-flex justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                    <h5 class="mb-1">{{ defendant.name }}</h5>
-                    <p class="mb-1 text-muted">
-                        {% if defendant.defendant_type == 'individual' %}
-                            <i class="bi bi-person me-1"></i>Individual Officer
-                        {% else %}
-                            <i class="bi bi-building me-1"></i>Government Agency
-                        {% endif %}
-                    </p>
-                    {% if defendant.badge_number %}<p class="mb-1"><strong>Badge:</strong> {{ defendant.badge_number }}</p>{% endif %}
-                    {% if defendant.title_rank %}<p class="mb-1"><strong>Position:</strong> {{ defendant.title_rank }}</p>{% endif %}
-                    {% if defendant.agency_name %}<p class="mb-1"><strong>Agency:</strong> {{ defendant.agency_name }}</p>{% endif %}
-                    {% if defendant.description %}<p class="mb-0"><strong>Description:</strong> {{ defendant.description }}</p>{% endif %}
-                </div>
-                <div class="item-actions">
-                    <button class="btn btn-sm btn-outline-danger" onclick="deleteItem('defendants', {{ defendant.id }})">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
+    <!-- Case Law Used -->
+    {% if document_data.case_law %}
+    <div class="container mt-4 no-print">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-book me-2"></i>Case Law Citations Used</h5>
             </div>
-        </div>
-        {% endfor %}
-    {% else %}
-    <p class="text-muted"><em>No defendants added yet.</em></p>
-    {% endif %}
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Incident Narrative -->
-{% with section_data=sections_data.incident_narrative %}
-{% if section_data %}
-<div class="preview-section {% if section_data.section.status == 'completed' %}completed{% elif section_data.section.status == 'needs_work' %}needs-work{% elif section_data.section.status == 'in_progress' %}in-progress{% elif section_data.section.status == 'not_applicable' %}not-applicable{% endif %}">
-    <div class="section-header">
-        <h3><i class="bi bi-journal-text me-2"></i>{{ section_data.config.title }}</h3>
-        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-incident_narrative">
-            <i class="bi bi-pencil me-1"></i>Edit
-        </button>
-    </div>
-    {% if section_data.data %}
-    <div class="data-field">
-        <div class="data-label">What Happened</div>
-        <div class="data-value">{{ section_data.data.detailed_narrative|default:"Not provided"|linebreaks }}</div>
-    </div>
-    {% if section_data.data.what_were_you_doing %}
-    <div class="data-field">
-        <div class="data-label">What You Were Doing Before the Incident</div>
-        <div class="data-value">{{ section_data.data.what_were_you_doing|linebreaks }}</div>
-    </div>
-    {% endif %}
-    {% if section_data.data.what_was_said %}
-    <div class="data-field">
-        <div class="data-label">What Was Said</div>
-        <div class="data-value">{{ section_data.data.what_was_said|linebreaks }}</div>
-    </div>
-    {% endif %}
-    {% if section_data.data.physical_actions %}
-    <div class="data-field">
-        <div class="data-label">Physical Actions</div>
-        <div class="data-value">{{ section_data.data.physical_actions|linebreaks }}</div>
-    </div>
-    {% endif %}
-    {% if section_data.data.how_it_ended %}
-    <div class="data-field">
-        <div class="data-label">How It Ended</div>
-        <div class="data-value">{{ section_data.data.how_it_ended|linebreaks }}</div>
-    </div>
-    {% endif %}
-    {% else %}
-    <p class="text-muted"><em>No information provided yet.</em></p>
-    {% endif %}
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Rights Violated -->
-{% with section_data=sections_data.rights_violated %}
-{% if section_data %}
-<div class="preview-section {% if section_data.section.status == 'completed' %}completed{% elif section_data.section.status == 'needs_work' %}needs-work{% elif section_data.section.status == 'in_progress' %}in-progress{% elif section_data.section.status == 'not_applicable' %}not-applicable{% endif %}">
-    <div class="section-header">
-        <h3><i class="bi bi-file-earmark-ruled me-2"></i>{{ section_data.config.title }}</h3>
-        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-rights_violated">
-            <i class="bi bi-pencil me-1"></i>Edit
-        </button>
-    </div>
-    {% if section_data.data %}
-    <div class="row">
-        <div class="col-md-6">
-            <div class="data-field">
-                <h6>Constitutional Amendments</h6>
-                <ul class="mb-0">
-                    {% if section_data.data.first_amendment %}<li>First Amendment (Free Speech, Press, Assembly)</li>{% endif %}
-                    {% if section_data.data.fourth_amendment %}<li>Fourth Amendment (Unreasonable Search/Seizure)</li>{% endif %}
-                    {% if section_data.data.fifth_amendment %}<li>Fifth Amendment (Due Process)</li>{% endif %}
-                    {% if section_data.data.fourteenth_amendment %}<li>Fourteenth Amendment (Equal Protection)</li>{% endif %}
+            <div class="card-body">
+                <p class="text-muted mb-3">The following cases were integrated into the legal arguments above:</p>
+                <ul class="list-group list-group-flush">
+                    {% for case in document_data.case_law %}
+                    <li class="list-group-item">
+                        <strong>{{ case.case_name }}</strong>, {{ case.citation }}
+                        <br><small class="text-muted">{{ case.key_holding|truncatewords:30 }}</small>
+                    </li>
+                    {% endfor %}
                 </ul>
             </div>
         </div>
-        <div class="col-md-6">
-            {% if section_data.data.other_rights %}
-            <div class="data-field">
-                <h6>Other Rights</h6>
-                <div class="data-value">{{ section_data.data.other_rights|linebreaks }}</div>
-            </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- RAW DATA VIEW (when document not generated or missing data) -->
+
+    {% if not document_data.has_minimum_data %}
+    <!-- Missing Data Warning -->
+    <div class="container">
+        <div class="missing-data-card">
+            <h5><i class="bi bi-exclamation-triangle me-2"></i>More Information Needed</h5>
+            <p class="mb-2">To generate a legal document, please complete the following:</p>
+            <ul class="mb-3">
+                {% if not document_data.plaintiff.first_name or not document_data.plaintiff.last_name %}
+                <li>Complete your <a href="{% url 'documents:section_edit' document.id 'plaintiff_info' %}">Plaintiff Information</a></li>
+                {% endif %}
+                {% if not document_data.narrative.detailed_narrative %}
+                <li>Add your <a href="{% url 'documents:section_edit' document.id 'incident_narrative' %}">Incident Narrative</a></li>
+                {% endif %}
+                {% if not document_data.rights_violated.first_amendment and not document_data.rights_violated.fourth_amendment and not document_data.rights_violated.fifth_amendment and not document_data.rights_violated.fourteenth_amendment %}
+                <li>Select which <a href="{% url 'documents:section_edit' document.id 'rights_violated' %}">Rights Were Violated</a></li>
+                {% endif %}
+            </ul>
+            <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil me-1"></i>Continue Editing
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Raw Data Display -->
+    <div class="container">
+        <h2 class="mb-4">{{ document.title }}</h2>
+
+        <!-- Plaintiff Information -->
+        {% with section_data=sections_data.plaintiff_info %}
+        {% if section_data %}
+        <div class="raw-data-section {% if section_data.section.status == 'completed' %}completed{% endif %}">
+            <h4><i class="bi bi-person me-2"></i>Plaintiff Information</h4>
+            {% if section_data.data %}
+            <p><strong>Name:</strong> {{ section_data.data.first_name }} {{ section_data.data.middle_name }} {{ section_data.data.last_name }}</p>
+            <p><strong>Address:</strong> {{ section_data.data.street_address }}, {{ section_data.data.city }}, {{ section_data.data.state }} {{ section_data.data.zip_code }}</p>
+            <p><strong>Phone:</strong> {{ section_data.data.phone }}</p>
+            <p><strong>Email:</strong> {{ section_data.data.email }}</p>
+            <p><strong>Representation:</strong> {% if section_data.data.is_pro_se %}Pro Se{% else %}Represented by {{ section_data.data.attorney_name }}{% endif %}</p>
+            {% else %}
+            <p class="text-muted"><em>No information provided yet.</em></p>
             {% endif %}
         </div>
-    </div>
-    {% if section_data.data.explanation %}
-    <div class="data-field">
-        <div class="data-label">How Rights Were Violated</div>
-        <div class="data-value">{{ section_data.data.explanation|linebreaks }}</div>
-    </div>
-    {% endif %}
-    {% else %}
-    <p class="text-muted"><em>No information provided yet.</em></p>
-    {% endif %}
-</div>
-{% endif %}
-{% endwith %}
+        {% endif %}
+        {% endwith %}
 
-<!-- Case Law Citations -->
-{% if case_law_citations %}
-<div class="preview-section completed">
-    <div class="section-header">
-        <h3><i class="bi bi-book me-2"></i>Supporting Case Law</h3>
-        <a href="{% url 'documents:case_law_list' document.id %}" class="btn btn-sm btn-outline-primary">
-            <i class="bi bi-pencil me-1"></i>Manage Citations
-        </a>
-    </div>
-    {% for citation in case_law_citations %}
-    <div class="item-card">
-        <div class="d-flex justify-content-between align-items-start">
-            <div class="flex-grow-1">
-                <h5 class="mb-1">
-                    {{ citation.case_law.case_name }}
-                    {% if citation.case_law.is_landmark %}
-                    <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">Landmark</span>
-                    {% endif %}
-                </h5>
-                <p class="mb-1 text-muted fst-italic">{{ citation.case_law.citation }}</p>
-                <p class="mb-1">{{ citation.get_explanation }}</p>
-                <small class="text-muted">
-                    <span class="badge bg-primary">{{ citation.get_amendment_display }}</span>
-                    <span class="badge bg-secondary ms-1">{{ citation.get_right_category_display }}</span>
-                </small>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-</div>
-{% else %}
-<div class="preview-section">
-    <div class="section-header">
-        <h3><i class="bi bi-book me-2"></i>Supporting Case Law</h3>
-        <a href="{% url 'documents:case_law_list' document.id %}" class="btn btn-sm btn-outline-primary">
-            <i class="bi bi-stars me-1"></i>Add Citations
-        </a>
-    </div>
-    <p class="text-muted"><em>No case law citations added yet. Click "Add Citations" to strengthen your complaint with legal precedents.</em></p>
-</div>
-{% endif %}
-
-<!-- Witnesses -->
-{% with section_data=sections_data.witnesses %}
-{% if section_data %}
-<div class="preview-section {% if section_data.section.status == 'completed' %}completed{% elif section_data.section.status == 'needs_work' %}needs-work{% elif section_data.section.status == 'in_progress' %}in-progress{% elif section_data.section.status == 'not_applicable' %}not-applicable{% endif %}">
-    <div class="section-header">
-        <h3><i class="bi bi-people me-2"></i>{{ section_data.config.title }}</h3>
-        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-witnesses">
-            <i class="bi bi-plus-lg me-1"></i>Add Witness
-        </button>
-    </div>
-    {% if section_data.data %}
-        {% for witness in section_data.data %}
-        <div class="item-card">
-            <div class="d-flex justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                    <h5 class="mb-1">{{ witness.name }}</h5>
-                    {% if witness.relationship %}<p class="mb-1"><strong>Relationship:</strong> {{ witness.relationship }}</p>{% endif %}
-                    {% if witness.contact_info %}<p class="mb-1"><strong>Contact:</strong> {{ witness.contact_info }}</p>{% endif %}
-                    {% if witness.what_they_witnessed %}<p class="mb-0"><strong>Witnessed:</strong> {{ witness.what_they_witnessed }}</p>{% endif %}
-                </div>
-                <div class="item-actions">
-                    <button class="btn btn-sm btn-outline-danger" onclick="deleteItem('witnesses', {{ witness.id }})">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    {% else %}
-    <p class="text-muted"><em>No witnesses added yet.</em></p>
-    {% endif %}
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Evidence -->
-{% with section_data=sections_data.evidence %}
-{% if section_data %}
-<div class="preview-section {% if section_data.section.status == 'completed' %}completed{% elif section_data.section.status == 'needs_work' %}needs-work{% elif section_data.section.status == 'in_progress' %}in-progress{% elif section_data.section.status == 'not_applicable' %}not-applicable{% endif %}">
-    <div class="section-header">
-        <h3><i class="bi bi-folder me-2"></i>{{ section_data.config.title }}</h3>
-        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-evidence">
-            <i class="bi bi-plus-lg me-1"></i>Add Evidence
-        </button>
-    </div>
-    {% if section_data.data %}
-        {% for item in section_data.data %}
-        <div class="item-card">
-            <div class="d-flex justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                    <h5 class="mb-1">{{ item.description }}</h5>
-                    <p class="mb-1 text-muted">
-                        <i class="bi bi-tag me-1"></i>{{ item.get_evidence_type_display }}
-                    </p>
-                    {% if item.location_of_evidence %}<p class="mb-1"><strong>Location:</strong> {{ item.location_of_evidence }}</p>{% endif %}
-                    {% if item.date_obtained %}<p class="mb-0"><strong>Date Obtained:</strong> {{ item.date_obtained|date:"F j, Y" }}</p>{% endif %}
-                </div>
-                <div class="item-actions">
-                    <button class="btn btn-sm btn-outline-danger" onclick="deleteItem('evidence', {{ item.id }})">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    {% else %}
-    <p class="text-muted"><em>No evidence added yet.</em></p>
-    {% endif %}
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Damages -->
-{% with section_data=sections_data.damages %}
-{% if section_data %}
-<div class="preview-section {% if section_data.section.status == 'completed' %}completed{% elif section_data.section.status == 'needs_work' %}needs-work{% elif section_data.section.status == 'in_progress' %}in-progress{% elif section_data.section.status == 'not_applicable' %}not-applicable{% endif %}">
-    <div class="section-header">
-        <h3><i class="bi bi-bandaid me-2"></i>{{ section_data.config.title }}</h3>
-        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-damages">
-            <i class="bi bi-pencil me-1"></i>Edit
-        </button>
-    </div>
-    {% if section_data.data %}
-    <div class="row">
-        {% if section_data.data.physical_injury_description %}
-        <div class="col-md-6">
-            <div class="data-field">
-                <div class="data-label">Physical Injuries</div>
-                <div class="data-value">{{ section_data.data.physical_injury_description|linebreaks }}</div>
-            </div>
-        </div>
-        {% endif %}
-        {% if section_data.data.emotional_distress_description %}
-        <div class="col-md-6">
-            <div class="data-field">
-                <div class="data-label">Emotional Distress</div>
-                <div class="data-value">{{ section_data.data.emotional_distress_description|linebreaks }}</div>
-            </div>
-        </div>
-        {% endif %}
-        {% if section_data.data.medical_treatment_description %}
-        <div class="col-md-6">
-            <div class="data-field">
-                <div class="data-label">Medical Treatment</div>
-                <div class="data-value">{{ section_data.data.medical_treatment_description|linebreaks }}</div>
-            </div>
-        </div>
-        {% endif %}
-        {% if section_data.data.property_damage_description %}
-        <div class="col-md-6">
-            <div class="data-field">
-                <div class="data-label">Property Damage</div>
-                <div class="data-value">{{ section_data.data.property_damage_description|linebreaks }}</div>
-            </div>
-        </div>
-        {% endif %}
-        {% if section_data.data.lost_wages %}
-        <div class="col-md-6">
-            <div class="data-field">
-                <div class="data-label">Lost Wages</div>
-                <div class="data-value">${{ section_data.data.lost_wages_amount|floatformat:2|default:"Amount not specified" }}</div>
-            </div>
-        </div>
-        {% endif %}
-        {% if section_data.data.other_expenses_description %}
-        <div class="col-md-12">
-            <div class="data-field">
-                <div class="data-label">Other Expenses</div>
-                <div class="data-value">{{ section_data.data.other_expenses_description|linebreaks }}</div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-    {% else %}
-    <p class="text-muted"><em>No information provided yet.</em></p>
-    {% endif %}
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Prior Complaints -->
-{% with section_data=sections_data.prior_complaints %}
-{% if section_data %}
-<div class="preview-section {% if section_data.section.status == 'completed' %}completed{% elif section_data.section.status == 'needs_work' %}needs-work{% elif section_data.section.status == 'in_progress' %}in-progress{% elif section_data.section.status == 'not_applicable' %}not-applicable{% endif %}">
-    <div class="section-header">
-        <h3><i class="bi bi-file-earmark-text me-2"></i>{{ section_data.config.title }}</h3>
-        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-prior_complaints">
-            <i class="bi bi-pencil me-1"></i>Edit
-        </button>
-    </div>
-    {% if section_data.data %}
-    <div class="row">
-        <div class="col-md-12">
-            <div class="data-field">
-                <div class="data-label">Prior Complaints Filed</div>
-                <div class="data-value">{{ section_data.data.filed_complaint|yesno:"Yes,No" }}</div>
-            </div>
-        </div>
-        {% if section_data.data.complaint_details %}
-        <div class="col-md-12">
-            <div class="data-field">
-                <div class="data-label">Details</div>
-                <div class="data-value">{{ section_data.data.complaint_details|linebreaks }}</div>
-            </div>
-        </div>
-        {% endif %}
-        {% if section_data.data.agency_response %}
-        <div class="col-md-12">
-            <div class="data-field">
-                <div class="data-label">Agency Response</div>
-                <div class="data-value">{{ section_data.data.agency_response|linebreaks }}</div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-    {% else %}
-    <p class="text-muted"><em>No information provided yet.</em></p>
-    {% endif %}
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Relief Sought -->
-{% with section_data=sections_data.relief_sought %}
-{% if section_data %}
-<div class="preview-section {% if section_data.section.status == 'completed' %}completed{% elif section_data.section.status == 'needs_work' %}needs-work{% elif section_data.section.status == 'in_progress' %}in-progress{% elif section_data.section.status == 'not_applicable' %}not-applicable{% endif %}">
-    <div class="section-header">
-        <h3><i class="bi bi-trophy me-2"></i>{{ section_data.config.title }}</h3>
-        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-relief_sought">
-            <i class="bi bi-pencil me-1"></i>Edit
-        </button>
-    </div>
-    {% if section_data.data %}
-    <div class="row">
-        <div class="col-md-6">
-            <div class="data-field">
-                <h6>Types of Relief</h6>
-                <ul class="mb-0">
-                    {% if section_data.data.compensatory_damages %}<li>Compensatory Damages</li>{% endif %}
-                    {% if section_data.data.punitive_damages %}<li>Punitive Damages</li>{% endif %}
-                    {% if section_data.data.injunctive_relief %}<li>Injunctive Relief</li>{% endif %}
-                    {% if section_data.data.declaratory_relief %}<li>Declaratory Relief</li>{% endif %}
-                    {% if section_data.data.attorneys_fees %}<li>Attorney's Fees</li>{% endif %}
-                </ul>
-            </div>
-        </div>
-        <div class="col-md-6">
-            {% if section_data.data.specific_amount %}
-            <div class="data-field">
-                <div class="data-label">Specific Amount Requested</div>
-                <div class="data-value">${{ section_data.data.specific_amount|floatformat:2 }}</div>
-            </div>
+        <!-- Incident Overview -->
+        {% with section_data=sections_data.incident_overview %}
+        {% if section_data %}
+        <div class="raw-data-section {% if section_data.section.status == 'completed' %}completed{% endif %}">
+            <h4><i class="bi bi-calendar-event me-2"></i>Incident Overview</h4>
+            {% if section_data.data %}
+            <p><strong>Date:</strong> {{ section_data.data.incident_date|date:"F j, Y"|default:"Not provided" }}</p>
+            <p><strong>Time:</strong> {{ section_data.data.incident_time|time:"g:i A"|default:"Not provided" }}</p>
+            <p><strong>Location:</strong> {{ section_data.data.incident_location }}, {{ section_data.data.city }}, {{ section_data.data.state }}</p>
+            <p><strong>Federal Court:</strong> {{ section_data.data.federal_district_court|default:"Not determined" }}</p>
+            {% else %}
+            <p class="text-muted"><em>No information provided yet.</em></p>
             {% endif %}
         </div>
-    </div>
-    {% if section_data.data.other_relief %}
-    <div class="data-field">
-        <div class="data-label">Other Relief</div>
-        <div class="data-value">{{ section_data.data.other_relief|linebreaks }}</div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Defendants -->
+        {% with section_data=sections_data.defendants %}
+        {% if section_data %}
+        <div class="raw-data-section {% if section_data.section.status == 'completed' %}completed{% endif %}">
+            <h4><i class="bi bi-shield-exclamation me-2"></i>Defendants</h4>
+            {% if section_data.data %}
+            {% for defendant in section_data.data %}
+            <div class="card mb-2">
+                <div class="card-body py-2">
+                    <strong>{{ defendant.name }}</strong>
+                    {% if defendant.title_rank %} - {{ defendant.title_rank }}{% endif %}
+                    {% if defendant.agency_name %}<br><small class="text-muted">{{ defendant.agency_name }}</small>{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-muted"><em>No defendants added yet.</em></p>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Incident Narrative -->
+        {% with section_data=sections_data.incident_narrative %}
+        {% if section_data %}
+        <div class="raw-data-section {% if section_data.section.status == 'completed' %}completed{% endif %}">
+            <h4><i class="bi bi-journal-text me-2"></i>Incident Narrative</h4>
+            {% if section_data.data %}
+            <p>{{ section_data.data.detailed_narrative|default:"No narrative provided"|linebreaks }}</p>
+            {% else %}
+            <p class="text-muted"><em>No information provided yet.</em></p>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Rights Violated -->
+        {% with section_data=sections_data.rights_violated %}
+        {% if section_data %}
+        <div class="raw-data-section {% if section_data.section.status == 'completed' %}completed{% endif %}">
+            <h4><i class="bi bi-file-earmark-ruled me-2"></i>Rights Violated</h4>
+            {% if section_data.data %}
+            <ul>
+                {% if section_data.data.first_amendment %}<li>First Amendment</li>{% endif %}
+                {% if section_data.data.fourth_amendment %}<li>Fourth Amendment</li>{% endif %}
+                {% if section_data.data.fifth_amendment %}<li>Fifth Amendment</li>{% endif %}
+                {% if section_data.data.fourteenth_amendment %}<li>Fourteenth Amendment</li>{% endif %}
+            </ul>
+            {% else %}
+            <p class="text-muted"><em>No rights selected yet.</em></p>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Case Law Citations -->
+        <div class="raw-data-section {% if case_law_citations %}completed{% endif %}">
+            <h4><i class="bi bi-book me-2"></i>Case Law Citations</h4>
+            {% if case_law_citations %}
+            {% for citation in case_law_citations %}
+            <div class="card mb-2">
+                <div class="card-body py-2">
+                    <strong>{{ citation.case_law.case_name }}</strong>, {{ citation.case_law.citation }}
+                    <br><small class="text-muted">{{ citation.get_explanation|truncatewords:20 }}</small>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-muted">
+                <em>No case law citations added yet.</em>
+                <a href="{% url 'documents:case_law_list' document.id %}">Add Citations</a>
+            </p>
+            {% endif %}
+        </div>
+
+        <!-- Relief Sought -->
+        {% with section_data=sections_data.relief_sought %}
+        {% if section_data %}
+        <div class="raw-data-section {% if section_data.section.status == 'completed' %}completed{% endif %}">
+            <h4><i class="bi bi-trophy me-2"></i>Relief Sought</h4>
+            {% if section_data.data %}
+            <ul>
+                {% if section_data.data.compensatory_damages %}<li>Compensatory Damages</li>{% endif %}
+                {% if section_data.data.punitive_damages %}<li>Punitive Damages</li>{% endif %}
+                {% if section_data.data.injunctive_relief %}<li>Injunctive Relief</li>{% endif %}
+                {% if section_data.data.declaratory_relief %}<li>Declaratory Relief</li>{% endif %}
+                {% if section_data.data.attorney_fees %}<li>Attorney's Fees</li>{% endif %}
+            </ul>
+            {% if section_data.data.jury_trial_demanded %}
+            <p><strong>Jury Trial:</strong> Demanded</p>
+            {% endif %}
+            {% else %}
+            <p class="text-muted"><em>No relief specified yet.</em></p>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endwith %}
     </div>
     {% endif %}
-    {% else %}
-    <p class="text-muted"><em>No information provided yet.</em></p>
-    {% endif %}
 </div>
-{% endif %}
-{% endwith %}
-
-<!-- Edit Modals -->
-
-<!-- Plaintiff Info Modal -->
-{% with section_data=sections_data.plaintiff_info %}
-{% if section_data %}
-<div class="modal fade" id="modal-plaintiff_info" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-person me-2"></i>Edit Plaintiff Information</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="form-plaintiff_info" class="ajax-form" data-section="plaintiff_info">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    {% for field in section_data.form %}
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        Save Changes
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Incident Overview Modal -->
-{% with section_data=sections_data.incident_overview %}
-{% if section_data %}
-<div class="modal fade" id="modal-incident_overview" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-calendar-event me-2"></i>Edit Incident Overview</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="form-incident_overview" class="ajax-form" data-section="incident_overview">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    {% for field in section_data.form %}
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        Save Changes
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Defendants Modal (Add new) -->
-{% with section_data=sections_data.defendants %}
-{% if section_data %}
-<div class="modal fade" id="modal-defendants" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-shield-exclamation me-2"></i>Add Defendant</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="form-defendants" class="ajax-form" data-section="defendants">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    {% for field in section_data.form %}
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        Add Defendant
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Incident Narrative Modal -->
-{% with section_data=sections_data.incident_narrative %}
-{% if section_data %}
-<div class="modal fade" id="modal-incident_narrative" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-journal-text me-2"></i>Edit Incident Narrative</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="form-incident_narrative" class="ajax-form" data-section="incident_narrative">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    {% for field in section_data.form %}
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        Save Changes
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Rights Violated Modal -->
-{% with section_data=sections_data.rights_violated %}
-{% if section_data %}
-<div class="modal fade" id="modal-rights_violated" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-file-earmark-ruled me-2"></i>Edit Rights Violated</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="form-rights_violated" class="ajax-form" data-section="rights_violated">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    {% for field in section_data.form %}
-                    <div class="mb-3">
-                        {% if field.field.widget.input_type == 'checkbox' %}
-                        <div class="form-check">
-                            {{ field }}
-                            <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        </div>
-                        {% else %}
-                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% endif %}
-                        {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        Save Changes
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Witnesses Modal -->
-{% with section_data=sections_data.witnesses %}
-{% if section_data %}
-<div class="modal fade" id="modal-witnesses" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-people me-2"></i>Add Witness</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="form-witnesses" class="ajax-form" data-section="witnesses">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    {% for field in section_data.form %}
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        Add Witness
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Evidence Modal -->
-{% with section_data=sections_data.evidence %}
-{% if section_data %}
-<div class="modal fade" id="modal-evidence" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-folder me-2"></i>Add Evidence</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="form-evidence" class="ajax-form" data-section="evidence">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    {% for field in section_data.form %}
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        Add Evidence
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Damages Modal -->
-{% with section_data=sections_data.damages %}
-{% if section_data %}
-<div class="modal fade" id="modal-damages" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-bandaid me-2"></i>Edit Damages</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="form-damages" class="ajax-form" data-section="damages">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    {% for field in section_data.form %}
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        Save Changes
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Prior Complaints Modal -->
-{% with section_data=sections_data.prior_complaints %}
-{% if section_data %}
-<div class="modal fade" id="modal-prior_complaints" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-file-earmark-text me-2"></i>Edit Prior Complaints</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="form-prior_complaints" class="ajax-form" data-section="prior_complaints">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    {% for field in section_data.form %}
-                    <div class="mb-3">
-                        {% if field.field.widget.input_type == 'checkbox' %}
-                        <div class="form-check">
-                            {{ field }}
-                            <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        </div>
-                        {% else %}
-                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% endif %}
-                        {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        Save Changes
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endwith %}
-
-<!-- Relief Sought Modal -->
-{% with section_data=sections_data.relief_sought %}
-{% if section_data %}
-<div class="modal fade" id="modal-relief_sought" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-trophy me-2"></i>Edit Relief Sought</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="form-relief_sought" class="ajax-form" data-section="relief_sought">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    {% for field in section_data.form %}
-                    <div class="mb-3">
-                        {% if field.field.widget.input_type == 'checkbox' %}
-                        <div class="form-check">
-                            {{ field }}
-                            <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        </div>
-                        {% else %}
-                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% endif %}
-                        {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        Save Changes
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endwith %}
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const documentId = {{ document.id }};
-
-// Handle AJAX form submissions
-document.querySelectorAll('.ajax-form').forEach(form => {
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const sectionType = form.dataset.section;
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const spinner = submitBtn.querySelector('.spinner-border');
-
-        // Clear previous errors
-        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-        form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
-
-        // Show loading
-        spinner.classList.remove('d-none');
-        submitBtn.disabled = true;
-
-        try {
-            const formData = new FormData(form);
-            const response = await fetch(`/documents/${documentId}/section/${sectionType}/save/`, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                // Close modal and reload page to show updated data
-                const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
-                modal.hide();
-
-                // Show success message
-                showToast('Success', data.message || 'Changes saved successfully', 'success');
-
-                // Reload page after short delay
-                setTimeout(() => location.reload(), 500);
-            } else {
-                // Show validation errors
-                if (data.errors) {
-                    for (const [field, errors] of Object.entries(data.errors)) {
-                        const input = form.querySelector(`[name="${field}"]`);
-                        if (input) {
-                            input.classList.add('is-invalid');
-                            const feedback = input.parentElement.querySelector('.invalid-feedback');
-                            if (feedback) {
-                                feedback.textContent = errors.join(', ');
-                            }
-                        }
-                    }
-                }
-                showToast('Error', data.error || 'Please fix the errors and try again', 'danger');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            showToast('Error', 'An unexpected error occurred', 'danger');
-        } finally {
-            spinner.classList.add('d-none');
-            submitBtn.disabled = false;
-        }
-    });
-});
-
-// Delete item function
-async function deleteItem(sectionType, itemId) {
-    if (!confirm('Are you sure you want to delete this item?')) {
-        return;
-    }
-
-    try {
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-        const response = await fetch(`/documents/${documentId}/section/${sectionType}/delete-item/${itemId}/`, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': csrfToken
-            }
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showToast('Success', 'Item deleted successfully', 'success');
-            setTimeout(() => location.reload(), 500);
-        } else {
-            showToast('Error', data.error || 'Failed to delete item', 'danger');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        showToast('Error', 'An unexpected error occurred', 'danger');
-    }
-}
-
-// Toast notification function
-function showToast(title, message, type = 'info') {
-    // Create toast container if it doesn't exist
-    let container = document.querySelector('.toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.className = 'toast-container position-fixed top-0 end-0 p-3';
-        container.style.zIndex = '9999';
-        document.body.appendChild(container);
-    }
-
-    const toastId = 'toast-' + Date.now();
-    const toastHtml = `
-        <div id="${toastId}" class="toast" role="alert">
-            <div class="toast-header bg-${type} text-white">
-                <strong class="me-auto">${title}</strong>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
-            </div>
-            <div class="toast-body">${message}</div>
-        </div>
-    `;
-
-    container.insertAdjacentHTML('beforeend', toastHtml);
-
-    const toastElement = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
-    toast.show();
-
-    toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
-}
-
-// Add Bootstrap classes to form fields
-document.querySelectorAll('.modal .form-control, .modal select, .modal textarea').forEach(el => {
-    if (!el.classList.contains('form-control') && !el.classList.contains('form-select') && !el.classList.contains('form-check-input')) {
-        if (el.tagName === 'SELECT') {
-            el.classList.add('form-select');
-        } else if (el.type === 'checkbox') {
-            el.classList.add('form-check-input');
-        } else {
-            el.classList.add('form-control');
-        }
-    }
-});
-
-// Attorney toggle for plaintiff_info modal
-function setupAttorneyToggle() {
-    const modal = document.getElementById('modal-plaintiff_info');
-    if (!modal) return;
-
-    const hasAttorneyCheckbox = modal.querySelector('#id_has_attorney');
-    if (!hasAttorneyCheckbox) return;
-
-    // Attorney field IDs
-    const attorneyFieldIds = [
-        'id_attorney_name', 'id_attorney_bar_number', 'id_attorney_firm_name',
-        'id_attorney_street_address', 'id_attorney_city', 'id_attorney_state',
-        'id_attorney_zip_code', 'id_attorney_phone', 'id_attorney_fax', 'id_attorney_email'
-    ];
-
-    // Check if wrapper already exists
-    let attorneySection = modal.querySelector('#attorney-section-modal');
-    if (!attorneySection) {
-        // Create wrapper for attorney fields
-        attorneySection = document.createElement('div');
-        attorneySection.id = 'attorney-section-modal';
-        attorneySection.style.cssText = 'background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.5rem; padding: 1rem; margin-top: 1rem;';
-        attorneySection.innerHTML = '<h6 style="color: #495057; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #dee2e6;"><i class="bi bi-briefcase me-2" style="color: #0d6efd;"></i>Attorney Information</h6>';
-
-        const fieldsContainer = document.createElement('div');
-        fieldsContainer.id = 'attorney-fields-modal';
-        attorneySection.appendChild(fieldsContainer);
-
-        // Move attorney fields into the container
-        attorneyFieldIds.forEach(fieldId => {
-            const field = modal.querySelector('#' + fieldId);
-            if (field) {
-                const fieldContainer = field.closest('.mb-3');
-                if (fieldContainer) {
-                    fieldsContainer.appendChild(fieldContainer);
-                }
-            }
-        });
-
-        // Insert after the has_attorney checkbox
-        const checkboxContainer = hasAttorneyCheckbox.closest('.mb-3');
-        if (checkboxContainer && fieldsContainer.children.length > 0) {
-            checkboxContainer.after(attorneySection);
-        }
-    }
-
-    // Toggle function
-    function toggleAttorneyFields() {
-        attorneySection.style.display = hasAttorneyCheckbox.checked ? 'block' : 'none';
-    }
-
-    // Initial state
-    toggleAttorneyFields();
-
-    // Listen for changes
-    hasAttorneyCheckbox.removeEventListener('change', toggleAttorneyFields);
-    hasAttorneyCheckbox.addEventListener('change', toggleAttorneyFields);
-}
-
-// Setup attorney toggle when modal is shown
-const plaintiffModal = document.getElementById('modal-plaintiff_info');
-if (plaintiffModal) {
-    plaintiffModal.addEventListener('shown.bs.modal', setupAttorneyToggle);
-    // Also setup on page load in case modal is already in DOM
-    setupAttorneyToggle();
-}
+// Nothing needed for now - purely display
 </script>
 {% endblock %}

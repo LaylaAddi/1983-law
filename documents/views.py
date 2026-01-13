@@ -516,10 +516,28 @@ def fill_test_data(request, document_id):
 
 @login_required
 def document_preview(request, document_id):
-    """Preview the complete document with inline editing modals."""
+    """Preview the complete document as a professionally written legal complaint."""
     document = get_object_or_404(Document, id=document_id, user=request.user)
 
-    # Load all section data
+    # Check if we should generate the legal document
+    generate = request.GET.get('generate', 'true').lower() == 'true'
+
+    # Collect all document data for the generator
+    document_data = _collect_document_data(document)
+
+    generated_document = None
+    if generate and document_data.get('has_minimum_data'):
+        try:
+            from .services.document_generator import DocumentGenerator
+            generator = DocumentGenerator()
+            result = generator.generate_complaint(document_data)
+            if result.get('success'):
+                generated_document = result.get('document')
+        except Exception as e:
+            # Log error but continue to show data view
+            print(f"Error generating document: {e}")
+
+    # Also load raw section data for reference/editing
     sections_data = {}
     for section in document.sections.all():
         config = SECTION_CONFIG.get(section.section_type, {})
@@ -560,9 +578,201 @@ def document_preview(request, document_id):
         'sections_data': sections_data,
         'section_config': SECTION_CONFIG,
         'case_law_citations': case_law_citations,
+        'generated_document': generated_document,
+        'document_data': document_data,
     }
 
     return render(request, 'documents/document_preview.html', context)
+
+
+def _collect_document_data(document):
+    """Collect all document data for the generator."""
+    data = {
+        'has_minimum_data': False,
+        'plaintiff': {},
+        'defendants': [],
+        'incident': {},
+        'narrative': {},
+        'rights_violated': {},
+        'damages': {},
+        'relief': {},
+        'case_law': [],
+        'court': '',
+    }
+
+    # Plaintiff info
+    try:
+        plaintiff_section = document.sections.get(section_type='plaintiff_info')
+        pi = plaintiff_section.plaintiff_info
+        data['plaintiff'] = {
+            'first_name': pi.first_name,
+            'middle_name': pi.middle_name,
+            'last_name': pi.last_name,
+            'street_address': pi.street_address,
+            'city': pi.city,
+            'state': pi.state,
+            'zip_code': pi.zip_code,
+            'phone': pi.phone,
+            'email': pi.email,
+            'is_pro_se': pi.is_pro_se,
+            'attorney_name': pi.attorney_name,
+            'attorney_bar_number': pi.attorney_bar_number,
+            'attorney_firm_name': pi.attorney_firm_name,
+            'attorney_street_address': pi.attorney_street_address,
+            'attorney_city': pi.attorney_city,
+            'attorney_state': pi.attorney_state,
+            'attorney_zip_code': pi.attorney_zip_code,
+            'attorney_phone': pi.attorney_phone,
+            'attorney_email': pi.attorney_email,
+        }
+    except (DocumentSection.DoesNotExist, PlaintiffInfo.DoesNotExist):
+        pass
+
+    # Defendants
+    try:
+        defendants_section = document.sections.get(section_type='defendants')
+        for d in Defendant.objects.filter(section=defendants_section):
+            data['defendants'].append({
+                'name': d.name,
+                'defendant_type': d.defendant_type,
+                'badge_number': d.badge_number,
+                'title_rank': d.title_rank,
+                'agency_name': d.agency_name,
+                'description': d.description,
+            })
+    except DocumentSection.DoesNotExist:
+        pass
+
+    # Incident overview
+    try:
+        incident_section = document.sections.get(section_type='incident_overview')
+        io = incident_section.incident_overview
+        data['incident'] = {
+            'incident_date': str(io.incident_date) if io.incident_date else '',
+            'incident_time': str(io.incident_time) if io.incident_time else '',
+            'incident_location': io.incident_location,
+            'city': io.city,
+            'state': io.state,
+            'location_type': io.location_type,
+            'was_recording': io.was_recording,
+            'recording_device': io.recording_device,
+        }
+        data['court'] = io.federal_district_court or ''
+    except (DocumentSection.DoesNotExist, IncidentOverview.DoesNotExist):
+        pass
+
+    # Incident narrative
+    try:
+        narrative_section = document.sections.get(section_type='incident_narrative')
+        n = narrative_section.incident_narrative
+        data['narrative'] = {
+            'summary': n.summary,
+            'detailed_narrative': n.detailed_narrative,
+            'what_were_you_doing': n.what_were_you_doing,
+            'initial_contact': n.initial_contact,
+            'what_was_said': n.what_was_said,
+            'physical_actions': n.physical_actions,
+            'how_it_ended': n.how_it_ended,
+        }
+    except (DocumentSection.DoesNotExist, IncidentNarrative.DoesNotExist):
+        pass
+
+    # Rights violated
+    try:
+        rights_section = document.sections.get(section_type='rights_violated')
+        rv = rights_section.rights_violated
+        data['rights_violated'] = {
+            'first_amendment': rv.first_amendment,
+            'first_amendment_speech': rv.first_amendment_speech,
+            'first_amendment_press': rv.first_amendment_press,
+            'first_amendment_assembly': rv.first_amendment_assembly,
+            'first_amendment_petition': rv.first_amendment_petition,
+            'first_amendment_details': rv.first_amendment_details,
+            'fourth_amendment': rv.fourth_amendment,
+            'fourth_amendment_search': rv.fourth_amendment_search,
+            'fourth_amendment_seizure': rv.fourth_amendment_seizure,
+            'fourth_amendment_arrest': rv.fourth_amendment_arrest,
+            'fourth_amendment_force': rv.fourth_amendment_force,
+            'fourth_amendment_details': rv.fourth_amendment_details,
+            'fifth_amendment': rv.fifth_amendment,
+            'fifth_amendment_self_incrimination': rv.fifth_amendment_self_incrimination,
+            'fifth_amendment_due_process': rv.fifth_amendment_due_process,
+            'fifth_amendment_details': rv.fifth_amendment_details,
+            'fourteenth_amendment': rv.fourteenth_amendment,
+            'fourteenth_amendment_due_process': rv.fourteenth_amendment_due_process,
+            'fourteenth_amendment_equal_protection': rv.fourteenth_amendment_equal_protection,
+            'fourteenth_amendment_details': rv.fourteenth_amendment_details,
+        }
+    except (DocumentSection.DoesNotExist, RightsViolated.DoesNotExist):
+        pass
+
+    # Damages
+    try:
+        damages_section = document.sections.get(section_type='damages')
+        d = damages_section.damages
+        data['damages'] = {
+            'physical_injury': d.physical_injury,
+            'physical_injury_description': d.physical_injury_description,
+            'emotional_distress': d.emotional_distress,
+            'emotional_distress_description': d.emotional_distress_description,
+            'property_damage': d.property_damage,
+            'property_damage_description': d.property_damage_description,
+            'lost_wages': d.lost_wages,
+            'lost_wages_amount': float(d.lost_wages_amount) if d.lost_wages_amount else 0,
+            'medical_expenses': float(d.medical_expenses) if d.medical_expenses else 0,
+        }
+    except (DocumentSection.DoesNotExist, Damages.DoesNotExist):
+        pass
+
+    # Relief sought
+    try:
+        relief_section = document.sections.get(section_type='relief_sought')
+        rs = relief_section.relief_sought
+        data['relief'] = {
+            'compensatory_damages': rs.compensatory_damages,
+            'compensatory_amount': float(rs.compensatory_amount) if rs.compensatory_amount else None,
+            'punitive_damages': rs.punitive_damages,
+            'punitive_amount': float(rs.punitive_amount) if rs.punitive_amount else None,
+            'attorney_fees': rs.attorney_fees,
+            'injunctive_relief': rs.injunctive_relief,
+            'injunctive_description': rs.injunctive_description,
+            'declaratory_relief': rs.declaratory_relief,
+            'declaratory_description': rs.declaratory_description,
+            'jury_trial_demanded': rs.jury_trial_demanded,
+        }
+    except (DocumentSection.DoesNotExist, ReliefSought.DoesNotExist):
+        pass
+
+    # Case law citations
+    case_law_citations = DocumentCaseLaw.objects.filter(
+        document=document,
+        status__in=['accepted', 'edited']
+    ).select_related('case_law')
+
+    for cl in case_law_citations:
+        data['case_law'].append({
+            'case_name': cl.case_law.case_name,
+            'citation': cl.case_law.citation,
+            'amendment': cl.amendment,
+            'right_category': cl.right_category,
+            'key_holding': cl.case_law.key_holding,
+            'citation_text': cl.case_law.citation_text,
+            'explanation': cl.get_explanation(),
+        })
+
+    # Check if we have minimum data to generate
+    has_plaintiff = bool(data['plaintiff'].get('first_name') and data['plaintiff'].get('last_name'))
+    has_narrative = bool(data['narrative'].get('detailed_narrative') or document.story_text)
+    has_rights = any([
+        data['rights_violated'].get('first_amendment'),
+        data['rights_violated'].get('fourth_amendment'),
+        data['rights_violated'].get('fifth_amendment'),
+        data['rights_violated'].get('fourteenth_amendment'),
+    ])
+
+    data['has_minimum_data'] = has_plaintiff and has_narrative and has_rights
+
+    return data
 
 
 @login_required
