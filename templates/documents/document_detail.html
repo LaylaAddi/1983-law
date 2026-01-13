@@ -71,31 +71,39 @@
 <div class="row">
     {% for item in sections %}
         <div class="col-md-6 mb-3">
-            <div class="card h-100 {% if item.section.status == 'needs_work' %}border-warning border-2{% elif item.section.status == 'completed' %}border-success{% elif item.section.status == 'not_applicable' %}border-secondary{% endif %}">
+            <div class="card h-100 {% if item.section.status == 'needs_work' %}border-warning border-2{% elif item.section.status == 'completed' %}border-success{% elif item.section.status == 'not_applicable' %}border-secondary{% elif item.section.story_relevance == 'may_not_apply' and item.section.status == 'not_started' %}border-secondary opacity-75{% endif %}">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h5 class="card-title mb-0">
+                        <h5 class="card-title mb-0 {% if item.section.story_relevance == 'may_not_apply' and item.section.status == 'not_started' %}text-muted{% endif %}">
                             <span class="text-muted me-2">{{ forloop.counter }}.</span>
                             {{ item.title }}
                         </h5>
 
-                        {% if item.section.status == 'not_started' %}
-                            <span class="badge bg-secondary">Not Started</span>
-                        {% elif item.section.status == 'in_progress' %}
-                            <span class="badge bg-info">In Progress</span>
-                        {% elif item.section.status == 'needs_work' %}
-                            <span class="badge bg-warning text-dark">
-                                <i class="bi bi-exclamation-triangle me-1"></i>Needs Work
-                            </span>
-                        {% elif item.section.status == 'completed' %}
-                            <span class="badge bg-success">
-                                <i class="bi bi-check-lg me-1"></i>Completed
-                            </span>
-                        {% elif item.section.status == 'not_applicable' %}
-                            <span class="badge bg-secondary">
-                                <i class="bi bi-dash-lg me-1"></i>N/A
-                            </span>
-                        {% endif %}
+                        <div class="d-flex flex-column align-items-end gap-1">
+                            {% if item.section.status == 'not_started' %}
+                                <span class="badge bg-secondary">Not Started</span>
+                            {% elif item.section.status == 'in_progress' %}
+                                <span class="badge bg-info">In Progress</span>
+                            {% elif item.section.status == 'needs_work' %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Needs Work
+                                </span>
+                            {% elif item.section.status == 'completed' %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-lg me-1"></i>Completed
+                                </span>
+                            {% elif item.section.status == 'not_applicable' %}
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-dash-lg me-1"></i>N/A
+                                </span>
+                            {% endif %}
+
+                            {% if item.section.story_relevance == 'may_not_apply' and item.section.status == 'not_started' %}
+                                <span class="badge bg-light text-muted border" style="font-size: 0.7rem;">
+                                    <i class="bi bi-info-circle me-1"></i>May not apply
+                                </span>
+                            {% endif %}
+                        </div>
                     </div>
 
                     <p class="card-text text-muted small mb-3">{{ item.description }}</p>

@@ -781,6 +781,58 @@ def _collect_document_data(document):
     return data
 
 
+def _update_section_relevance(document, extracted_data):
+    """
+    Update story_relevance field for sections based on what was extracted from the story.
+
+    Sections that always apply (set to 'relevant'):
+    - plaintiff_info, incident_overview, incident_narrative, rights_violated, relief_sought, defendants
+
+    Sections that may not apply (based on extracted data):
+    - witnesses: 'may_not_apply' if no witnesses extracted
+    - evidence: 'may_not_apply' if no evidence extracted
+    - damages: 'relevant' if any damages mentioned, else 'may_not_apply'
+    - prior_complaints: typically 'may_not_apply' (rarely mentioned in stories)
+    """
+    # Sections that always apply
+    always_relevant = ['plaintiff_info', 'incident_overview', 'incident_narrative',
+                       'rights_violated', 'relief_sought', 'defendants']
+
+    # Check what was extracted
+    witnesses = extracted_data.get('witnesses', [])
+    has_witnesses = bool(witnesses and any(w.get('name') or w.get('description') for w in witnesses))
+
+    evidence = extracted_data.get('evidence', [])
+    has_evidence = bool(evidence and any(e.get('type') or e.get('description') for e in evidence))
+
+    damages = extracted_data.get('damages', {})
+    has_damages = bool(
+        damages.get('physical_injuries') or
+        damages.get('emotional_distress') or
+        damages.get('financial_losses') or
+        damages.get('other_damages')
+    )
+
+    # Update each section
+    for section in document.sections.all():
+        if section.section_type in always_relevant:
+            section.story_relevance = 'relevant'
+        elif section.section_type == 'witnesses':
+            section.story_relevance = 'relevant' if has_witnesses else 'may_not_apply'
+        elif section.section_type == 'evidence':
+            section.story_relevance = 'relevant' if has_evidence else 'may_not_apply'
+        elif section.section_type == 'damages':
+            # Damages usually apply even if not mentioned - people often have at least emotional distress
+            section.story_relevance = 'relevant' if has_damages else 'may_not_apply'
+        elif section.section_type == 'prior_complaints':
+            # Prior complaints are rarely mentioned in stories
+            section.story_relevance = 'may_not_apply'
+        else:
+            section.story_relevance = 'unknown'
+
+        section.save(update_fields=['story_relevance'])
+
+
 @login_required
 @require_POST
 def section_save_ajax(request, document_id, section_type):
@@ -1114,6 +1166,10 @@ def parse_story(request, document_id):
                     'incident_overview': True,
                     'fields_applied': [k for k, v in incident_data.items() if v]
                 }
+
+            # Update story_relevance for all sections based on extracted data
+            extracted = result.get('data', {}) or result.get('sections', {})
+            _update_section_relevance(document, extracted)
 
         return JsonResponse(result)
 

@@ -74,9 +74,21 @@ class DocumentSection(models.Model):
         ('not_applicable', 'Not Applicable'),
     ]
 
+    RELEVANCE_CHOICES = [
+        ('unknown', 'Not Analyzed'),
+        ('relevant', 'Relevant'),
+        ('may_not_apply', 'May Not Apply'),
+    ]
+
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='sections')
     section_type = models.CharField(max_length=30, choices=SECTION_TYPES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_started')
+    story_relevance = models.CharField(
+        max_length=20,
+        choices=RELEVANCE_CHOICES,
+        default='unknown',
+        help_text='Whether this section appears relevant based on story analysis'
+    )
     order = models.PositiveIntegerField(default=0)
     notes = models.TextField(blank=True, help_text='Internal notes about what needs work')
     updated_at = models.DateTimeField(auto_now=True)
