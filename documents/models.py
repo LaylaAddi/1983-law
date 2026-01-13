@@ -139,16 +139,22 @@ class Document(models.Model):
         """Check if AI features are available."""
         if not self.can_edit():
             return False
+        # Admin/staff have unlimited access
+        if self.user.has_unlimited_access():
+            return True
         if self.payment_status == 'draft':
-            return self.ai_generations_used < settings.FREE_AI_GENERATIONS
+            # Check USER-level free AI limit (across all documents)
+            return self.user.can_use_free_ai()
         elif self.payment_status == 'paid':
             return float(self.ai_cost_used) < settings.PAID_AI_BUDGET
         return False
 
     def get_ai_usage_display(self):
         """Get AI usage display string."""
+        if self.user.has_unlimited_access():
+            return "AI: Unlimited (Admin)"
         if self.payment_status == 'draft':
-            remaining = settings.FREE_AI_GENERATIONS - self.ai_generations_used
+            remaining = self.user.get_free_ai_remaining()
             return f"{remaining} of {settings.FREE_AI_GENERATIONS} free AI uses remaining"
         elif self.payment_status == 'paid':
             budget = Decimal(str(settings.PAID_AI_BUDGET))

@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.conf import settings
 
 
 class CustomUserManager(BaseUserManager):
@@ -107,3 +108,28 @@ class User(AbstractBaseUser, PermissionsMixin):
                 city_state_zip += ' ' + self.mailing_zip_code
             parts.append(city_state_zip)
         return '\n'.join(filter(None, parts))
+
+    def has_unlimited_access(self):
+        """Check if user has unlimited access (admin/staff)."""
+        return self.is_staff or self.is_superuser
+
+    def get_total_free_ai_uses(self):
+        """Get total free AI generations used across all draft documents."""
+        return self.documents.filter(
+            payment_status='draft'
+        ).aggregate(
+            total=models.Sum('ai_generations_used')
+        )['total'] or 0
+
+    def can_use_free_ai(self):
+        """Check if user can still use free AI generations."""
+        if self.has_unlimited_access():
+            return True
+        return self.get_total_free_ai_uses() < settings.FREE_AI_GENERATIONS
+
+    def get_free_ai_remaining(self):
+        """Get remaining free AI generations for this user."""
+        if self.has_unlimited_access():
+            return 999  # Unlimited
+        remaining = settings.FREE_AI_GENERATIONS - self.get_total_free_ai_uses()
+        return max(0, remaining)
