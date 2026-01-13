@@ -1,0 +1,339 @@
+{% comment %}
+Custom form template for Relief Sought section.
+Shows a clear summary of what's being requested with options to customize.
+{% endcomment %}
+
+<style>
+    .relief-summary-card {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border: 2px solid #28a745;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .relief-summary-card h5 {
+        color: #155724;
+    }
+    .relief-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+    .relief-item:last-child {
+        border-bottom: none;
+    }
+    .relief-item i {
+        color: #28a745;
+        margin-right: 0.75rem;
+        margin-top: 0.2rem;
+    }
+    .relief-item.excluded i {
+        color: #6c757d;
+    }
+    .relief-item.excluded span {
+        color: #6c757d;
+        text-decoration: line-through;
+    }
+    .customize-section {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        margin-top: 1rem;
+    }
+    .customize-header {
+        padding: 1rem;
+        background: #e9ecef;
+        border-radius: 0.5rem 0.5rem 0 0;
+        cursor: pointer;
+    }
+    .customize-header:hover {
+        background: #dee2e6;
+    }
+    .customize-body {
+        padding: 1.5rem;
+    }
+    .form-section {
+        background: white;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+    }
+    .form-section-title {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+</style>
+
+<!-- Summary Card -->
+<div class="relief-summary-card">
+    <h5><i class="bi bi-check-circle-fill me-2"></i>What Your Complaint Will Ask For</h5>
+    <p class="text-muted mb-3">Based on standard Section 1983 civil rights cases. These are the typical requests for First Amendment audit cases.</p>
+
+    <div id="relief-summary">
+        <div class="relief-item" data-field="compensatory_damages">
+            <i class="bi bi-check-lg"></i>
+            <span><strong>Compensatory Damages</strong> - Money for your actual losses and suffering</span>
+        </div>
+        <div class="relief-item" data-field="punitive_damages">
+            <i class="bi bi-check-lg"></i>
+            <span><strong>Punitive Damages</strong> - Extra money to punish the officers</span>
+        </div>
+        <div class="relief-item" data-field="attorney_fees">
+            <i class="bi bi-check-lg"></i>
+            <span><strong>Attorney's Fees</strong> - Make them pay your legal costs if you win</span>
+        </div>
+        <div class="relief-item" data-field="declaratory_relief">
+            <i class="bi bi-check-lg"></i>
+            <span><strong>Declaratory Judgment</strong> - Official declaration that your rights were violated</span>
+        </div>
+        <div class="relief-item" data-field="jury_trial_demanded">
+            <i class="bi bi-check-lg"></i>
+            <span><strong>Jury Trial</strong> - Have regular citizens decide your case</span>
+        </div>
+        <div class="relief-item excluded" data-field="injunctive_relief" style="display: none;">
+            <i class="bi bi-dash-lg"></i>
+            <span><strong>Policy Changes</strong> - Court-ordered changes to department policies</span>
+        </div>
+    </div>
+</div>
+
+<!-- Main Form (hidden checkboxes that control the summary) -->
+<form method="post" id="relief-form">
+    {% csrf_token %}
+
+    <!-- Customize Section -->
+    <div class="customize-section">
+        <div class="customize-header" data-bs-toggle="collapse" data-bs-target="#customizeOptions">
+            <div class="d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="bi bi-sliders me-2"></i>
+                    <strong>Customize Your Requests</strong>
+                    <small class="text-muted ms-2">Click to expand</small>
+                </span>
+                <i class="bi bi-chevron-down" id="customizeChevron"></i>
+            </div>
+        </div>
+
+        <div class="collapse" id="customizeOptions">
+            <div class="customize-body">
+                <!-- Standard Relief Options -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="bi bi-currency-dollar me-2 text-success"></i>Standard Relief
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                {{ form.compensatory_damages }}
+                                <label class="form-check-label" for="{{ form.compensatory_damages.id_for_label }}">
+                                    {{ form.compensatory_damages.label }}
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-1">{{ form.compensatory_damages.help_text }}</small>
+
+                            <div class="mt-2" id="compensatory-amount-wrapper">
+                                <label class="form-label small">Specific amount (optional):</label>
+                                {{ form.compensatory_amount }}
+                                <small class="text-muted">Leave blank to let the court decide</small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                {{ form.punitive_damages }}
+                                <label class="form-check-label" for="{{ form.punitive_damages.id_for_label }}">
+                                    {{ form.punitive_damages.label }}
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-1">{{ form.punitive_damages.help_text }}</small>
+
+                            <div class="mt-2" id="punitive-amount-wrapper">
+                                <label class="form-label small">Specific amount (optional):</label>
+                                {{ form.punitive_amount }}
+                                <small class="text-muted">Leave blank to let the court decide</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                {{ form.attorney_fees }}
+                                <label class="form-check-label" for="{{ form.attorney_fees.id_for_label }}">
+                                    {{ form.attorney_fees.label }}
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-1">{{ form.attorney_fees.help_text }}</small>
+                            <div class="alert alert-warning py-1 px-2 mt-2 small">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                <strong>Always include this!</strong> It's standard in civil rights cases.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                {{ form.jury_trial_demanded }}
+                                <label class="form-check-label" for="{{ form.jury_trial_demanded.id_for_label }}">
+                                    {{ form.jury_trial_demanded.label }}
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-1">{{ form.jury_trial_demanded.help_text }}</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Declaratory Relief -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="bi bi-file-earmark-text me-2 text-primary"></i>Declaratory Judgment
+                    </div>
+
+                    <div class="form-check mb-3">
+                        {{ form.declaratory_relief }}
+                        <label class="form-check-label" for="{{ form.declaratory_relief.id_for_label }}">
+                            {{ form.declaratory_relief.label }}
+                        </label>
+                    </div>
+                    <small class="text-muted d-block mb-3">{{ form.declaratory_relief.help_text }}</small>
+
+                    <div id="declaratory-description-wrapper">
+                        <label class="form-label">Custom Declaration (optional):</label>
+                        {{ form.declaratory_description }}
+                        <small class="text-muted">Leave blank for standard language, or write your own</small>
+                    </div>
+                </div>
+
+                <!-- Injunctive Relief (Optional) -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="bi bi-building me-2 text-info"></i>Policy Changes (Optional)
+                    </div>
+
+                    <div class="alert alert-info py-2 mb-3">
+                        <small>
+                            <i class="bi bi-info-circle me-1"></i>
+                            This is optional and harder to get, but can create lasting change. Most individual plaintiffs skip this.
+                        </small>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        {{ form.injunctive_relief }}
+                        <label class="form-check-label" for="{{ form.injunctive_relief.id_for_label }}">
+                            {{ form.injunctive_relief.label }}
+                        </label>
+                    </div>
+
+                    <div id="injunctive-description-wrapper" style="display: none;">
+                        <label class="form-label">What changes do you want the court to order?</label>
+                        {{ form.injunctive_description }}
+                        <small class="text-muted">Example: "Order the department to train officers on First Amendment rights regarding filming in public"</small>
+                    </div>
+                </div>
+
+                <!-- Other Relief -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="bi bi-plus-circle me-2 text-secondary"></i>Other Relief
+                    </div>
+
+                    <label class="form-label">Anything else you want to ask for?</label>
+                    {{ form.other_relief }}
+                    <small class="text-muted">Optional - most cases don't need anything here</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-4">
+
+    <div class="d-flex justify-content-between">
+        <button type="submit" name="save" class="btn btn-outline-primary">
+            <i class="bi bi-save me-1"></i>Save
+        </button>
+        <button type="submit" name="save_and_continue" class="btn btn-primary">
+            Save & Continue<i class="bi bi-arrow-right ms-1"></i>
+        </button>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle customize chevron
+    var customizeOptions = document.getElementById('customizeOptions');
+    var customizeChevron = document.getElementById('customizeChevron');
+    if (customizeOptions && customizeChevron) {
+        customizeOptions.addEventListener('show.bs.collapse', function() {
+            customizeChevron.style.transform = 'rotate(180deg)';
+        });
+        customizeOptions.addEventListener('hide.bs.collapse', function() {
+            customizeChevron.style.transform = 'rotate(0deg)';
+        });
+    }
+
+    // Update summary when checkboxes change
+    function updateSummary() {
+        var summaryItems = {
+            'compensatory_damages': document.getElementById('id_compensatory_damages'),
+            'punitive_damages': document.getElementById('id_punitive_damages'),
+            'attorney_fees': document.getElementById('id_attorney_fees'),
+            'declaratory_relief': document.getElementById('id_declaratory_relief'),
+            'jury_trial_demanded': document.getElementById('id_jury_trial_demanded'),
+            'injunctive_relief': document.getElementById('id_injunctive_relief'),
+        };
+
+        for (var field in summaryItems) {
+            var checkbox = summaryItems[field];
+            var summaryItem = document.querySelector('.relief-item[data-field="' + field + '"]');
+            if (checkbox && summaryItem) {
+                if (checkbox.checked) {
+                    summaryItem.classList.remove('excluded');
+                    summaryItem.style.display = '';
+                    summaryItem.querySelector('i').className = 'bi bi-check-lg';
+                } else {
+                    if (field === 'injunctive_relief') {
+                        // Hide injunctive if not selected
+                        summaryItem.style.display = 'none';
+                    } else {
+                        summaryItem.classList.add('excluded');
+                        summaryItem.querySelector('i').className = 'bi bi-x-lg';
+                    }
+                }
+            }
+        }
+    }
+
+    // Toggle injunctive description visibility
+    var injunctiveCheckbox = document.getElementById('id_injunctive_relief');
+    var injunctiveWrapper = document.getElementById('injunctive-description-wrapper');
+    var injunctiveSummary = document.querySelector('.relief-item[data-field="injunctive_relief"]');
+
+    if (injunctiveCheckbox && injunctiveWrapper) {
+        function toggleInjunctive() {
+            injunctiveWrapper.style.display = injunctiveCheckbox.checked ? '' : 'none';
+            if (injunctiveSummary) {
+                injunctiveSummary.style.display = injunctiveCheckbox.checked ? '' : 'none';
+            }
+        }
+        injunctiveCheckbox.addEventListener('change', function() {
+            toggleInjunctive();
+            updateSummary();
+        });
+        toggleInjunctive();
+    }
+
+    // Add change listeners to all checkboxes
+    var checkboxes = document.querySelectorAll('#relief-form input[type="checkbox"]');
+    checkboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', updateSummary);
+    });
+
+    // Initial summary update
+    updateSummary();
+});
+</script>

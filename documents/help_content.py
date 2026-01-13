@@ -452,65 +452,65 @@ SECTION_HELP = {
     'relief_sought': {
         'title': 'What Do You Want From This Lawsuit?',
         'overview': '''
-            <strong>What is this?</strong> This is where you tell the court what you want if you win.
-            Don't worry about the legal terms - we've written everything in plain English!
+            <strong>What is this?</strong> This tells the court what you're asking for if you win your case.
+            We've pre-selected the standard requests for First Amendment audit cases - you can customize if needed.
         ''',
         'why_important': '''
-            <strong>Why it matters:</strong> You can only get what you ask for. Ask for everything
-            that applies to your situation. You can always settle for less, but you can't get more
-            than what you requested.
-        ''',
-        'recommended_note': '''
-            <div class="alert alert-success mb-3">
-                <strong><i class="bi bi-lightbulb me-2"></i>Pro Tip:</strong> Click the
-                <strong>"Use Recommended"</strong> button above to automatically select the most
-                common requests for First Amendment audit cases. You can then customize as needed.
-            </div>
+            <strong>Why it matters:</strong> You can only get what you ask for. We've set up sensible defaults
+            that work for most First Amendment audit cases. The green summary box shows what your complaint will request.
         ''',
         'tips': [
-            '<strong>ALWAYS</strong> ask for legal fees - if you win, the other side pays your lawyer',
-            'You do NOT need to know exact dollar amounts - the court can figure that out',
-            'Most 1A auditors ask for: money for losses, extra money as punishment, a court declaration, and legal fees',
-            'Juries (regular people) often side with citizens whose rights were violated - request a jury!',
+            'The <strong>green summary box</strong> shows what your complaint will ask for',
+            'Click <strong>"Customize Your Requests"</strong> to make changes or add specific amounts',
+            'You do NOT need to specify dollar amounts - courts often let juries decide the amounts',
+            'Attorney\'s fees are ALWAYS included - this is standard in civil rights cases',
         ],
         'simple_explanations': [
             {
+                'question': 'Why are things already selected?',
+                'answer': 'We\'ve pre-selected what most First Amendment auditors ask for. These are standard requests that apply to almost every case. You can change them by clicking "Customize Your Requests."'
+            },
+            {
                 'question': 'What\'s the difference between the money options?',
-                'answer': '<strong>Compensatory</strong> = pays you back for real losses (damaged camera, missed work, stress). <strong>Punitive</strong> = extra money to punish the officers for being bad. You can ask for both!'
+                'answer': '<strong>Compensatory</strong> = pays you back for real losses (damaged camera, missed work, stress). <strong>Punitive</strong> = extra money to punish the officers for their bad behavior. You should ask for both!'
             },
             {
-                'question': 'What\'s a "declaration" from the court?',
-                'answer': 'It\'s an official statement from a judge saying "Yes, this person\'s rights were violated." It creates a legal record that can help other auditors and may prevent future violations.'
+                'question': 'What\'s a "declaratory judgment"?',
+                'answer': 'It\'s an official court statement saying "Yes, this person\'s constitutional rights were violated." It creates a legal record that helps other auditors and may prevent future violations.'
             },
             {
-                'question': 'Should I ask for policy changes?',
-                'answer': 'Only if you want the police department to actually change how they operate (new training, new policies). This is harder to get but can create real change.'
+                'question': 'Should I ask for policy changes (injunctive relief)?',
+                'answer': 'This is optional and harder to get. Most individual plaintiffs don\'t include it. Only add this if you specifically want the court to order the department to change their policies or training.'
+            },
+            {
+                'question': 'Do I need to specify exact dollar amounts?',
+                'answer': 'No! Leave the amount fields blank and let the court or jury decide. They\'ll consider your actual damages, the officers\' conduct, and what\'s fair. Asking for a specific number can sometimes backfire.'
             },
         ],
         'fields': {
             'compensatory_damages': {
                 'tooltip': 'Money to cover your actual losses - equipment, wages, emotional harm',
-                'help': 'This pays you back for things you lost or suffered: damaged equipment, missed work, anxiety, humiliation, etc.',
+                'help': 'Pays you back for things you lost: damaged equipment, missed work, medical bills, anxiety, humiliation, etc.',
             },
             'punitive_damages': {
                 'tooltip': 'Extra money to punish the officers - common in 1A audit cases',
-                'help': 'When officers clearly knew they were wrong (like telling you filming is illegal when it\'s not), courts often award extra money as punishment.',
-            },
-            'injunctive_relief': {
-                'tooltip': 'Force the department to change their policies or training',
-                'help': 'This is optional. Select this if you want the court to ORDER the police department to make changes.',
-            },
-            'declaratory_relief': {
-                'tooltip': 'Get an official court statement that your rights were violated',
-                'help': 'Highly recommended! Creates an official record and helps establish legal precedent for future cases.',
+                'help': 'When officers clearly knew their actions were wrong, courts often award extra money as punishment and deterrence.',
             },
             'attorney_fees': {
                 'tooltip': 'Make them pay your lawyer if you win - Section 1983 allows this!',
-                'help': 'ALWAYS select this! The law specifically allows you to recover legal fees in civil rights cases.',
+                'help': 'ALWAYS included! 42 U.S.C. § 1988 specifically allows recovery of legal fees in civil rights cases.',
+            },
+            'declaratory_relief': {
+                'tooltip': 'Get an official court statement that your rights were violated',
+                'help': 'Creates an official record. Helps establish legal precedent and can be cited in future cases.',
             },
             'jury_trial_demanded': {
                 'tooltip': 'Let regular citizens (not just a judge) decide your case',
-                'help': 'Juries are often sympathetic to regular people whose rights were violated by police. Most plaintiffs prefer a jury.',
+                'help': 'Juries are often sympathetic to regular people whose rights were violated. Most plaintiffs prefer a jury.',
+            },
+            'injunctive_relief': {
+                'tooltip': 'Force the department to change their policies or training',
+                'help': 'Optional and harder to get. Select this only if you want the court to ORDER specific policy or training changes.',
             },
         },
     },

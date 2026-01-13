@@ -373,25 +373,66 @@ class ReliefSought(models.Model):
 
     section = models.OneToOneField(DocumentSection, on_delete=models.CASCADE, related_name='relief_sought')
 
-    # Monetary
-    compensatory_damages = models.BooleanField(default=True)
-    compensatory_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    punitive_damages = models.BooleanField(default=False)
-    punitive_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    attorney_fees = models.BooleanField(default=True)
+    # Standard Relief (pre-selected for most 1A cases)
+    compensatory_damages = models.BooleanField(
+        default=True,
+        verbose_name='Compensatory Damages',
+        help_text='Money to cover actual losses - medical bills, lost wages, emotional distress, damaged equipment'
+    )
+    compensatory_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        verbose_name='Specific Amount (optional)',
+        help_text='Leave blank to let the court/jury decide the amount'
+    )
+    punitive_damages = models.BooleanField(
+        default=True,  # Changed to True - common in 1A cases
+        verbose_name='Punitive Damages',
+        help_text='Extra money to punish officers who clearly violated your rights'
+    )
+    punitive_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        verbose_name='Specific Amount (optional)',
+        help_text='Leave blank to let the court/jury decide the amount'
+    )
+    attorney_fees = models.BooleanField(
+        default=True,
+        verbose_name="Attorney's Fees",
+        help_text='42 U.S.C. § 1988 allows recovery of legal fees in civil rights cases - ALWAYS include this'
+    )
+    declaratory_relief = models.BooleanField(
+        default=True,  # Changed to True - establishes precedent
+        verbose_name='Declaratory Judgment',
+        help_text='Official court declaration that your constitutional rights were violated'
+    )
+    declaratory_description = models.TextField(
+        blank=True,
+        verbose_name='Declaration Details (optional)',
+        help_text='Customize what you want declared, or leave blank for standard language'
+    )
+    jury_trial_demanded = models.BooleanField(
+        default=True,
+        verbose_name='Jury Trial',
+        help_text='Have regular citizens decide your case - juries are often sympathetic to civil rights plaintiffs'
+    )
 
-    # Injunctive
-    injunctive_relief = models.BooleanField(default=False)
-    injunctive_description = models.TextField(blank=True, help_text='What specific actions do you want the court to order?')
-
-    # Declaratory
-    declaratory_relief = models.BooleanField(default=False)
-    declaratory_description = models.TextField(blank=True, help_text='What do you want the court to declare?')
+    # Optional/Advanced Relief
+    injunctive_relief = models.BooleanField(
+        default=False,
+        verbose_name='Injunctive Relief (Policy Changes)',
+        help_text='Court orders forcing the department to change policies or training - harder to get but creates lasting change'
+    )
+    injunctive_description = models.TextField(
+        blank=True,
+        verbose_name='What changes do you want?',
+        help_text='Example: Require training on First Amendment rights, revise filming policies'
+    )
 
     # Other
-    other_relief = models.TextField(blank=True)
-
-    jury_trial_demanded = models.BooleanField(default=True)
+    other_relief = models.TextField(
+        blank=True,
+        verbose_name='Other Relief',
+        help_text='Any other relief not covered above'
+    )
 
     def __str__(self):
         return "Relief Sought"

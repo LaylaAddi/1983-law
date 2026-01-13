@@ -347,20 +347,6 @@
                 <p class="text-muted mb-3">Are you representing yourself (pro se) or do you have an attorney?</p>
                 {% endif %}
 
-                {% if section.section_type == 'relief_sought' %}
-                <!-- Recommended Settings for Relief Sought -->
-                <div class="alert alert-info mb-4">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <strong><i class="bi bi-star-fill me-2"></i>Not sure what to ask for?</strong>
-                            <p class="mb-0 small">Click below to use the recommended settings for First Amendment audit cases.</p>
-                        </div>
-                        <button type="button" class="btn btn-info btn-sm" id="useRecommendedBtn">
-                            <i class="bi bi-magic me-1"></i>Use Recommended
-                        </button>
-                    </div>
-                </div>
-                {% endif %}
 
                 {% if section.section_type == 'rights_violated' %}
                 <!-- AI Analysis for Rights Violated -->
@@ -460,6 +446,10 @@
                             <i class="bi bi-plus-lg me-1"></i>Add
                         </button>
                     </form>
+
+                {% elif section.section_type == 'relief_sought' %}
+                    <!-- Custom Relief Sought Form -->
+                    {% include 'documents/partials/relief_sought_form.html' %}
 
                 {% else %}
                     <!-- Single item section -->
@@ -734,66 +724,6 @@ document.addEventListener('DOMContentLoaded', function() {
         hasAttorneyCheckbox.addEventListener('change', toggleAttorneyFields);
     }
 
-    // Use Recommended Settings button for Relief Sought section
-    var recommendedBtn = document.getElementById('useRecommendedBtn');
-    if (recommendedBtn) {
-        recommendedBtn.addEventListener('click', function() {
-            // Set the recommended checkboxes
-            var checkboxes = {
-                'id_compensatory_damages': true,    // Money for losses - YES
-                'id_punitive_damages': true,        // Punish bad behavior - YES
-                'id_attorney_fees': true,           // Legal fees - ALWAYS YES
-                'id_injunctive_relief': false,      // Policy changes - Optional (OFF)
-                'id_declaratory_relief': true,      // Official declaration - YES
-                'id_jury_trial_demanded': true      // Jury trial - YES
-            };
-
-            for (var id in checkboxes) {
-                var checkbox = document.getElementById(id);
-                if (checkbox) {
-                    checkbox.checked = checkboxes[id];
-                    checkbox.dispatchEvent(new Event('change'));
-                }
-            }
-
-            // Clear amount fields (let court decide)
-            var compensatoryAmount = document.getElementById('id_compensatory_amount');
-            if (compensatoryAmount) compensatoryAmount.value = '';
-
-            var punitiveAmount = document.getElementById('id_punitive_amount');
-            if (punitiveAmount) punitiveAmount.value = '';
-
-            // Clear injunctive description (since it's turned off)
-            var injunctiveDesc = document.getElementById('id_injunctive_description');
-            if (injunctiveDesc) injunctiveDesc.value = '';
-
-            // Set declaratory description with standard 1A audit language
-            var declaratoryDesc = document.getElementById('id_declaratory_description');
-            if (declaratoryDesc) {
-                declaratoryDesc.value = 'Declare that the Plaintiff\'s First Amendment right to record police officers performing their official duties in public places was violated by the Defendants.';
-            }
-
-            // Clear other relief
-            var otherRelief = document.getElementById('id_other_relief');
-            if (otherRelief) otherRelief.value = '';
-
-            // Show success feedback
-            this.innerHTML = '<i class="bi bi-check-lg me-1"></i>Applied!';
-            this.classList.remove('btn-info');
-            this.classList.add('btn-success');
-
-            // Scroll to form
-            document.querySelector('form').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-            // Reset button after 2 seconds
-            var btn = this;
-            setTimeout(function() {
-                btn.innerHTML = '<i class="bi bi-magic me-1"></i>Use Recommended';
-                btn.classList.remove('btn-success');
-                btn.classList.add('btn-info');
-            }, 2000);
-        });
-    }
 
     // District court lookup for incident_overview section
     var cityField = document.getElementById('id_city');
