@@ -145,6 +145,15 @@
 </div>
 
 <div class="container-fluid py-4">
+    {% if generation_error %}
+    <div class="container mb-4">
+        <div class="alert alert-danger">
+            <h5><i class="bi bi-exclamation-triangle me-2"></i>Document Generation Error</h5>
+            <p class="mb-0">{{ generation_error }}</p>
+        </div>
+    </div>
+    {% endif %}
+
     {% if generated_document %}
     <!-- GENERATED LEGAL DOCUMENT VIEW -->
     <div class="legal-document">
@@ -232,16 +241,28 @@
             <p class="mb-2">To generate a legal document, please complete the following:</p>
             <ul class="mb-3">
                 {% if not document_data.plaintiff.first_name or not document_data.plaintiff.last_name %}
-                <li>Complete your <a href="{% url 'documents:section_edit' document.id 'plaintiff_info' %}">Plaintiff Information</a></li>
+                <li>Complete your <a href="{% url 'documents:section_edit' document.id 'plaintiff_info' %}">Plaintiff Information</a> (need first and last name)</li>
                 {% endif %}
                 {% if not document_data.narrative.detailed_narrative %}
-                <li>Add your <a href="{% url 'documents:section_edit' document.id 'incident_narrative' %}">Incident Narrative</a></li>
+                <li>Add your <a href="{% url 'documents:section_edit' document.id 'incident_narrative' %}">Incident Narrative</a> (need detailed narrative)</li>
                 {% endif %}
                 {% if not document_data.rights_violated.first_amendment and not document_data.rights_violated.fourth_amendment and not document_data.rights_violated.fifth_amendment and not document_data.rights_violated.fourteenth_amendment %}
-                <li>Select which <a href="{% url 'documents:section_edit' document.id 'rights_violated' %}">Rights Were Violated</a></li>
+                <li>Select which <a href="{% url 'documents:section_edit' document.id 'rights_violated' %}">Rights Were Violated</a> (need at least one amendment)</li>
                 {% endif %}
             </ul>
-            <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-primary">
+            <details class="mt-3">
+                <summary class="text-muted" style="cursor: pointer;">Debug: Current Data Status</summary>
+                <pre class="mt-2 p-2 bg-light" style="font-size: 0.8rem;">
+Plaintiff: {{ document_data.plaintiff.first_name }} {{ document_data.plaintiff.last_name }}
+Has Narrative: {{ document_data.narrative.detailed_narrative|yesno:"Yes,No" }}
+First Amendment: {{ document_data.rights_violated.first_amendment|yesno:"Yes,No" }}
+Fourth Amendment: {{ document_data.rights_violated.fourth_amendment|yesno:"Yes,No" }}
+Fifth Amendment: {{ document_data.rights_violated.fifth_amendment|yesno:"Yes,No" }}
+Fourteenth Amendment: {{ document_data.rights_violated.fourteenth_amendment|yesno:"Yes,No" }}
+Has Minimum Data: {{ document_data.has_minimum_data|yesno:"Yes,No" }}
+                </pre>
+            </details>
+            <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-primary mt-3">
                 <i class="bi bi-pencil me-1"></i>Continue Editing
             </a>
         </div>

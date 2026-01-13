@@ -526,6 +526,7 @@ def document_preview(request, document_id):
     document_data = _collect_document_data(document)
 
     generated_document = None
+    generation_error = None
     if generate and document_data.get('has_minimum_data'):
         try:
             from .services.document_generator import DocumentGenerator
@@ -533,9 +534,13 @@ def document_preview(request, document_id):
             result = generator.generate_complaint(document_data)
             if result.get('success'):
                 generated_document = result.get('document')
+            else:
+                generation_error = result.get('error', 'Unknown generation error')
         except Exception as e:
             # Log error but continue to show data view
-            print(f"Error generating document: {e}")
+            generation_error = str(e)
+            import traceback
+            traceback.print_exc()
 
     # Also load raw section data for reference/editing
     sections_data = {}
@@ -580,6 +585,7 @@ def document_preview(request, document_id):
         'case_law_citations': case_law_citations,
         'generated_document': generated_document,
         'document_data': document_data,
+        'generation_error': generation_error,
     }
 
     return render(request, 'documents/document_preview.html', context)
