@@ -4,6 +4,29 @@
 
 {% block extra_css %}
 <style>
+    /* Draft watermark */
+    .draft-watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 120px;
+        font-weight: bold;
+        color: rgba(128, 128, 128, 0.15);
+        white-space: nowrap;
+        pointer-events: none;
+        z-index: 1000;
+        user-select: none;
+    }
+
+    /* Print styles for watermark */
+    @media print {
+        .draft-watermark {
+            position: fixed;
+            color: rgba(128, 128, 128, 0.2);
+        }
+    }
+
     /* Legal document styling */
     .legal-document {
         font-family: 'Times New Roman', Times, serif;
@@ -114,6 +137,9 @@
 {% endblock %}
 
 {% block content %}
+<!-- Draft Watermark -->
+<div class="draft-watermark">DRAFT - {{ app_name }}</div>
+
 <!-- Preview Controls -->
 <div class="preview-controls no-print">
     <div class="container">
