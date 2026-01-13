@@ -3,6 +3,8 @@
 {% block title %}{{ document.title }} - 1983 Law{% endblock %}
 
 {% block content %}
+{% include 'documents/partials/status_banner.html' %}
+
 <div class="d-flex justify-content-between align-items-start mb-4">
     <div>
         <h2>{{ document.title }}</h2>
@@ -32,8 +34,8 @@
                 </div>
             </div>
             <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                <span class="badge bg-{{ document.status|yesno:'success,secondary,info,primary' }} fs-6">
-                    {{ document.get_status_display }}
+                <span class="badge bg-{% if document.payment_status == 'paid' %}success{% elif document.payment_status == 'finalized' %}info{% elif document.payment_status == 'expired' %}danger{% else %}secondary{% endif %} fs-6">
+                    {{ document.get_payment_status_display }}
                 </span>
             </div>
         </div>
