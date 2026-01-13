@@ -335,12 +335,123 @@ Document must have:
 
 ---
 
+## Payment System (NEW)
+
+### Overview
+Pay-per-document model with Stripe integration, promo/referral codes, and document lifecycle management.
+
+### Pricing
+| Item | Price |
+|------|-------|
+| Base price | $79.00 |
+| With promo code | $59.25 (25% off) |
+| Referral payout | $15.00 per use |
+
+### Document Lifecycle
+```
+DRAFT (free) → EXPIRED or PAID → FINALIZED
+```
+
+| Status | Can Edit | AI Access | Expiry | PDF |
+|--------|----------|-----------|--------|-----|
+| draft | Yes | 3 free (user-level) | 48 hours | No |
+| expired | No | No | Pay to unlock | No |
+| paid | Yes | $5 budget | 45 days | No |
+| finalized | No | No | Never | Yes |
+
+### Key Features
+1. **User-Level AI Tracking** - Free AI uses tracked across ALL user documents (prevents abuse)
+2. **Admin Unlimited Access** - `is_staff` or `is_superuser` users bypass all limits
+3. **Promo Codes** - Users create their own referral code, earn $15 per use
+4. **Stripe Checkout** - Secure payment with promo code validation
+5. **Document Finalization** - Confirmation required before locking document
+6. **Status Banner** - Shows time remaining, AI usage, and action buttons on all document pages
+
+### Database Models
+| Model | Purpose |
+|-------|---------|
+| Document.payment_status | draft/expired/paid/finalized |
+| Document.stripe_payment_id | Stripe Payment Intent ID |
+| Document.promo_code_used | FK to PromoCode |
+| Document.amount_paid | Decimal amount |
+| Document.paid_at | Payment timestamp |
+| Document.finalized_at | Finalization timestamp |
+| Document.ai_generations_used | Free tier counter |
+| Document.ai_cost_used | Paid tier cost tracking |
+| PromoCode | User's referral code with stats |
+| PromoCodeUsage | Tracks each promo use for payouts |
+
+### User Model Additions
+- `has_unlimited_access()` - Check if admin/staff
+- `get_total_free_ai_uses()` - AI uses across all documents
+- `can_use_free_ai()` - Check user-level AI limit
+- `get_free_ai_remaining()` - Remaining free AI count
+
+### URLs (Payment)
+- `/documents/{id}/checkout/` - Checkout page with promo code
+- `/documents/{id}/checkout/success/` - Payment success handler
+- `/documents/{id}/checkout/cancel/` - Payment cancelled
+- `/documents/webhook/stripe/` - Stripe webhook endpoint
+- `/documents/{id}/finalize/` - Document finalization confirmation
+- `/documents/my-referral-code/` - Create/view referral code
+- `/documents/validate-promo-code/` - AJAX promo validation
+
+### Admin Features
+- View all documents with payment status
+- PromoCode admin with usage stats
+- PromoCodeUsage admin with payout tracking
+- Bulk action: "Mark as paid" for referral payouts
+
+### Environment Variables
+```env
+STRIPE_PUBLIC_KEY=pk_test_xxx
+STRIPE_SECRET_KEY=sk_test_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx  # Optional for local testing
+```
+
+### Settings (config/settings.py)
+```python
+DOCUMENT_PRICE = 79.00
+PROMO_DISCOUNT_PERCENT = 25
+REFERRAL_PAYOUT = 15.00
+FREE_AI_GENERATIONS = 3
+DRAFT_EXPIRY_HOURS = 48
+PAID_AI_BUDGET = 5.00
+PAID_EXPIRY_DAYS = 45
+APP_NAME = '1983law.com'  # Shown in DRAFT watermark
+```
+
+### Templates Added
+- `templates/documents/checkout.html` - Checkout page
+- `templates/documents/finalize.html` - Finalization confirmation
+- `templates/documents/my_referral_code.html` - Referral code management
+- `templates/documents/partials/status_banner.html` - Status display partial
+
+### Checkout Flow
+1. User clicks "Upgrade Now" in status banner
+2. Enter promo code OR check "I confirm I do not have a promo code"
+3. Redirected to Stripe Checkout
+4. On success → document marked as `paid`
+5. User has 45 days to edit and use AI ($5 budget)
+6. User clicks "Finalize & Download PDF"
+7. Confirmation modal with checkbox
+8. Document marked as `finalized`, PDF available (no watermark)
+
+### Testing Without Webhook
+- Checkout flow works without webhook (success page handles verification)
+- Use test card: `4242 4242 4242 4242`, any future date, any CVC
+- For webhook testing, install Stripe CLI:
+  ```powershell
+  stripe listen --forward-to localhost:8000/documents/webhook/stripe/
+  ```
+
+---
+
 ## What's NOT Built Yet
 
-- PDF generation of the complaint (HTML output is court-ready for printing)
+- Server-side PDF generation (using browser Print to PDF for now)
 - E-filing integration
-- Payment/subscription (DO NOT BUILD - user doesn't want Stripe)
-- Video extraction (DO NOT BUILD - user didn't ask for this)
+- Video extraction
 
 ---
 
@@ -349,6 +460,7 @@ Document must have:
 - **Mobile App Version** - Tell Your Story will be key feature
 - **Voice Input** - Add speech-to-text (Whisper) later
 - **More Case Law** - Expand database with circuit-specific cases
+- **Server-side PDF** - WeasyPrint or similar for direct download
 
 ---
 
@@ -402,6 +514,15 @@ u.save()
 
 ## Environment Variables Needed
 
-```
-OPENAI_API_KEY=sk-...  # Required for AI features
+```env
+# Required
+OPENAI_API_KEY=sk-...          # Required for AI features
+
+# Stripe (Required for payments)
+STRIPE_PUBLIC_KEY=pk_test_...  # Stripe publishable key
+STRIPE_SECRET_KEY=sk_test_...  # Stripe secret key
+STRIPE_WEBHOOK_SECRET=whsec_...# Stripe webhook secret (optional for local)
+
+# Optional
+APP_NAME=1983law.com           # Shown in DRAFT watermark
 ```
