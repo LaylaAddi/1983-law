@@ -483,7 +483,7 @@ Respond in this exact JSON format:
                         "content": prompt
                     }
                 ],
-                temperature=0.3,
+                temperature=0.1,  # Low temperature for consistent, deterministic suggestions
                 max_tokens=3000,
                 response_format={"type": "json_object"}
             )

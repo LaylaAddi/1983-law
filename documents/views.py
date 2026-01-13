@@ -1463,17 +1463,31 @@ def suggest_case_law(request, document_id):
                 'error': 'Please tell your story or fill out the incident narrative before getting case law suggestions.',
             })
 
-        # Get available cases from database
-        available_cases = list(CaseLaw.objects.filter(is_active=True).values(
+        # Get IDs of cases already added to this document (to exclude from suggestions)
+        existing_case_ids = list(DocumentCaseLaw.objects.filter(
+            document=document
+        ).values_list('case_law_id', flat=True))
+
+        # Get available cases from database, excluding already-added ones
+        available_cases = list(CaseLaw.objects.filter(is_active=True).exclude(
+            id__in=existing_case_ids
+        ).values(
             'id', 'case_name', 'citation', 'amendment', 'right_category',
             'key_holding', 'facts_summary', 'relevance_keywords'
         ))
 
         if not available_cases:
-            return JsonResponse({
-                'success': False,
-                'error': 'Case law database is not yet populated. Please run: python manage.py load_case_law',
-            })
+            # Check if it's because all cases are already added vs database empty
+            if existing_case_ids:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'All relevant cases from our database have already been added to your document.',
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Case law database is not yet populated. Please run: python manage.py load_case_law',
+                })
 
         # Call AI to suggest cases
         from .services.openai_service import OpenAIService
