@@ -22,8 +22,11 @@ COPY . .
 # Collect static files
 RUN python manage.py collectstatic --noinput --clear || true
 
+# Make startup script executable
+RUN chmod +x start.sh
+
 # Expose port (Render uses $PORT env var, typically 10000)
 EXPOSE 10000
 
-# Run the application with gunicorn (use $PORT for Render compatibility)
-CMD gunicorn --bind 0.0.0.0:${PORT:-8000} config.wsgi:application
+# Run startup script (handles migrations + gunicorn)
+CMD ["./start.sh"]
