@@ -20,7 +20,6 @@ services:
     environment:
       - DEBUG=1
       - DATABASE_URL=postgres://postgres:postgres@db:5432/section1983
-      - ALLOWED_HOSTS=localhost,127.0.0.1
     depends_on:
       - db
 
