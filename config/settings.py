@@ -110,7 +110,7 @@ if not DEBUG:
     CSRF_TRUSTED_ORIGINS = [
         'https://1983law.org',
         'https://www.1983law.org',
-        'https://*.onrender.com',
+        'https://one983-law.onrender.com',
     ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
