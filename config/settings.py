@@ -133,8 +133,22 @@ LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
 
-# Email (for development - prints to console)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Email Configuration
+# For development: uses console backend (prints to terminal)
+# For production: uses SMTP (Namecheap Private Email or similar)
+if os.getenv('EMAIL_HOST'):
+    # Production SMTP settings
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.getenv('EMAIL_HOST')  # e.g., mail.privateemail.com
+    EMAIL_PORT = int(os.getenv('EMAIL_PORT', '465'))
+    EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', '1') == '1'  # Use SSL for port 465
+    EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', '0') == '1'  # Use TLS for port 587
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')  # e.g., noreply@1983law.com
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+else:
+    # Development: print emails to console
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@1983law.com')
 ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'admin@1983law.com')
 

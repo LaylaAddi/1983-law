@@ -101,6 +101,34 @@ The app is functional with the following features complete:
 
 ---
 
+## Authentication System
+
+### Features
+- Email-based login (no usernames)
+- User registration with email verification
+- Password reset via email
+- Password change for logged-in users
+- Profile management
+
+### URLs (accounts app)
+| URL | Purpose |
+|-----|---------|
+| `/accounts/login/` | Login page |
+| `/accounts/logout/` | Logout |
+| `/accounts/register/` | New user registration |
+| `/accounts/password-reset/` | Request password reset email |
+| `/accounts/password-reset/done/` | "Email sent" confirmation |
+| `/accounts/password-reset/<uid>/<token>/` | Set new password (from email link) |
+| `/accounts/password-reset/complete/` | "Password changed" confirmation |
+| `/accounts/password-change/` | Change password (logged in) |
+| `/accounts/profile/` | View profile |
+| `/accounts/profile/edit/` | Edit profile |
+
+### Email Configuration
+Password reset and payout notifications require SMTP email. See Environment Variables section for Namecheap Private Email setup.
+
+---
+
 ## User Model Fields (accounts/models.py)
 
 | Field | Purpose |
@@ -586,6 +614,16 @@ Set these in Render Dashboard → Environment:
 - `STRIPE_WEBHOOK_SECRET` - From Stripe webhook settings
 - `APP_NAME` - `1983law.org` (footer/watermark)
 - `HEADER_APP_NAME` - `1983 Law` (navbar/titles)
+
+**Email (Namecheap Private Email):**
+- `EMAIL_HOST` - `mail.privateemail.com`
+- `EMAIL_PORT` - `465` (SSL) or `587` (TLS)
+- `EMAIL_USE_SSL` - `1` (if using port 465)
+- `EMAIL_USE_TLS` - `0` (set to `1` if using port 587)
+- `EMAIL_HOST_USER` - Your email address (e.g., `noreply@1983law.com`)
+- `EMAIL_HOST_PASSWORD` - Email account password
+- `DEFAULT_FROM_EMAIL` - Same as EMAIL_HOST_USER (e.g., `noreply@1983law.com`)
+- `ADMIN_EMAIL` - Where payout notifications go (e.g., `admin@1983law.com`)
 
 ### Creating Admin User on Render
 1. Go to Render Dashboard → Your Service → Shell tab
