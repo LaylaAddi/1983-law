@@ -8,5 +8,6 @@ pip install -r requirements.txt
 # Collect static files
 python manage.py collectstatic --no-input
 
-# Run migrations
+# Create and run migrations
+python manage.py makemigrations accounts documents
 python manage.py migrate
