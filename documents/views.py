@@ -2127,7 +2127,7 @@ def admin_referrals(request):
     # Get all users who have promo codes with their stats
     code_owners = User.objects.filter(
         promo_codes__isnull=False
-    ).distinct().prefetch_related('promo_codes').order_by('-date_joined')
+    ).distinct().prefetch_related('promo_codes').order_by('-created_at')
 
     # Calculate stats for each owner
     for owner in code_owners:

@@ -191,7 +191,7 @@
                             <span class="badge {% if code.is_active %}bg-primary{% else %}bg-secondary{% endif %}">{{ code.code }}</span>
                             {% endfor %}
                         </td>
-                        <td>{{ owner.date_joined|date:"M d, Y" }}</td>
+                        <td>{{ owner.created_at|date:"M d, Y" }}</td>
                         <td>
                             {% if owner.last_login %}
                             {{ owner.last_login|date:"M d, Y H:i" }}
