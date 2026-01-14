@@ -35,8 +35,8 @@
         <div class="col-md-3">
             <div class="card text-center bg-info text-white">
                 <div class="card-body">
-                    <h3 class="mb-0">{{ all_codes|length }}</h3>
-                    <small>Active Codes</small>
+                    <h3 class="mb-0">{{ total_codes }}</h3>
+                    <small>Total Codes</small>
                 </div>
             </div>
         </div>
@@ -160,6 +160,66 @@
         </div>
     </div>
 
+    <!-- Referral Users (Code Owners) -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>Referral Code Owners</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>User</th>
+                        <th>Codes</th>
+                        <th>Signed Up</th>
+                        <th>Last Login</th>
+                        <th class="text-center">Total Uses</th>
+                        <th class="text-end">Earned</th>
+                        <th class="text-end">Pending</th>
+                        <th class="text-end">Paid</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for owner in code_owners %}
+                    <tr>
+                        <td>
+                            <strong>{{ owner.email }}</strong>
+                            <br><small class="text-muted">{{ owner.get_full_name|default:"No name" }}</small>
+                        </td>
+                        <td>
+                            {% for code in owner.promo_codes.all %}
+                            <span class="badge {% if code.is_active %}bg-primary{% else %}bg-secondary{% endif %}">{{ code.code }}</span>
+                            {% endfor %}
+                        </td>
+                        <td>{{ owner.date_joined|date:"M d, Y" }}</td>
+                        <td>
+                            {% if owner.last_login %}
+                            {{ owner.last_login|date:"M d, Y H:i" }}
+                            {% else %}
+                            <span class="text-muted">Never</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">{{ owner.total_uses }}</td>
+                        <td class="text-end">${{ owner.total_earned|floatformat:2 }}</td>
+                        <td class="text-end">
+                            {% if owner.pending_amount > 0 %}
+                            <span class="text-warning">${{ owner.pending_amount|floatformat:2 }}</span>
+                            {% else %}
+                            $0.00
+                            {% endif %}
+                        </td>
+                        <td class="text-end text-success">${{ owner.paid_amount|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-3">No users with referral codes yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="row">
         <!-- All Promo Codes -->
         <div class="col-lg-5 mb-4">
@@ -167,12 +227,13 @@
                 <div class="card-header">
                     <h5 class="mb-0">All Promo Codes</h5>
                 </div>
-                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
                     <table class="table table-sm table-striped mb-0">
                         <thead class="table-light sticky-top">
                             <tr>
                                 <th>Code</th>
                                 <th>Owner</th>
+                                <th>Created</th>
                                 <th class="text-center">Uses</th>
                                 <th class="text-end">Earned</th>
                             </tr>
@@ -182,15 +243,17 @@
                             <tr>
                                 <td>
                                     <strong>{{ code.code }}</strong>
-                                    {% if not code.is_active %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+                                    {% if code.name %}<br><small class="text-muted">{{ code.name }}</small>{% endif %}
+                                    {% if not code.is_active %}<br><span class="badge bg-secondary">Inactive</span>{% endif %}
                                 </td>
                                 <td><small>{{ code.owner.email }}</small></td>
+                                <td><small>{{ code.created_at|date:"M d, Y" }}</small></td>
                                 <td class="text-center">{{ code.times_used }}</td>
                                 <td class="text-end">${{ code.total_earned|floatformat:2 }}</td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-3">No promo codes yet.</td>
+                                <td colspan="5" class="text-center text-muted py-3">No promo codes yet.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -205,7 +268,7 @@
                 <div class="card-header">
                     <h5 class="mb-0">Recent Referral Activity</h5>
                 </div>
-                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
                     <table class="table table-sm table-striped mb-0">
                         <thead class="table-light sticky-top">
                             <tr>

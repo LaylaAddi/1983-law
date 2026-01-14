@@ -2099,6 +2099,8 @@ Review and process at: {request.build_absolute_uri(reverse('documents:admin_refe
 @staff_member_required
 def admin_referrals(request):
     """Admin view to manage all referrals and payouts."""
+    from accounts.models import User
+
     # Get all promo codes with stats
     all_codes = PromoCode.objects.select_related('owner').order_by('-times_used')
 
@@ -2120,6 +2122,23 @@ def admin_referrals(request):
     total_paid = PromoCodeUsage.objects.filter(payout_status='paid').aggregate(
         total=db_models.Sum('referral_amount')
     )['total'] or 0
+    total_codes = PromoCode.objects.count()
+
+    # Get all users who have promo codes with their stats
+    code_owners = User.objects.filter(
+        promo_codes__isnull=False
+    ).distinct().prefetch_related('promo_codes').order_by('-date_joined')
+
+    # Calculate stats for each owner
+    for owner in code_owners:
+        owner.total_uses = sum(code.times_used for code in owner.promo_codes.all())
+        owner.total_earned = sum(code.total_earned for code in owner.promo_codes.all())
+        owner.pending_amount = PromoCodeUsage.objects.filter(
+            promo_code__owner=owner, payout_status='pending'
+        ).aggregate(total=db_models.Sum('referral_amount'))['total'] or 0
+        owner.paid_amount = PromoCodeUsage.objects.filter(
+            promo_code__owner=owner, payout_status='paid'
+        ).aggregate(total=db_models.Sum('referral_amount'))['total'] or 0
 
     context = {
         'all_codes': all_codes,
@@ -2128,6 +2147,8 @@ def admin_referrals(request):
         'total_referrals': total_referrals,
         'total_pending': total_pending,
         'total_paid': total_paid,
+        'total_codes': total_codes,
+        'code_owners': code_owners,
     }
 
     return render(request, 'documents/admin_referrals.html', context)
