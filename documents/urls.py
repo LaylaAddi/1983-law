@@ -52,7 +52,14 @@ urlpatterns = [
     # Finalization
     path('<int:document_id>/finalize/', views.finalize_document, name='finalize'),
 
-    # Promo codes
+    # Promo codes / Referrals
     path('my-referral-code/', views.my_referral_code, name='my_referral_code'),
     path('validate-promo-code/', views.validate_promo_code, name='validate_promo_code'),
+    path('promo-code/<int:code_id>/toggle/', views.toggle_promo_code, name='toggle_promo_code'),
+    path('request-payout/', views.request_payout, name='request_payout'),
+
+    # Admin referral management
+    path('admin/referrals/', views.admin_referrals, name='admin_referrals'),
+    path('admin/referrals/payout/<int:request_id>/process/', views.admin_process_payout, name='admin_process_payout'),
+    path('admin/referrals/usage/<int:usage_id>/mark-paid/', views.admin_mark_usage_paid, name='admin_mark_usage_paid'),
 ]

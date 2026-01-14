@@ -12,11 +12,13 @@ from decimal import Decimal
 import stripe
 import json
 from .help_content import get_section_help
+from django.core.mail import send_mail
+from django.contrib.admin.views.decorators import staff_member_required
 from .models import (
     Document, DocumentSection, PlaintiffInfo, IncidentOverview,
     Defendant, IncidentNarrative, RightsViolated, Witness,
     Evidence, Damages, PriorComplaints, ReliefSought,
-    CaseLaw, DocumentCaseLaw, PromoCode, PromoCodeUsage
+    CaseLaw, DocumentCaseLaw, PromoCode, PromoCodeUsage, PayoutRequest
 )
 
 # Initialize Stripe
@@ -1958,46 +1960,253 @@ def finalize_document(request, document_id):
 
 @login_required
 def my_referral_code(request):
-    """Manage user's referral/promo code."""
-    # Get or create promo code for user
-    promo_code = PromoCode.objects.filter(owner=request.user).first()
+    """Manage user's referral/promo codes (dashboard)."""
+    # Get all promo codes for user
+    promo_codes = PromoCode.objects.filter(owner=request.user).order_by('-created_at')
 
     if request.method == 'POST':
-        if promo_code:
-            messages.info(request, 'You already have a referral code.')
+        new_code = request.POST.get('code', '').strip().upper()
+        code_name = request.POST.get('name', '').strip()
+
+        if not new_code:
+            messages.error(request, 'Please enter a code.')
+        elif len(new_code) < 4:
+            messages.error(request, 'Code must be at least 4 characters.')
+        elif len(new_code) > 20:
+            messages.error(request, 'Code must be 20 characters or less.')
+        elif not new_code.isalnum():
+            messages.error(request, 'Code can only contain letters and numbers.')
+        elif PromoCode.objects.filter(code=new_code).exists():
+            messages.error(request, 'This code is already taken. Please choose another.')
         else:
-            new_code = request.POST.get('code', '').strip().upper()
+            PromoCode.objects.create(
+                owner=request.user,
+                code=new_code,
+                name=code_name,
+            )
+            messages.success(request, f'Your referral code "{new_code}" has been created!')
+            return redirect('documents:my_referral_code')
 
-            if not new_code:
-                messages.error(request, 'Please enter a code.')
-            elif len(new_code) < 4:
-                messages.error(request, 'Code must be at least 4 characters.')
-            elif len(new_code) > 20:
-                messages.error(request, 'Code must be 20 characters or less.')
-            elif not new_code.isalnum():
-                messages.error(request, 'Code can only contain letters and numbers.')
-            elif PromoCode.objects.filter(code=new_code).exists():
-                messages.error(request, 'This code is already taken. Please choose another.')
-            else:
-                promo_code = PromoCode.objects.create(
-                    owner=request.user,
-                    code=new_code,
-                )
-                messages.success(request, f'Your referral code "{new_code}" has been created!')
+    # Get all usages across all codes
+    all_usages = PromoCodeUsage.objects.filter(
+        promo_code__owner=request.user
+    ).select_related('promo_code', 'user').order_by('-created_at')[:20]
 
-    # Get usage stats
-    usages = []
-    if promo_code:
-        usages = promo_code.usages.all().order_by('-created_at')[:10]
+    # Calculate totals
+    total_earned = request.user.get_total_referral_earnings()
+    pending_earnings = request.user.get_pending_referral_earnings()
+    paid_earnings = request.user.get_paid_referral_earnings()
+
+    # Get pending payout requests
+    pending_requests = PayoutRequest.objects.filter(
+        user=request.user, status__in=['pending', 'processing']
+    )
 
     context = {
-        'promo_code': promo_code,
-        'usages': usages,
+        'promo_codes': promo_codes,
+        'all_usages': all_usages,
+        'total_earned': total_earned,
+        'pending_earnings': pending_earnings,
+        'paid_earnings': paid_earnings,
+        'pending_requests': pending_requests,
         'referral_payout': settings.REFERRAL_PAYOUT,
         'discount_percent': settings.PROMO_DISCOUNT_PERCENT,
     }
 
     return render(request, 'documents/my_referral_code.html', context)
+
+
+@login_required
+@require_POST
+def toggle_promo_code(request, code_id):
+    """Toggle a promo code's active status."""
+    promo_code = get_object_or_404(PromoCode, id=code_id, owner=request.user)
+    promo_code.is_active = not promo_code.is_active
+    promo_code.save()
+    status = 'activated' if promo_code.is_active else 'deactivated'
+    messages.success(request, f'Code "{promo_code.code}" has been {status}.')
+    return redirect('documents:my_referral_code')
+
+
+@login_required
+def request_payout(request):
+    """Request a payout for pending referral earnings."""
+    pending_earnings = request.user.get_pending_referral_earnings()
+
+    if request.method == 'POST':
+        if pending_earnings < 15:
+            messages.error(request, 'Minimum payout amount is $15.00.')
+            return redirect('documents:my_referral_code')
+
+        # Check for existing pending request
+        existing = PayoutRequest.objects.filter(
+            user=request.user, status__in=['pending', 'processing']
+        ).first()
+        if existing:
+            messages.warning(request, 'You already have a pending payout request.')
+            return redirect('documents:my_referral_code')
+
+        payment_method = request.POST.get('payment_method', '').strip()
+        payment_details = request.POST.get('payment_details', '').strip()
+
+        if not payment_method:
+            messages.error(request, 'Please specify how you want to be paid.')
+            return render(request, 'documents/request_payout.html', {
+                'pending_earnings': pending_earnings
+            })
+
+        # Create payout request
+        payout_request = PayoutRequest.objects.create(
+            user=request.user,
+            amount_requested=pending_earnings,
+            payment_method=payment_method,
+            payment_details=payment_details,
+        )
+
+        # Send email to admin
+        try:
+            send_mail(
+                subject=f'Payout Request: ${pending_earnings} from {request.user.email}',
+                message=f'''A user has requested a payout.
+
+User: {request.user.email}
+Amount: ${pending_earnings}
+Payment Method: {payment_method}
+Details: {payment_details}
+
+Review and process at: {request.build_absolute_uri(reverse('documents:admin_referrals'))}
+''',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[settings.ADMIN_EMAIL],
+                fail_silently=True,
+            )
+        except Exception:
+            pass  # Don't fail if email fails
+
+        messages.success(request, f'Payout request for ${pending_earnings} has been submitted! We will process it within 3-5 business days.')
+        return redirect('documents:my_referral_code')
+
+    context = {
+        'pending_earnings': pending_earnings,
+    }
+    return render(request, 'documents/request_payout.html', context)
+
+
+# ============================================================================
+# Admin Referral Management Views
+# ============================================================================
+
+@staff_member_required
+def admin_referrals(request):
+    """Admin view to manage all referrals and payouts."""
+    # Get all promo codes with stats
+    all_codes = PromoCode.objects.select_related('owner').order_by('-times_used')
+
+    # Get all usages
+    all_usages = PromoCodeUsage.objects.select_related(
+        'promo_code', 'promo_code__owner', 'user', 'document'
+    ).order_by('-created_at')
+
+    # Get pending payout requests
+    payout_requests = PayoutRequest.objects.select_related(
+        'user', 'processed_by'
+    ).order_by('-created_at')
+
+    # Summary stats
+    total_referrals = PromoCodeUsage.objects.count()
+    total_pending = PromoCodeUsage.objects.filter(payout_status='pending').aggregate(
+        total=db_models.Sum('referral_amount')
+    )['total'] or 0
+    total_paid = PromoCodeUsage.objects.filter(payout_status='paid').aggregate(
+        total=db_models.Sum('referral_amount')
+    )['total'] or 0
+
+    context = {
+        'all_codes': all_codes,
+        'all_usages': all_usages[:50],  # Last 50
+        'payout_requests': payout_requests,
+        'total_referrals': total_referrals,
+        'total_pending': total_pending,
+        'total_paid': total_paid,
+    }
+
+    return render(request, 'documents/admin_referrals.html', context)
+
+
+@staff_member_required
+@require_POST
+def admin_process_payout(request, request_id):
+    """Process a payout request."""
+    payout_request = get_object_or_404(PayoutRequest, id=request_id)
+
+    action = request.POST.get('action')
+
+    if action == 'complete':
+        amount_paid = request.POST.get('amount_paid', '').strip()
+        payment_reference = request.POST.get('payment_reference', '').strip()
+        admin_notes = request.POST.get('admin_notes', '').strip()
+
+        if not amount_paid:
+            messages.error(request, 'Please enter the amount paid.')
+            return redirect('documents:admin_referrals')
+
+        try:
+            amount_paid = Decimal(amount_paid)
+        except:
+            messages.error(request, 'Invalid amount.')
+            return redirect('documents:admin_referrals')
+
+        # Mark the payout request as completed
+        payout_request.mark_completed(
+            admin_user=request.user,
+            amount_paid=amount_paid,
+            reference=payment_reference,
+            notes=admin_notes
+        )
+
+        # Mark all pending usages for this user's codes as paid
+        PromoCodeUsage.objects.filter(
+            promo_code__owner=payout_request.user,
+            payout_status='pending'
+        ).update(
+            payout_status='paid',
+            payout_date=timezone.now(),
+            payout_reference=payment_reference,
+            payout_notes=f'Paid via payout request #{payout_request.id}'
+        )
+
+        messages.success(request, f'Payout of ${amount_paid} to {payout_request.user.email} marked as complete.')
+
+    elif action == 'reject':
+        admin_notes = request.POST.get('admin_notes', '').strip()
+        payout_request.status = 'rejected'
+        payout_request.admin_notes = admin_notes
+        payout_request.processed_by = request.user
+        payout_request.processed_at = timezone.now()
+        payout_request.save()
+        messages.warning(request, f'Payout request from {payout_request.user.email} has been rejected.')
+
+    elif action == 'processing':
+        payout_request.status = 'processing'
+        payout_request.save()
+        messages.info(request, f'Payout request marked as processing.')
+
+    return redirect('documents:admin_referrals')
+
+
+@staff_member_required
+@require_POST
+def admin_mark_usage_paid(request, usage_id):
+    """Mark a single usage as paid."""
+    usage = get_object_or_404(PromoCodeUsage, id=usage_id)
+
+    payment_reference = request.POST.get('payment_reference', '').strip()
+    payout_notes = request.POST.get('payout_notes', '').strip()
+
+    usage.mark_paid(reference=payment_reference, notes=payout_notes)
+
+    messages.success(request, f'Usage marked as paid.')
+    return redirect('documents:admin_referrals')
 
 
 @require_GET

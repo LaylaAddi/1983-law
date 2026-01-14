@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin: Referral Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h2 class="mb-4"><i class="bi bi-people me-2"></i>Referral Management</h2>
+
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center bg-primary text-white">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ total_referrals }}</h3>
+                    <small>Total Referrals</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-warning text-dark">
+                <div class="card-body">
+                    <h3 class="mb-0">${{ total_pending|floatformat:2 }}</h3>
+                    <small>Pending Payouts</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-success text-white">
+                <div class="card-body">
+                    <h3 class="mb-0">${{ total_paid|floatformat:2 }}</h3>
+                    <small>Total Paid Out</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-info text-white">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ all_codes|length }}</h3>
+                    <small>Active Codes</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payout Requests -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="bi bi-exclamation-circle me-2"></i>Payout Requests</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if payout_requests %}
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>User</th>
+                        <th class="text-end">Requested</th>
+                        <th>Method</th>
+                        <th>Details</th>
+                        <th class="text-center">Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in payout_requests %}
+                    <tr class="{% if req.status == 'pending' %}table-warning{% elif req.status == 'processing' %}table-info{% elif req.status == 'completed' %}table-success{% endif %}">
+                        <td>{{ req.created_at|date:"M d, Y H:i" }}</td>
+                        <td>
+                            <strong>{{ req.user.email }}</strong>
+                            <br><small class="text-muted">{{ req.user.get_full_name }}</small>
+                        </td>
+                        <td class="text-end"><strong>${{ req.amount_requested|floatformat:2 }}</strong></td>
+                        <td>{{ req.payment_method }}</td>
+                        <td><small>{{ req.payment_details|truncatechars:40 }}</small></td>
+                        <td class="text-center">
+                            {% if req.status == 'pending' %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif req.status == 'processing' %}
+                            <span class="badge bg-info">Processing</span>
+                            {% elif req.status == 'completed' %}
+                            <span class="badge bg-success">Completed</span>
+                            {% elif req.status == 'rejected' %}
+                            <span class="badge bg-danger">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if req.status in 'pending,processing' %}
+                            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#payoutModal{{ req.id }}">
+                                <i class="bi bi-check-circle"></i> Process
+                            </button>
+
+                            <!-- Payout Modal -->
+                            <div class="modal fade" id="payoutModal{{ req.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Process Payout: {{ req.user.email }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="post" action="{% url 'documents:admin_process_payout' req.id %}">
+                                            {% csrf_token %}
+                                            <div class="modal-body">
+                                                <div class="alert alert-info">
+                                                    <strong>Payment Method:</strong> {{ req.payment_method }}<br>
+                                                    <strong>Details:</strong> {{ req.payment_details }}
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label">Amount Paid</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" step="0.01" class="form-control" name="amount_paid"
+                                                               value="{{ req.amount_requested }}" required>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label">Payment Reference</label>
+                                                    <input type="text" class="form-control" name="payment_reference"
+                                                           placeholder="PayPal transaction ID, check #, etc.">
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label">Admin Notes</label>
+                                                    <textarea class="form-control" name="admin_notes" rows="2"></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="submit" name="action" value="processing" class="btn btn-info">
+                                                    <i class="bi bi-hourglass me-1"></i>Mark Processing
+                                                </button>
+                                                <button type="submit" name="action" value="reject" class="btn btn-danger">
+                                                    <i class="bi bi-x-circle me-1"></i>Reject
+                                                </button>
+                                                <button type="submit" name="action" value="complete" class="btn btn-success">
+                                                    <i class="bi bi-check-circle me-1"></i>Mark Completed
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <small class="text-muted">
+                                {% if req.amount_paid %}Paid: ${{ req.amount_paid|floatformat:2 }}{% endif %}
+                                {% if req.payment_reference %}<br>Ref: {{ req.payment_reference }}{% endif %}
+                            </small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="p-4 text-center text-muted">
+                <i class="bi bi-inbox display-4"></i>
+                <p class="mt-2">No payout requests yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- All Promo Codes -->
+        <div class="col-lg-5 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">All Promo Codes</h5>
+                </div>
+                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Code</th>
+                                <th>Owner</th>
+                                <th class="text-center">Uses</th>
+                                <th class="text-end">Earned</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for code in all_codes %}
+                            <tr>
+                                <td>
+                                    <strong>{{ code.code }}</strong>
+                                    {% if not code.is_active %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+                                </td>
+                                <td><small>{{ code.owner.email }}</small></td>
+                                <td class="text-center">{{ code.times_used }}</td>
+                                <td class="text-end">${{ code.total_earned|floatformat:2 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">No promo codes yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Referral Usages -->
+        <div class="col-lg-7 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Referral Activity</h5>
+                </div>
+                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Date</th>
+                                <th>Code</th>
+                                <th>Code Owner</th>
+                                <th>Customer</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-center">Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for usage in all_usages %}
+                            <tr>
+                                <td>{{ usage.created_at|date:"M d" }}</td>
+                                <td><code>{{ usage.promo_code.code }}</code></td>
+                                <td><small>{{ usage.promo_code.owner.email|truncatechars:15 }}</small></td>
+                                <td><small>{{ usage.user.email|truncatechars:15 }}</small></td>
+                                <td class="text-end">${{ usage.referral_amount|floatformat:2 }}</td>
+                                <td class="text-center">
+                                    {% if usage.payout_status == 'paid' %}
+                                    <span class="badge bg-success">Paid</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if usage.payout_status == 'pending' %}
+                                    <button class="btn btn-xs btn-outline-success" data-bs-toggle="modal" data-bs-target="#usageModal{{ usage.id }}">
+                                        Pay
+                                    </button>
+
+                                    <!-- Mark Paid Modal -->
+                                    <div class="modal fade" id="usageModal{{ usage.id }}" tabindex="-1">
+                                        <div class="modal-dialog modal-sm">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h6 class="modal-title">Mark as Paid</h6>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <form method="post" action="{% url 'documents:admin_mark_usage_paid' usage.id %}">
+                                                    {% csrf_token %}
+                                                    <div class="modal-body">
+                                                        <div class="mb-2">
+                                                            <label class="form-label">Reference</label>
+                                                            <input type="text" class="form-control form-control-sm" name="payment_reference">
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <label class="form-label">Notes</label>
+                                                            <input type="text" class="form-control form-control-sm" name="payout_notes">
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="submit" class="btn btn-sm btn-success">Mark Paid</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <small class="text-muted">{{ usage.payout_date|date:"M d" }}</small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-3">No referral activity yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{% url 'admin:index' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-gear me-1"></i>Django Admin
+        </a>
+        <a href="{% url 'documents:document_list' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left me-1"></i>Back to Documents
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}Request Payout{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h2 class="mb-4"><i class="bi bi-cash me-2"></i>Request Payout</h2>
+
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Payout Request</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h2 class="text-success">${{ pending_earnings|floatformat:2 }}</h2>
+                        <p class="text-muted">Available for payout</p>
+                    </div>
+
+                    {% if pending_earnings < 15 %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Minimum payout is $15.00. You need ${{ 15|floatformat:2 }} to request a payout.
+                    </div>
+                    <a href="{% url 'documents:my_referral_code' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Referrals
+                    </a>
+                    {% else %}
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="payment_method" class="form-label">How would you like to be paid? <span class="text-danger">*</span></label>
+                            <select class="form-select" name="payment_method" id="payment_method" required>
+                                <option value="">Select payment method...</option>
+                                <option value="PayPal">PayPal</option>
+                                <option value="Venmo">Venmo</option>
+                                <option value="Zelle">Zelle</option>
+                                <option value="Check">Check (mailed)</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="payment_details" class="form-label">Payment Details <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="payment_details" id="payment_details" rows="3"
+                                      placeholder="Enter your PayPal email, Venmo username, phone number for Zelle, or mailing address for check..."
+                                      required></textarea>
+                            <div class="form-text">
+                                Please provide the account info where we should send your payment.
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Payouts are typically processed within 3-5 business days. You'll receive the full amount of ${{ pending_earnings|floatformat:2 }}.
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'documents:my_referral_code' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-send me-1"></i>Submit Request
+                            </button>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

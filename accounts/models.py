@@ -133,3 +133,30 @@ class User(AbstractBaseUser, PermissionsMixin):
             return 999  # Unlimited
         remaining = settings.FREE_AI_GENERATIONS - self.get_total_free_ai_uses()
         return max(0, remaining)
+
+    def get_total_referral_earnings(self):
+        """Get total earnings from all promo codes."""
+        from documents.models import PromoCode
+        return self.promo_codes.aggregate(
+            total=models.Sum('total_earned')
+        )['total'] or 0
+
+    def get_pending_referral_earnings(self):
+        """Get total pending (unpaid) referral earnings."""
+        from documents.models import PromoCodeUsage
+        return PromoCodeUsage.objects.filter(
+            promo_code__owner=self,
+            payout_status='pending'
+        ).aggregate(
+            total=models.Sum('referral_amount')
+        )['total'] or 0
+
+    def get_paid_referral_earnings(self):
+        """Get total paid referral earnings."""
+        from documents.models import PromoCodeUsage
+        return PromoCodeUsage.objects.filter(
+            promo_code__owner=self,
+            payout_status='paid'
+        ).aggregate(
+            total=models.Sum('referral_amount')
+        )['total'] or 0

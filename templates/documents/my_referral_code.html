@@ -1,139 +1,225 @@
 {% extends 'base.html' %}
 
-{% block title %}My Referral Code{% endblock %}
+{% block title %}My Referral Codes{% endblock %}
 
 {% block content %}
 <div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <h2 class="mb-4"><i class="bi bi-share me-2"></i>My Referral Code</h2>
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4"><i class="bi bi-share me-2"></i>My Referral Dashboard</h2>
 
-            {% if promo_code %}
-            <!-- Existing Code Display -->
-            <div class="card shadow mb-4">
-                <div class="card-body text-center py-4">
-                    <h6 class="text-muted mb-2">Your Referral Code</h6>
-                    <div class="display-4 fw-bold text-primary mb-3">{{ promo_code.code }}</div>
-                    <button class="btn btn-outline-primary" onclick="copyCode()">
-                        <i class="bi bi-clipboard me-1"></i>Copy Code
-                    </button>
-                </div>
-            </div>
-
-            <!-- Stats -->
+            <!-- Earnings Summary -->
             <div class="row mb-4">
-                <div class="col-md-4">
-                    <div class="card text-center">
+                <div class="col-md-3">
+                    <div class="card text-center bg-primary text-white">
                         <div class="card-body">
-                            <h3 class="text-primary mb-0">{{ promo_code.times_used }}</h3>
-                            <small class="text-muted">Times Used</small>
+                            <h3 class="mb-0">${{ total_earned|floatformat:2 }}</h3>
+                            <small>Total Earned</small>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card text-center">
+                <div class="col-md-3">
+                    <div class="card text-center bg-warning text-dark">
                         <div class="card-body">
-                            <h3 class="text-success mb-0">${{ promo_code.total_earned }}</h3>
-                            <small class="text-muted">Total Earned</small>
+                            <h3 class="mb-0">${{ pending_earnings|floatformat:2 }}</h3>
+                            <small>Pending Payout</small>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card text-center">
+                <div class="col-md-3">
+                    <div class="card text-center bg-success text-white">
                         <div class="card-body">
-                            <h3 class="text-info mb-0">${{ referral_payout }}</h3>
-                            <small class="text-muted">Per Referral</small>
+                            <h3 class="mb-0">${{ paid_earnings|floatformat:2 }}</h3>
+                            <small>Already Paid</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center bg-info text-white">
+                        <div class="card-body">
+                            <h3 class="mb-0">${{ referral_payout }}</h3>
+                            <small>Per Referral</small>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- How It Works -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">How It Works</h5>
-                </div>
-                <div class="card-body">
-                    <ol class="mb-0">
-                        <li class="mb-2">Share your code <strong>{{ promo_code.code }}</strong> with others</li>
-                        <li class="mb-2">They get <strong>{{ discount_percent }}% off</strong> their purchase</li>
-                        <li class="mb-2">You earn <strong>${{ referral_payout }}</strong> for each purchase</li>
-                        <li>We'll pay you out regularly (contact us for payout)</li>
-                    </ol>
-                </div>
+            <!-- Request Payout Button -->
+            {% if pending_earnings >= 15 %}
+            <div class="alert alert-success d-flex justify-content-between align-items-center">
+                <span><strong>You have ${{ pending_earnings|floatformat:2 }} available for payout!</strong></span>
+                {% if pending_requests %}
+                <span class="badge bg-warning text-dark">Payout Request Pending</span>
+                {% else %}
+                <a href="{% url 'documents:request_payout' %}" class="btn btn-success">
+                    <i class="bi bi-cash me-1"></i>Request Payout
+                </a>
+                {% endif %}
             </div>
-
-            <!-- Recent Usage -->
-            {% if usages %}
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Recent Referrals</h5>
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-striped mb-0">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Earned</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for usage in usages %}
-                            <tr>
-                                <td>{{ usage.created_at|date:"M d, Y" }}</td>
-                                <td>${{ usage.referral_amount }}</td>
-                                <td>
-                                    {% if usage.payout_status == 'paid' %}
-                                    <span class="badge bg-success">Paid</span>
-                                    {% else %}
-                                    <span class="badge bg-warning text-dark">Pending</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            {% elif pending_earnings > 0 %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-1"></i>
+                Minimum payout is $15.00. You need ${{ 15|add:pending_earnings|floatformat:2 }} more in earnings.
             </div>
             {% endif %}
 
-            {% else %}
-            <!-- Create New Code -->
-            <div class="card shadow">
-                <div class="card-header">
-                    <h5 class="mb-0">Create Your Referral Code</h5>
-                </div>
-                <div class="card-body">
-                    <p>Create a unique referral code to share with others. When they use your code:</p>
-                    <ul>
-                        <li>They get <strong>{{ discount_percent }}% off</strong> their purchase</li>
-                        <li>You earn <strong>${{ referral_payout }}</strong> for each referral</li>
-                    </ul>
+            <div class="row">
+                <!-- Left Column: Codes -->
+                <div class="col-lg-6 mb-4">
+                    <!-- My Codes -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">My Referral Codes</h5>
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#newCodeForm">
+                                <i class="bi bi-plus-circle me-1"></i>New Code
+                            </button>
+                        </div>
 
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="code" class="form-label">Choose Your Code</label>
-                            <input type="text"
-                                   class="form-control form-control-lg"
-                                   name="code"
-                                   id="code"
-                                   placeholder="e.g., SMITH25"
-                                   maxlength="20"
-                                   style="text-transform: uppercase;"
-                                   required>
-                            <div class="form-text">
-                                4-20 characters, letters and numbers only. Make it memorable!
+                        <!-- New Code Form (Collapsed) -->
+                        <div class="collapse" id="newCodeForm">
+                            <div class="card-body border-bottom bg-light">
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <div class="row g-2">
+                                        <div class="col-md-5">
+                                            <input type="text" class="form-control" name="code"
+                                                   placeholder="CODE (e.g., SMITH25)"
+                                                   style="text-transform: uppercase;"
+                                                   maxlength="20" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control" name="name"
+                                                   placeholder="Name (optional)" maxlength="100">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <button type="submit" class="btn btn-primary w-100">Create</button>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">4-20 characters, letters and numbers only</small>
+                                </form>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-plus-circle me-1"></i>Create My Code
-                        </button>
-                    </form>
+
+                        <div class="card-body p-0">
+                            {% if promo_codes %}
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Code</th>
+                                        <th class="text-center">Used</th>
+                                        <th class="text-end">Earned</th>
+                                        <th class="text-center">Status</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for code in promo_codes %}
+                                    <tr>
+                                        <td>
+                                            <strong class="text-primary">{{ code.code }}</strong>
+                                            {% if code.name %}
+                                            <br><small class="text-muted">{{ code.name }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">{{ code.times_used }}</td>
+                                        <td class="text-end">${{ code.total_earned|floatformat:2 }}</td>
+                                        <td class="text-center">
+                                            {% if code.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="copyCode('{{ code.code }}')" title="Copy">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                            <form method="post" action="{% url 'documents:toggle_promo_code' code.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-{% if code.is_active %}warning{% else %}success{% endif %}"
+                                                        title="{% if code.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                                    <i class="bi bi-{% if code.is_active %}pause{% else %}play{% endif %}-fill"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <div class="p-4 text-center text-muted">
+                                <i class="bi bi-tag display-4"></i>
+                                <p class="mt-2">No referral codes yet. Create your first code above!</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- How It Works -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">How It Works</h5>
+                        </div>
+                        <div class="card-body">
+                            <ol class="mb-0">
+                                <li class="mb-2">Create one or more referral codes above</li>
+                                <li class="mb-2">Share your codes with others</li>
+                                <li class="mb-2">They get <strong>{{ discount_percent }}% off</strong> their purchase</li>
+                                <li class="mb-2">You earn <strong>${{ referral_payout }}</strong> for each purchase</li>
+                                <li>Request payout when you have $15+ pending</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Referral History -->
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Referral History</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if all_usages %}
+                            <table class="table table-striped mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Code</th>
+                                        <th>Referred User</th>
+                                        <th class="text-end">Earned</th>
+                                        <th class="text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for usage in all_usages %}
+                                    <tr>
+                                        <td>{{ usage.created_at|date:"M d, Y" }}</td>
+                                        <td><code>{{ usage.promo_code.code }}</code></td>
+                                        <td>
+                                            <small>{{ usage.user.email|truncatechars:20 }}</small>
+                                        </td>
+                                        <td class="text-end">${{ usage.referral_amount|floatformat:2 }}</td>
+                                        <td class="text-center">
+                                            {% if usage.payout_status == 'paid' %}
+                                            <span class="badge bg-success">Paid</span>
+                                            {% else %}
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <div class="p-4 text-center text-muted">
+                                <i class="bi bi-people display-4"></i>
+                                <p class="mt-2">No referrals yet. Share your codes to start earning!</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
-            {% endif %}
 
             <div class="text-center mt-4">
                 <a href="{% url 'documents:document_list' %}" class="text-muted">
@@ -147,10 +233,9 @@
 
 {% block extra_js %}
 <script>
-function copyCode() {
-    const code = '{{ promo_code.code }}';
+function copyCode(code) {
     navigator.clipboard.writeText(code).then(function() {
-        alert('Code copied to clipboard!');
+        alert('Code "' + code + '" copied to clipboard!');
     });
 }
 </script>

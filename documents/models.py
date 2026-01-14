@@ -704,10 +704,11 @@ class DocumentCaseLaw(models.Model):
 class PromoCode(models.Model):
     """Referral/promo codes created by users."""
 
-    owner = models.OneToOneField(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='promo_code'
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='promo_codes'
     )
     code = models.CharField(max_length=20, unique=True, help_text='Unique promo code (e.g., SMITH25)')
+    name = models.CharField(max_length=100, blank=True, help_text='Optional friendly name for this code')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -726,6 +727,18 @@ class PromoCode(models.Model):
         self.times_used += 1
         self.total_earned += Decimal(str(amount_earned))
         self.save(update_fields=['times_used', 'total_earned'])
+
+    def get_pending_earnings(self):
+        """Get total pending (unpaid) earnings for this code."""
+        return self.usages.filter(payout_status='pending').aggregate(
+            total=models.Sum('referral_amount')
+        )['total'] or Decimal('0.00')
+
+    def get_paid_earnings(self):
+        """Get total paid earnings for this code."""
+        return self.usages.filter(payout_status='paid').aggregate(
+            total=models.Sum('referral_amount')
+        )['total'] or Decimal('0.00')
 
 
 class PromoCodeUsage(models.Model):
@@ -774,4 +787,63 @@ class PromoCodeUsage(models.Model):
         self.payout_reference = reference
         self.payout_date = timezone.now()
         self.payout_notes = notes
+        self.save()
+
+
+class PayoutRequest(models.Model):
+    """Tracks payout requests from users."""
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('rejected', 'Rejected'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payout_requests'
+    )
+    amount_requested = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_method = models.CharField(
+        max_length=100, blank=True,
+        help_text='How user wants to be paid (PayPal email, Venmo, etc.)'
+    )
+    payment_details = models.TextField(
+        blank=True,
+        help_text='Additional payment details provided by user'
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    # Admin processing
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    payment_reference = models.CharField(
+        max_length=255, blank=True,
+        help_text='Transaction ID or reference number'
+    )
+    admin_notes = models.TextField(blank=True)
+    processed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='processed_payouts'
+    )
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Payout Request'
+        verbose_name_plural = 'Payout Requests'
+
+    def __str__(self):
+        return f"${self.amount_requested} request by {self.user.email} ({self.status})"
+
+    def mark_completed(self, admin_user, amount_paid, reference, notes=''):
+        """Mark this payout request as completed."""
+        self.status = 'completed'
+        self.amount_paid = amount_paid
+        self.payment_reference = reference
+        self.admin_notes = notes
+        self.processed_by = admin_user
+        self.processed_at = timezone.now()
         self.save()

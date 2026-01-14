@@ -3,7 +3,7 @@ from .models import (
     Document, DocumentSection, PlaintiffInfo, IncidentOverview,
     Defendant, IncidentNarrative, RightsViolated, Witness,
     Evidence, Damages, PriorComplaints, ReliefSought,
-    PromoCode, PromoCodeUsage
+    PromoCode, PromoCodeUsage, PayoutRequest
 )
 
 
@@ -114,3 +114,35 @@ class PromoCodeUsageAdmin(admin.ModelAdmin):
     def mark_as_paid(self, request, queryset):
         updated = queryset.filter(payout_status='pending').update(payout_status='paid')
         self.message_user(request, f'{updated} usage(s) marked as paid.')
+
+
+@admin.register(PayoutRequest)
+class PayoutRequestAdmin(admin.ModelAdmin):
+    list_display = [
+        'user', 'amount_requested', 'payment_method', 'status',
+        'amount_paid', 'processed_by', 'created_at'
+    ]
+    list_filter = ['status', 'created_at']
+    search_fields = ['user__email', 'payment_reference']
+    readonly_fields = ['user', 'amount_requested', 'created_at', 'updated_at']
+    actions = ['mark_as_processing', 'mark_as_completed']
+
+    fieldsets = (
+        ('Request Details', {
+            'fields': ('user', 'amount_requested', 'payment_method', 'payment_details', 'created_at')
+        }),
+        ('Processing', {
+            'fields': ('status', 'amount_paid', 'payment_reference', 'admin_notes', 'processed_by', 'processed_at')
+        }),
+    )
+
+    @admin.action(description='Mark selected as processing')
+    def mark_as_processing(self, request, queryset):
+        updated = queryset.filter(status='pending').update(status='processing')
+        self.message_user(request, f'{updated} request(s) marked as processing.')
+
+    @admin.action(description='Mark selected as completed')
+    def mark_as_completed(self, request, queryset):
+        # This is a simple bulk action - for proper completion, use the admin_referrals view
+        updated = queryset.filter(status__in=['pending', 'processing']).update(status='completed')
+        self.message_user(request, f'{updated} request(s) marked as completed.')

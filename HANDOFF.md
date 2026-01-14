@@ -418,14 +418,18 @@ DRAFT (free) → EXPIRED or PAID → FINALIZED
 | Document.finalized_at | Finalization timestamp |
 | Document.ai_generations_used | Free tier counter |
 | Document.ai_cost_used | Paid tier cost tracking |
-| PromoCode | User's referral code with stats |
+| PromoCode | User's referral codes (multiple per user) |
 | PromoCodeUsage | Tracks each promo use for payouts |
+| PayoutRequest | User payout requests with status tracking |
 
 ### User Model Additions
 - `has_unlimited_access()` - Check if admin/staff
 - `get_total_free_ai_uses()` - AI uses across all documents
 - `can_use_free_ai()` - Check user-level AI limit
 - `get_free_ai_remaining()` - Remaining free AI count
+- `get_total_referral_earnings()` - Total earnings from all codes
+- `get_pending_referral_earnings()` - Pending (unpaid) earnings
+- `get_paid_referral_earnings()` - Already paid earnings
 
 ### URLs (Payment)
 - `/documents/{id}/checkout/` - Checkout page with promo code
@@ -433,14 +437,19 @@ DRAFT (free) → EXPIRED or PAID → FINALIZED
 - `/documents/{id}/checkout/cancel/` - Payment cancelled
 - `/documents/webhook/stripe/` - Stripe webhook endpoint
 - `/documents/{id}/finalize/` - Document finalization confirmation
-- `/documents/my-referral-code/` - Create/view referral code
+- `/documents/my-referral-code/` - Referral dashboard (multiple codes)
 - `/documents/validate-promo-code/` - AJAX promo validation
+- `/documents/promo-code/{id}/toggle/` - Activate/deactivate a code
+- `/documents/request-payout/` - Request payout for pending earnings
+- `/documents/admin/referrals/` - Admin referral management dashboard
 
 ### Admin Features
 - View all documents with payment status
 - PromoCode admin with usage stats
 - PromoCodeUsage admin with payout tracking
+- PayoutRequest admin for processing payouts
 - Bulk action: "Mark as paid" for referral payouts
+- Custom admin referral dashboard at `/documents/admin/referrals/`
 
 ### Environment Variables
 ```env
@@ -465,7 +474,9 @@ HEADER_APP_NAME = '1983 Law'  # Shown in navbar and page titles
 ### Templates Added
 - `templates/documents/checkout.html` - Checkout page
 - `templates/documents/finalize.html` - Finalization confirmation
-- `templates/documents/my_referral_code.html` - Referral code management
+- `templates/documents/my_referral_code.html` - Referral dashboard (multiple codes)
+- `templates/documents/request_payout.html` - Payout request form
+- `templates/documents/admin_referrals.html` - Admin referral management
 - `templates/documents/partials/status_banner.html` - Status display partial
 
 ### Checkout Flow
@@ -485,6 +496,61 @@ HEADER_APP_NAME = '1983 Law'  # Shown in navbar and page titles
   ```powershell
   stripe listen --forward-to localhost:8000/documents/webhook/stripe/
   ```
+
+---
+
+## Referral System (Enhanced)
+
+### Overview
+Users can create multiple referral codes, track referrals, and request payouts. Admin manages all payouts manually via Stripe dashboard then updates the database.
+
+### User Features
+1. **Multiple Codes** - Create unlimited referral codes with optional names
+2. **Referral Dashboard** - See all codes, usage stats, earnings breakdown
+3. **Referral History** - View who used your codes, when, and payout status
+4. **Payout Requests** - Request payout when pending balance >= $15
+
+### Admin Features
+1. **Admin Referral Dashboard** (`/documents/admin/referrals/`)
+   - Summary stats (total referrals, pending payouts, total paid)
+   - All promo codes with owner and usage count
+   - Recent referral activity
+   - Payout request queue with processing actions
+
+2. **Payout Processing Workflow**
+   - User requests payout → Admin sees request with payment details
+   - Admin pays manually via Stripe/PayPal/Venmo/etc.
+   - Admin marks request as "Completed" with reference number
+   - System auto-marks all pending usages as paid
+
+3. **Email Notifications**
+   - When user requests payout, admin receives email notification
+   - Configure `ADMIN_EMAIL` in settings
+
+### Database Models
+| Model | Purpose |
+|-------|---------|
+| PromoCode | Multiple per user, tracks times_used and total_earned |
+| PromoCode.name | Optional friendly name for the code |
+| PromoCodeUsage | Each code use with payout_status (pending/paid) |
+| PayoutRequest | User payout requests with status and payment tracking |
+
+### Settings
+```python
+ADMIN_EMAIL = 'admin@1983law.com'  # Receives payout request notifications
+DEFAULT_FROM_EMAIL = 'noreply@1983law.com'
+```
+
+### Payout Flow
+1. User creates referral codes at `/documents/my-referral-code/`
+2. Others use code at checkout → User earns $15 per use
+3. When pending >= $15, user clicks "Request Payout"
+4. User enters payment method (PayPal, Venmo, Zelle, etc.)
+5. Admin receives email notification
+6. Admin visits `/documents/admin/referrals/`
+7. Admin pays user via Stripe dashboard or other method
+8. Admin enters payment reference and marks as "Completed"
+9. User's pending earnings reset, history shows "Paid"
 
 ---
 
