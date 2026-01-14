@@ -14,7 +14,8 @@ The app is functional with the following features complete:
 
 1. **User Authentication** (`accounts` app)
    - Email-based login (not username)
-   - Registration, login, logout
+   - Registration requires only email and password (no name fields)
+   - Name and address collected via Profile Completion before creating documents
    - Password recovery
    - User profile with full contact info (name, address, phone, mailing address)
    - **Profile completion required before creating documents**
@@ -418,7 +419,8 @@ FREE_AI_GENERATIONS = 3
 DRAFT_EXPIRY_HOURS = 48
 PAID_AI_BUDGET = 5.00
 PAID_EXPIRY_DAYS = 45
-APP_NAME = '1983law.com'  # Shown in DRAFT watermark
+APP_NAME = '1983law.com'  # Shown in DRAFT watermark and footer
+HEADER_APP_NAME = '1983 Law'  # Shown in navbar and page titles
 ```
 
 ### Templates Added
@@ -523,6 +525,7 @@ STRIPE_PUBLIC_KEY=pk_test_...  # Stripe publishable key
 STRIPE_SECRET_KEY=sk_test_...  # Stripe secret key
 STRIPE_WEBHOOK_SECRET=whsec_...# Stripe webhook secret (optional for local)
 
-# Optional
-APP_NAME=1983law.com           # Shown in DRAFT watermark
+# Optional (Branding)
+APP_NAME=1983law.com           # Shown in DRAFT watermark and footer
+HEADER_APP_NAME=1983 Law       # Shown in navbar and page titles
 ```

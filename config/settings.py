@@ -148,4 +148,5 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 
 # App Branding
-APP_NAME = os.getenv('APP_NAME', '1983law.com')
+APP_NAME = os.getenv('APP_NAME', '1983law.com')  # Used in footer and watermark
+HEADER_APP_NAME = os.getenv('HEADER_APP_NAME', '1983 Law')  # Used in header/navbar

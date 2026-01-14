@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}1983 Law{% endblock %}</title>
+    <title>{% block title %}{{ header_app_name }}{% endblock %}</title>
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -33,7 +33,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="{% url 'home' %}">
-                <i class="bi bi-briefcase me-2"></i>1983 Law
+                <i class="bi bi-briefcase me-2"></i>{{ header_app_name }}
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -96,7 +96,7 @@
     <!-- Footer -->
     <footer class="bg-dark text-light py-4 mt-5">
         <div class="container text-center">
-            <p class="mb-0">&copy; 2025 1983 Law. All rights reserved.</p>
+            <p class="mb-0">&copy; 2025 {{ app_name }}. All rights reserved.</p>
         </div>
     </footer>
 

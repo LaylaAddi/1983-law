@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ config.title }} - {{ document.title }} - 1983 Law{% endblock %}
+{% block title %}{{ config.title }} - {{ document.title }} - {{ header_app_name }}{% endblock %}
 
 {% block extra_css %}
 {% if section.section_type == 'incident_narrative' %}

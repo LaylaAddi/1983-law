@@ -32,7 +32,7 @@ class EmailAuthenticationForm(AuthenticationForm):
 
 
 class UserRegistrationForm(UserCreationForm):
-    """Registration form with email as the primary field."""
+    """Registration form with email as the primary field (no name fields - collected later)."""
 
     email = forms.EmailField(
         label='Email',
@@ -40,30 +40,6 @@ class UserRegistrationForm(UserCreationForm):
             'class': 'form-control',
             'placeholder': 'Enter your email',
             'autofocus': True,
-        })
-    )
-    first_name = forms.CharField(
-        max_length=30,
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'First name (optional)',
-        })
-    )
-    middle_name = forms.CharField(
-        max_length=30,
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Middle name (optional)',
-        })
-    )
-    last_name = forms.CharField(
-        max_length=30,
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Last name (optional)',
         })
     )
     password1 = forms.CharField(
@@ -83,7 +59,7 @@ class UserRegistrationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ('email', 'first_name', 'middle_name', 'last_name', 'password1', 'password2')
+        fields = ('email', 'password1', 'password2')
 
 
 class CustomPasswordResetForm(PasswordResetForm):
