@@ -22,8 +22,8 @@ COPY . .
 # Collect static files
 RUN python manage.py collectstatic --noinput --clear || true
 
-# Expose port
-EXPOSE 8000
+# Expose port (Render uses $PORT env var, typically 10000)
+EXPOSE 10000
 
-# Run the application with gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application"]
+# Run the application with gunicorn (use $PORT for Render compatibility)
+CMD gunicorn --bind 0.0.0.0:${PORT:-8000} config.wsgi:application
