@@ -111,8 +111,47 @@ The app is functional with the following features complete:
 | phone | Contact phone |
 | use_different_mailing_address | Boolean flag |
 | mailing_street_address, mailing_city, mailing_state, mailing_zip_code | Mailing address (if different) |
-| is_test_user | Enable test features |
+| is_test_user | Enable test features (NOT admin access) |
+| is_staff | Django staff status (grants unlimited AI access) |
+| is_superuser | Django superuser status (grants unlimited AI access) |
 | has_complete_profile() | Method to check if profile is complete |
+| has_unlimited_access() | Method: returns True if is_staff OR is_superuser |
+
+---
+
+## User Permission Types (IMPORTANT)
+
+There are three separate permission flags - they serve different purposes:
+
+| Flag | What It Does | AI Limits | Payment Required |
+|------|--------------|-----------|------------------|
+| `is_test_user` | Test stories dropdown, fill test data button | **Normal limits apply** | **Yes** |
+| `is_staff` | Django admin panel + unlimited AI | **Unlimited** | **No** |
+| `is_superuser` | Full Django admin + unlimited AI | **Unlimited** | **No** |
+
+### Common Configurations
+
+| User Type | is_test_user | is_staff | is_superuser |
+|-----------|--------------|----------|--------------|
+| Regular user | False | False | False |
+| Tester (limited) | True | False | False |
+| Staff tester (full) | True | True | False |
+| Site admin | True | True | True |
+
+### Key Code Locations
+- `is_test_user` check: `documents/views.py` lines 513, 1081
+- `has_unlimited_access()`: `accounts/models.py` line 112
+- AI limit bypass: `accounts/models.py` lines 126, 132 and `documents/models.py` line 143
+
+### Setting Up a Full Test User
+```python
+# In Django shell
+from accounts.models import User
+u = User.objects.get(email='your@email.com')
+u.is_test_user = True   # Test features (stories, sample data)
+u.is_staff = True       # Unlimited AI access
+u.save()
+```
 
 ---
 
