@@ -57,22 +57,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
+import dj_database_url
+
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 
 if DATABASE_URL:
-    import re
-    match = re.match(r'postgres://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', DATABASE_URL)
-    if match:
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.postgresql',
-                'NAME': match.group(5),
-                'USER': match.group(1),
-                'PASSWORD': match.group(2),
-                'HOST': match.group(3),
-                'PORT': match.group(4),
-            }
-        }
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL)
+    }
 else:
     DATABASES = {
         'default': {
