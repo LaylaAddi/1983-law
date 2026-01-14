@@ -449,6 +449,54 @@ HEADER_APP_NAME = '1983 Law'  # Shown in navbar and page titles
 
 ---
 
+## Deployment (Render.com)
+
+### Live URL
+- **Production**: https://one983-law.onrender.com
+- **Custom Domain**: 1983law.org (when DNS propagates)
+
+### Render Configuration
+The app uses Docker deployment on Render with these files:
+- `Dockerfile` - Python 3.11 slim image with gunicorn
+- `start.sh` - Startup script that runs migrations then starts gunicorn
+- `render.yaml` - Blueprint configuration (optional, can configure via dashboard)
+
+### Key Files for Deployment
+| File | Purpose |
+|------|---------|
+| `Dockerfile` | Container build instructions |
+| `start.sh` | Runs migrations + starts gunicorn on $PORT |
+| `build.sh` | Alternative build script (for native Python runtime) |
+| `requirements.txt` | Python dependencies |
+
+### Environment Variables on Render
+Set these in Render Dashboard → Environment:
+- `DATABASE_URL` - Auto-set if using Render Postgres
+- `SECRET_KEY` - Auto-generated or set manually
+- `DEBUG` - Set to `0` for production
+- `ALLOWED_HOSTS` - `.onrender.com,1983law.org,www.1983law.org`
+- `OPENAI_API_KEY` - Your OpenAI API key
+- `STRIPE_PUBLIC_KEY` - Stripe publishable key
+- `STRIPE_SECRET_KEY` - Stripe secret key
+- `STRIPE_WEBHOOK_SECRET` - From Stripe webhook settings
+- `APP_NAME` - `1983law.org` (footer/watermark)
+- `HEADER_APP_NAME` - `1983 Law` (navbar/titles)
+
+### Creating Admin User on Render
+1. Go to Render Dashboard → Your Service → Shell tab
+2. Run: `python manage.py createsuperuser`
+3. Enter email and password
+4. Admin URL: `https://one983-law.onrender.com/admin/`
+
+### Stripe Webhook Setup (Production)
+1. Go to https://dashboard.stripe.com/webhooks
+2. Click "Add endpoint"
+3. URL: `https://one983-law.onrender.com/documents/webhook/stripe/`
+4. Select event: `checkout.session.completed`
+5. Copy signing secret → Add as `STRIPE_WEBHOOK_SECRET` on Render
+
+---
+
 ## What's NOT Built Yet
 
 - Server-side PDF generation (using browser Print to PDF for now)
