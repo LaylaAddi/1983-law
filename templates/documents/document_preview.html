@@ -157,9 +157,6 @@
                 </a>
             </div>
             <div class="d-flex gap-2">
-                <a href="{% url 'documents:case_law_list' document.id %}" class="btn btn-outline-primary">
-                    <i class="bi bi-book me-1"></i>Manage Case Law
-                </a>
                 <button class="btn btn-outline-primary" onclick="window.print()">
                     <i class="bi bi-printer me-1"></i>Print
                 </button>
@@ -245,28 +242,6 @@
 {{ generated_document.signature }}
         </div>
     </div>
-
-    <!-- Case Law Used -->
-    {% if document_data.case_law %}
-    <div class="container mt-4 no-print">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-book me-2"></i>Case Law Citations Used</h5>
-            </div>
-            <div class="card-body">
-                <p class="text-muted mb-3">The following cases were integrated into the legal arguments above:</p>
-                <ul class="list-group list-group-flush">
-                    {% for case in document_data.case_law %}
-                    <li class="list-group-item">
-                        <strong>{{ case.case_name }}</strong>, {{ case.citation }}
-                        <br><small class="text-muted">{{ case.key_holding|truncatewords:30 }}</small>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
     {% else %}
     <!-- RAW DATA VIEW (when document not generated or missing data) -->
@@ -400,26 +375,6 @@ Has Minimum Data: {{ document_data.has_minimum_data|yesno:"Yes,No" }}
         </div>
         {% endif %}
         {% endwith %}
-
-        <!-- Case Law Citations -->
-        <div class="raw-data-section {% if case_law_citations %}completed{% endif %}">
-            <h4><i class="bi bi-book me-2"></i>Case Law Citations</h4>
-            {% if case_law_citations %}
-            {% for citation in case_law_citations %}
-            <div class="card mb-2">
-                <div class="card-body py-2">
-                    <strong>{{ citation.case_law.case_name }}</strong>, {{ citation.case_law.citation }}
-                    <br><small class="text-muted">{{ citation.get_explanation|truncatewords:20 }}</small>
-                </div>
-            </div>
-            {% endfor %}
-            {% else %}
-            <p class="text-muted">
-                <em>No case law citations added yet.</em>
-                <a href="{% url 'documents:case_law_list' document.id %}">Add Citations</a>
-            </p>
-            {% endif %}
-        </div>
 
         <!-- Relief Sought -->
         {% with section_data=sections_data.relief_sought %}

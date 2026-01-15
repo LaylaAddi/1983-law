@@ -34,13 +34,6 @@ urlpatterns = [
     path('<int:document_id>/parse-story/', views.parse_story, name='parse_story'),
     path('<int:document_id>/apply-story-fields/', views.apply_story_fields, name='apply_story_fields'),
 
-    # Case Law Citations (AI-assisted)
-    path('<int:document_id>/case-law/', views.case_law_list, name='case_law_list'),
-    path('<int:document_id>/suggest-case-law/', views.suggest_case_law, name='suggest_case_law'),
-    path('<int:document_id>/accept-case-law/', views.accept_case_law, name='accept_case_law'),
-    path('<int:document_id>/case-law/<int:citation_id>/update/', views.update_case_law, name='update_case_law'),
-    path('<int:document_id>/case-law/<int:citation_id>/remove/', views.remove_case_law, name='remove_case_law'),
-
     # Payment
     path('<int:document_id>/checkout/', views.checkout, name='checkout'),
     path('<int:document_id>/checkout/success/', views.checkout_success, name='checkout_success'),
