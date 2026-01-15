@@ -413,7 +413,7 @@ Pay-per-document model with Stripe integration, promo/referral codes, and docume
 |------|-------|
 | Base price | $79.00 |
 | With promo code | $59.25 (25% off) |
-| Referral payout | $15.00 per use |
+| Default referral payout | $5.00 per use (customizable per code) |
 
 ### Document Lifecycle
 ```
@@ -470,6 +470,7 @@ DRAFT (free) → EXPIRED or PAID → FINALIZED
 - `/documents/promo-code/{id}/toggle/` - Activate/deactivate a code
 - `/documents/request-payout/` - Request payout for pending earnings
 - `/documents/admin/referrals/` - Admin referral management dashboard
+- `/documents/admin/referrals/code/{id}/edit/` - Edit promo code rate (admin only)
 
 ### Admin Features
 - View all documents with payment status
@@ -490,7 +491,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx  # Optional for local testing
 ```python
 DOCUMENT_PRICE = 79.00
 PROMO_DISCOUNT_PERCENT = 25
-REFERRAL_PAYOUT = 15.00
+REFERRAL_PAYOUT = 5.00  # Default, but each PromoCode has its own referral_amount
 FREE_AI_GENERATIONS = 3
 DRAFT_EXPIRY_HOURS = 48
 PAID_AI_BUDGET = 5.00
@@ -530,28 +531,35 @@ HEADER_APP_NAME = '1983 Law'  # Shown in navbar and page titles
 ## Referral System (Enhanced)
 
 ### Overview
-Users can create multiple referral codes, track referrals, and request payouts. Admin manages all payouts manually via Stripe dashboard then updates the database.
+Users can create multiple referral codes, track referrals, and request payouts. Admin manages all payouts manually via Stripe dashboard then updates the database. **Each promo code has a custom referral rate** (default $5, admin can edit).
 
 ### User Features
 1. **Multiple Codes** - Create unlimited referral codes with optional names
-2. **Referral Dashboard** - See all codes, usage stats, earnings breakdown
-3. **Referral History** - View who used your codes, when, and payout status
-4. **Payout Requests** - Request payout when pending balance >= $15
+2. **Custom Rates** - Each code has its own referral rate (shown in "Rate" column)
+3. **Referral Dashboard** - See all codes, usage stats, earnings breakdown
+4. **Referral History** - View who used your codes, when, and payout status
+5. **Payout Requests** - Request payout when pending balance >= $15
 
 ### Admin Features
 1. **Admin Referral Dashboard** (`/documents/admin/referrals/`)
    - Summary stats (total referrals, pending payouts, total paid)
-   - All promo codes with owner and usage count
+   - All promo codes with owner, rate, and usage count
+   - **Edit button** to change referral rate per code
    - Recent referral activity
    - Payout request queue with processing actions
 
-2. **Payout Processing Workflow**
+2. **Custom Referral Rates**
+   - Default rate is $5.00 for new codes
+   - Admin can edit any code's rate via pencil icon in admin panel
+   - When code is used, the code's `referral_amount` is applied (not global setting)
+
+3. **Payout Processing Workflow**
    - User requests payout → Admin sees request with payment details
    - Admin pays manually via Stripe/PayPal/Venmo/etc.
    - Admin marks request as "Completed" with reference number
    - System auto-marks all pending usages as paid
 
-3. **Email Notifications**
+4. **Email Notifications**
    - When user requests payout, admin receives email notification
    - Configure `ADMIN_EMAIL` in settings
 
@@ -560,6 +568,7 @@ Users can create multiple referral codes, track referrals, and request payouts. 
 |-------|---------|
 | PromoCode | Multiple per user, tracks times_used and total_earned |
 | PromoCode.name | Optional friendly name for the code |
+| PromoCode.referral_amount | Custom rate per code (default $5.00) |
 | PromoCodeUsage | Each code use with payout_status (pending/paid) |
 | PayoutRequest | User payout requests with status and payment tracking |
 
@@ -586,13 +595,20 @@ DEFAULT_FROM_EMAIL = 'noreply@1983law.com'
 
 ### Live URL
 - **Production**: https://one983-law.onrender.com
-- **Custom Domain**: 1983law.org (when DNS propagates)
+- **Custom Domains**: 1983law.org, www.1983law.org
 
 ### Render Configuration
 The app uses Docker deployment on Render with these files:
 - `Dockerfile` - Python 3.11 slim image with gunicorn
 - `start.sh` - Startup script that runs migrations then starts gunicorn
 - `render.yaml` - Blueprint configuration (optional, can configure via dashboard)
+
+### IMPORTANT: Pre-Deploy Command
+Set this in Render Dashboard → Settings → **Pre-Deploy Command**:
+```
+python manage.py migrate
+```
+This ensures migrations run automatically on every deploy.
 
 ### Key Files for Deployment
 | File | Purpose |
@@ -601,6 +617,25 @@ The app uses Docker deployment on Render with these files:
 | `start.sh` | Runs migrations + starts gunicorn on $PORT |
 | `build.sh` | Alternative build script (for native Python runtime) |
 | `requirements.txt` | Python dependencies |
+
+### Migration Troubleshooting
+If you get 500 errors after deploy, check if tables are missing:
+
+1. Go to Render Dashboard → Shell
+2. Run: `python manage.py shell`
+3. Test:
+```python
+from documents.models import PayoutRequest
+PayoutRequest.objects.count()
+```
+4. If you get "table does not exist" error, create it manually:
+```python
+from django.db import connection
+cursor = connection.cursor()
+cursor.execute("CREATE TABLE documents_payoutrequest (...)")
+```
+
+**Why this happens:** If migrations were "faked" previously (marked as applied but tables not created), new deploys won't recreate them. Always commit migration files BEFORE running them on production.
 
 ### Environment Variables on Render
 Set these in Render Dashboard → Environment:
