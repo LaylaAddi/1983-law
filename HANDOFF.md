@@ -675,9 +675,32 @@ Set these in Render Dashboard → Environment:
 
 ## What's NOT Built Yet
 
-- Server-side PDF generation (using browser Print to PDF for now)
 - E-filing integration
 - Video extraction
+
+---
+
+## PDF Download Feature
+
+### Overview
+Finalized documents can be downloaded as professionally formatted PDF files using WeasyPrint.
+
+### How It Works
+1. User finalizes their document (after payment)
+2. "Download PDF" button appears on the preview page
+3. Server generates PDF from the legal document template
+4. PDF downloads to user's machine
+
+### Requirements
+- Document must be in `finalized` status
+- Document must have minimum required data (plaintiff name, narrative, rights violated)
+
+### Files
+- `templates/documents/document_pdf.html` - Print-optimized PDF template
+- `documents/views.py` - `download_pdf` view function
+
+### URL
+- `/documents/{id}/download-pdf/` - Download PDF endpoint
 
 ---
 
@@ -686,7 +709,6 @@ Set these in Render Dashboard → Environment:
 - **Mobile App Version** - Tell Your Story will be key feature
 - **Voice Input** - Add speech-to-text (Whisper) later
 - **More Case Law** - Expand database with circuit-specific cases
-- **Server-side PDF** - WeasyPrint or similar for direct download
 
 ---
 

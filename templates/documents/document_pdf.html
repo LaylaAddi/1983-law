@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ document.title }}</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 1in;
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            line-height: 2;
+            color: #000;
+        }
+
+        .legal-document {
+            max-width: 100%;
+        }
+
+        .caption {
+            text-align: center;
+            white-space: pre-line;
+            margin-bottom: 2rem;
+            line-height: 1.8;
+        }
+
+        .section-header {
+            text-align: center;
+            font-weight: bold;
+            text-decoration: underline;
+            margin: 2rem 0 1rem 0;
+        }
+
+        .cause-header {
+            text-align: center;
+            font-weight: bold;
+            margin: 2rem 0 1rem 0;
+        }
+
+        p {
+            text-indent: 0.5in;
+            margin-bottom: 0;
+            text-align: justify;
+        }
+
+        .no-indent {
+            text-indent: 0;
+        }
+
+        .signature-block {
+            margin-top: 3rem;
+            white-space: pre-line;
+            line-height: 1.5;
+        }
+
+        .prayer-item {
+            margin-left: 0.5in;
+            text-indent: -0.25in;
+            margin-bottom: 0.5rem;
+        }
+
+        .section {
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="legal-document">
+        <!-- Caption -->
+        <div class="caption">
+{{ generated_document.caption }}
+        </div>
+
+        <!-- Introduction -->
+        <p class="no-indent">{{ generated_document.introduction }}</p>
+
+        <!-- Jurisdiction and Venue -->
+        <div class="section">
+{{ generated_document.jurisdiction|linebreaks }}
+        </div>
+
+        <!-- Parties -->
+        <div class="section">
+{{ generated_document.parties|linebreaks }}
+        </div>
+
+        <!-- Statement of Facts -->
+        <div class="section">
+{{ generated_document.facts|linebreaks }}
+        </div>
+
+        <!-- Causes of Action -->
+        <div class="section-header">CAUSES OF ACTION</div>
+        {% for cause in generated_document.causes_of_action %}
+        <div class="section">
+{{ cause.content|linebreaks }}
+        </div>
+        {% endfor %}
+
+        <!-- Prayer for Relief -->
+        <div class="section">
+{{ generated_document.prayer|linebreaks }}
+        </div>
+
+        <!-- Jury Demand -->
+        {% if generated_document.jury_demand %}
+        <div class="section">
+{{ generated_document.jury_demand|linebreaks }}
+        </div>
+        {% endif %}
+
+        <!-- Signature Block -->
+        <div class="signature-block">
+{{ generated_document.signature }}
+        </div>
+    </div>
+</body>
+</html>

@@ -2238,3 +2238,57 @@ def validate_promo_code(request):
 
     except PromoCode.DoesNotExist:
         return JsonResponse({'valid': False, 'error': 'Invalid promo code'})
+
+
+@login_required
+def download_pdf(request, document_id):
+    """Download the finalized document as a PDF."""
+    from django.http import HttpResponse
+    from django.template.loader import render_to_string
+    from weasyprint import HTML
+
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Only allow PDF download for finalized documents
+    if document.payment_status != 'finalized':
+        from django.contrib import messages
+        messages.error(request, 'Only finalized documents can be downloaded as PDF.')
+        return redirect('documents:document_preview', document_id=document.id)
+
+    # Collect document data and generate the legal document
+    document_data = _collect_document_data(document)
+
+    if not document_data.get('has_minimum_data'):
+        from django.contrib import messages
+        messages.error(request, 'Document is missing required data for PDF generation.')
+        return redirect('documents:document_preview', document_id=document.id)
+
+    # Generate the legal document
+    from .services.document_generator import DocumentGenerator
+    generator = DocumentGenerator()
+    result = generator.generate_complaint(document_data)
+
+    if not result.get('success'):
+        from django.contrib import messages
+        messages.error(request, f'Error generating document: {result.get("error", "Unknown error")}')
+        return redirect('documents:document_preview', document_id=document.id)
+
+    generated_document = result.get('document')
+
+    # Render the PDF template
+    html_string = render_to_string('documents/document_pdf.html', {
+        'document': document,
+        'generated_document': generated_document,
+        'document_data': document_data,
+    })
+
+    # Generate PDF
+    html = HTML(string=html_string)
+    pdf = html.write_pdf()
+
+    # Create response with PDF
+    response = HttpResponse(pdf, content_type='application/pdf')
+    filename = f"{document.title.replace(' ', '_')}_Section_1983_Complaint.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    return response
