@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             name='referral_amount',
             field=models.DecimalField(
                 decimal_places=2,
-                default=Decimal('15.00'),
+                default=Decimal('5.00'),
                 help_text='Amount earned per referral (default $15.00)',
                 max_digits=10,
             ),
