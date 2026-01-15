@@ -4,9 +4,7 @@
 {% block title %}{{ config.title }} - {{ document.title }} - {{ header_app_name }}{% endblock %}
 
 {% block extra_css %}
-{% if section.section_type == 'incident_narrative' %}
-<link rel="stylesheet" href="{% static 'css/rewrite.css' %}">
-{% elif section.section_type == 'rights_violated' %}
+{% if section.section_type == 'rights_violated' %}
 <link rel="stylesheet" href="{% static 'css/rights-analyze.css' %}">
 {% endif %}
 <style>
@@ -885,9 +883,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-{% if section.section_type == 'incident_narrative' %}
-<script src="{% static 'js/rewrite.js' %}"></script>
-{% elif section.section_type == 'rights_violated' %}
+{% if section.section_type == 'rights_violated' %}
 <script src="{% static 'js/rights-analyze.js' %}"></script>
 {% endif %}
 {% endblock %}

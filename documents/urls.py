@@ -25,9 +25,6 @@ urlpatterns = [
     # District court lookup
     path('lookup-district-court/', views.lookup_district_court, name='lookup_district_court'),
 
-    # AI rewrite endpoint
-    path('rewrite-text/', views.rewrite_text, name='rewrite_text'),
-
     # AI rights analysis endpoint
     path('<int:document_id>/analyze-rights/', views.analyze_rights, name='analyze_rights'),
 

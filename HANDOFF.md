@@ -58,13 +58,12 @@ The app is functional with the following features complete:
    - Relief Sought (with recommended defaults)
 
 6. **AI Features** (OpenAI GPT-4o-mini)
-   - **ChatGPT Rewrite** - Rewrites narrative text in legal format
    - **Rights Violation Analyzer** - Suggests which rights were violated based on narrative
    - **Tell Your Story** - User writes story, AI extracts data for all sections
    - **Parse Story API** - Backend endpoint for AI parsing (`/documents/{id}/parse-story/`)
    - **Auto-apply incident_overview** - Extracted fields automatically saved to database
    - **Case Law Suggestions** - AI selects relevant case law from curated database
-   - **Legal Document Generator (NEW)** - AI writes court-ready federal complaint with case law integrated
+   - **Legal Document Generator** - AI writes court-ready federal complaint with case law integrated
 
 7. **Helper Features**
    - Federal district court lookup by city/state (auto-lookup on story parse)
@@ -191,14 +190,13 @@ u.save()
 - `documents/management/commands/load_case_law.py` - Management command to populate case law database
 - `templates/documents/case_law_list.html` - Case law management UI
 - `static/js/tell-story.js` - Tell Your Story frontend
-- `static/js/rewrite.js` - Rewrite feature frontend
 - `static/js/rights-analyze.js` - Rights analysis frontend
 - `static/css/tell-story.css` - Tell Your Story styles
 
 ### OpenAI Service Methods
-1. `rewrite_text(text, field_name)` - Rewrites text in legal format
-2. `analyze_rights_violations(document_data)` - Suggests rights violated
-3. `parse_story(story_text)` - Extracts structured data from user's story
+1. `analyze_rights_violations(document_data)` - Suggests rights violated
+2. `parse_story(story_text)` - Extracts structured data from user's story
+3. `suggest_case_law(document_data, available_cases)` - Suggests relevant case law
 
 ### Story Parsing Extracts
 - incident_overview: date, time, location, city, state, location_type, was_recording, recording_device

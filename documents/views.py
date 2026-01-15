@@ -934,46 +934,6 @@ def delete_item_ajax(request, document_id, section_type, item_id):
 
 @login_required
 @require_POST
-def rewrite_text(request):
-    """AJAX endpoint to rewrite text using ChatGPT for legal format."""
-    import json
-
-    try:
-        data = json.loads(request.body)
-        text = data.get('text', '').strip()
-        field_name = data.get('field_name', '')
-
-        if not text:
-            return JsonResponse({
-                'success': False,
-                'error': 'No text provided to rewrite',
-            })
-
-        from .services.openai_service import OpenAIService
-        service = OpenAIService()
-        result = service.rewrite_text(text, field_name)
-
-        return JsonResponse(result)
-
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'error': 'Invalid JSON in request body',
-        })
-    except ValueError as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e),
-        })
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'An error occurred: {str(e)}',
-        })
-
-
-@login_required
-@require_POST
 def analyze_rights(request, document_id):
     """AJAX endpoint to analyze document and suggest rights violations."""
     import json
