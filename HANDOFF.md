@@ -330,6 +330,8 @@ AI-powered document generation that creates a professionally written Section 198
 - **Third Person** - "Plaintiff" not "I"
 - **Numbered Paragraphs** - Following federal court conventions
 - **Print-Ready** - Document formatted for court filing
+- **Et al. Convention** - Multiple defendants shown as "FIRST DEFENDANT, et al." in caption
+- **Missing Agency Warning** - Individual defendants without agency shown in red with warning
 
 ### Files
 - `documents/services/document_generator.py` - Main generation service

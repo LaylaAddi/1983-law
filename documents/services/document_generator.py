@@ -83,18 +83,18 @@ class DocumentGenerator:
         if not plaintiff_name:
             plaintiff_name = "PLAINTIFF"
 
-        defendant_names = []
-        for d in defendants:
-            name = d.get('name', '')
-            if name:
-                capacity = "in their individual and official capacity" if d.get('defendant_type') == 'individual' else ""
-                if capacity:
-                    defendant_names.append(f"{name.upper()}, {capacity}")
-                else:
-                    defendant_names.append(name.upper())
-
-        if not defendant_names:
-            defendant_names = ["DEFENDANT(S)"]
+        # Build defendant line for caption
+        # Legal convention: use "et al." (and others) when multiple defendants
+        if not defendants:
+            defendant_line = "DEFENDANT(S)"
+        elif len(defendants) == 1:
+            d = defendants[0]
+            name = d.get('name', 'DEFENDANT')
+            defendant_line = name.upper()
+        else:
+            # Multiple defendants - use first defendant + "et al."
+            first_defendant = defendants[0].get('name', 'DEFENDANT')
+            defendant_line = f"{first_defendant.upper()}, et al."
 
         caption = f"""{court.upper()}
 
@@ -103,7 +103,7 @@ class DocumentGenerator:
 
 v.                                          Case No. ________________
 
-{chr(10).join(defendant_names)},
+{defendant_line},
     Defendant(s).
 
 ________________________________________

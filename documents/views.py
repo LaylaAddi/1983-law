@@ -1988,7 +1988,11 @@ def download_pdf(request, document_id):
 
     # Create response with PDF
     response = HttpResponse(pdf, content_type='application/pdf')
-    filename = f"{document.title.replace(' ', '_')}_Section_1983_Complaint.pdf"
+    # Sanitize filename - remove special characters, replace spaces with underscores
+    import re
+    safe_title = re.sub(r'[^\w\s-]', '', document.title)  # Remove special chars
+    safe_title = re.sub(r'\s+', '_', safe_title.strip())  # Replace spaces with underscores
+    filename = f"{safe_title}_Section_1983_Complaint.pdf"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     return response
