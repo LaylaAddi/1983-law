@@ -8,7 +8,7 @@ from django.db import models as db_models
 from django.conf import settings
 from django.utils import timezone
 from django.urls import reverse
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import stripe
 import json
 from .help_content import get_section_help
@@ -1852,18 +1852,18 @@ def checkout_success(request, document_id):
                     promo_code = PromoCode.objects.get(code=promo_code_str)
                     document.promo_code_used = promo_code
 
-                    # Record promo usage
+                    # Record promo usage (use the code's custom referral amount)
                     PromoCodeUsage.objects.create(
                         promo_code=promo_code,
                         document=document,
                         user=request.user,
                         stripe_payment_id=session.payment_intent,
                         amount_paid=document.amount_paid,
-                        referral_amount=Decimal(str(settings.REFERRAL_PAYOUT)),
+                        referral_amount=promo_code.referral_amount,
                     )
 
                     # Update promo code stats
-                    promo_code.record_usage(settings.REFERRAL_PAYOUT)
+                    promo_code.record_usage(promo_code.referral_amount)
 
                 except PromoCode.DoesNotExist:
                     pass
@@ -2227,6 +2227,25 @@ def admin_mark_usage_paid(request, usage_id):
     usage.mark_paid(reference=payment_reference, notes=payout_notes)
 
     messages.success(request, f'Usage marked as paid.')
+    return redirect('documents:admin_referrals')
+
+
+@staff_member_required
+@require_POST
+def admin_edit_promo_code(request, code_id):
+    """Edit a promo code's referral amount."""
+    promo_code = get_object_or_404(PromoCode, id=code_id)
+
+    referral_amount = request.POST.get('referral_amount', '').strip()
+
+    if referral_amount:
+        try:
+            promo_code.referral_amount = Decimal(referral_amount)
+            promo_code.save(update_fields=['referral_amount'])
+            messages.success(request, f'Referral rate for {promo_code.code} updated to ${promo_code.referral_amount}.')
+        except (ValueError, InvalidOperation):
+            messages.error(request, 'Invalid amount.')
+
     return redirect('documents:admin_referrals')
 
 

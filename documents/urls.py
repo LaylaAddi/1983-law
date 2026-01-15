@@ -62,4 +62,5 @@ urlpatterns = [
     path('admin/referrals/', views.admin_referrals, name='admin_referrals'),
     path('admin/referrals/payout/<int:request_id>/process/', views.admin_process_payout, name='admin_process_payout'),
     path('admin/referrals/usage/<int:usage_id>/mark-paid/', views.admin_mark_usage_paid, name='admin_mark_usage_paid'),
+    path('admin/referrals/code/<int:code_id>/edit/', views.admin_edit_promo_code, name='admin_edit_promo_code'),
 ]

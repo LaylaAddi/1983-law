@@ -233,9 +233,10 @@
                             <tr>
                                 <th>Code</th>
                                 <th>Owner</th>
-                                <th>Created</th>
+                                <th class="text-center">Rate</th>
                                 <th class="text-center">Uses</th>
                                 <th class="text-end">Earned</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -247,13 +248,45 @@
                                     {% if not code.is_active %}<br><span class="badge bg-secondary">Inactive</span>{% endif %}
                                 </td>
                                 <td><small>{{ code.owner.email }}</small></td>
-                                <td><small>{{ code.created_at|date:"M d, Y" }}</small></td>
+                                <td class="text-center">${{ code.referral_amount|floatformat:0 }}</td>
                                 <td class="text-center">{{ code.times_used }}</td>
                                 <td class="text-end">${{ code.total_earned|floatformat:2 }}</td>
+                                <td>
+                                    <button class="btn btn-xs btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editCodeModal{{ code.id }}" title="Edit rate">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+
+                                    <!-- Edit Code Modal -->
+                                    <div class="modal fade" id="editCodeModal{{ code.id }}" tabindex="-1">
+                                        <div class="modal-dialog modal-sm">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h6 class="modal-title">Edit {{ code.code }}</h6>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <form method="post" action="{% url 'documents:admin_edit_promo_code' code.id %}">
+                                                    {% csrf_token %}
+                                                    <div class="modal-body">
+                                                        <div class="mb-2">
+                                                            <label class="form-label">Referral Rate</label>
+                                                            <div class="input-group input-group-sm">
+                                                                <span class="input-group-text">$</span>
+                                                                <input type="number" step="0.01" class="form-control" name="referral_amount" value="{{ code.referral_amount }}" required>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-3">No promo codes yet.</td>
+                                <td colspan="6" class="text-center text-muted py-3">No promo codes yet.</td>
                             </tr>
                             {% endfor %}
                         </tbody>

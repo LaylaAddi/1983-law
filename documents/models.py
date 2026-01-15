@@ -709,6 +709,10 @@ class PromoCode(models.Model):
     )
     code = models.CharField(max_length=20, unique=True, help_text='Unique promo code (e.g., SMITH25)')
     name = models.CharField(max_length=100, blank=True, help_text='Optional friendly name for this code')
+    referral_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, default=15.00,
+        help_text='Amount earned per referral (default $15.00)'
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

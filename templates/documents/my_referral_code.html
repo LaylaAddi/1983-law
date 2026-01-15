@@ -37,8 +37,8 @@
                 <div class="col-md-3">
                     <div class="card text-center bg-info text-white">
                         <div class="card-body">
-                            <h3 class="mb-0">${{ referral_payout }}</h3>
-                            <small>Per Referral</small>
+                            <h3 class="mb-0">{{ promo_codes|length }}</h3>
+                            <small>Active Codes</small>
                         </div>
                     </div>
                 </div>
@@ -106,6 +106,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>Code</th>
+                                        <th class="text-center">Rate</th>
                                         <th class="text-center">Used</th>
                                         <th class="text-end">Earned</th>
                                         <th class="text-center">Status</th>
@@ -121,6 +122,7 @@
                                             <br><small class="text-muted">{{ code.name }}</small>
                                             {% endif %}
                                         </td>
+                                        <td class="text-center">${{ code.referral_amount|floatformat:0 }}</td>
                                         <td class="text-center">{{ code.times_used }}</td>
                                         <td class="text-end">${{ code.total_earned|floatformat:2 }}</td>
                                         <td class="text-center">
@@ -165,7 +167,7 @@
                                 <li class="mb-2">Create one or more referral codes above</li>
                                 <li class="mb-2">Share your codes with others</li>
                                 <li class="mb-2">They get <strong>{{ discount_percent }}% off</strong> their purchase</li>
-                                <li class="mb-2">You earn <strong>${{ referral_payout }}</strong> for each purchase</li>
+                                <li class="mb-2">You earn your <strong>referral rate</strong> for each purchase</li>
                                 <li>Request payout when you have $15+ pending</li>
                             </ol>
                         </div>
