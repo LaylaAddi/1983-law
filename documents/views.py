@@ -11,6 +11,7 @@ from django.urls import reverse
 from decimal import Decimal, InvalidOperation
 import stripe
 import json
+import threading
 from .help_content import get_section_help
 from django.core.mail import send_mail
 from django.contrib.admin.views.decorators import staff_member_required
@@ -1022,12 +1023,133 @@ def tell_your_story(request, document_id):
     return render(request, 'documents/tell_your_story.html', context)
 
 
+def _process_story_background(document_id, story_text):
+    """
+    Background function to process story with OpenAI.
+    Runs in a separate thread to avoid blocking the request.
+    """
+    import django
+    django.setup()  # Ensure Django is set up in this thread
+
+    from datetime import datetime
+    from .models import Document, DocumentSection, IncidentOverview
+    from .services.openai_service import OpenAIService
+    from .services.court_lookup_service import CourtLookupService
+
+    try:
+        document = Document.objects.get(id=document_id)
+
+        service = OpenAIService()
+        result = service.parse_story(story_text)
+
+        if result.get('success'):
+            # Save story text
+            document.story_text = story_text
+            document.story_told_at = timezone.now()
+
+            # Get extracted sections
+            extracted = result.get('sections', {})
+
+            # Call suggest_relief with extracted data
+            relief_result = service.suggest_relief(extracted)
+            if relief_result.get('success'):
+                result['relief_suggestions'] = relief_result.get('relief', {})
+
+            # Auto-apply incident_overview fields
+            incident_data = extracted.get('incident_overview', {})
+
+            if incident_data:
+                try:
+                    doc_section = DocumentSection.objects.get(
+                        document=document, section_type='incident_overview'
+                    )
+                    obj, created = IncidentOverview.objects.get_or_create(section=doc_section)
+
+                    # Apply extracted fields
+                    if incident_data.get('incident_date'):
+                        try:
+                            obj.incident_date = datetime.strptime(
+                                incident_data['incident_date'], '%Y-%m-%d'
+                            ).date()
+                        except ValueError:
+                            pass
+                    if incident_data.get('incident_time'):
+                        obj.incident_time = incident_data['incident_time']
+                    if incident_data.get('incident_location'):
+                        obj.incident_location = incident_data['incident_location']
+                    if incident_data.get('city'):
+                        obj.city = incident_data['city']
+                    if incident_data.get('state'):
+                        obj.state = incident_data['state']
+                    if incident_data.get('location_type'):
+                        obj.location_type = incident_data['location_type']
+                    if incident_data.get('was_recording') is not None:
+                        obj.was_recording = incident_data['was_recording'] in [True, 'true', 'True']
+                    if incident_data.get('recording_device'):
+                        obj.recording_device = incident_data['recording_device']
+
+                    # Auto-lookup federal district court
+                    if obj.city and obj.state and not obj.federal_district_court:
+                        try:
+                            court_service = CourtLookupService()
+                            court_result = court_service.lookup_court(obj.city, obj.state)
+                            if court_result.get('success') and court_result.get('court'):
+                                obj.federal_district_court = court_result['court']
+                                obj.district_lookup_confidence = court_result.get('confidence', 'medium')
+                        except Exception:
+                            pass
+
+                    obj.save()
+
+                    # Update section status
+                    if check_section_complete(doc_section, obj):
+                        doc_section.status = 'completed'
+                    elif doc_section.status == 'not_started':
+                        doc_section.status = 'in_progress'
+                    doc_section.save()
+
+                    # Add auto-applied notice
+                    result['auto_applied'] = {
+                        'incident_overview': True,
+                        'fields_applied': [k for k, v in incident_data.items() if v]
+                    }
+                except Exception:
+                    pass  # Don't fail if incident overview update fails
+
+            # Update story_relevance for all sections
+            _update_section_relevance(document, extracted)
+
+            # Store successful result
+            document.parsing_status = 'completed'
+            document.parsing_result = result
+            document.parsing_error = ''
+            document.save(update_fields=[
+                'story_text', 'story_told_at',
+                'parsing_status', 'parsing_result', 'parsing_error'
+            ])
+        else:
+            # Store failed result
+            document.parsing_status = 'failed'
+            document.parsing_error = result.get('error', 'Unknown error during parsing')
+            document.parsing_result = None
+            document.save(update_fields=['parsing_status', 'parsing_error', 'parsing_result'])
+
+    except Exception as e:
+        # Handle unexpected errors
+        try:
+            document = Document.objects.get(id=document_id)
+            document.parsing_status = 'failed'
+            document.parsing_error = str(e)
+            document.parsing_result = None
+            document.save(update_fields=['parsing_status', 'parsing_error', 'parsing_result'])
+        except Exception:
+            pass  # Can't save error status
+
+
 @login_required
 @require_POST
 def parse_story(request, document_id):
-    """AJAX endpoint to parse user's story and extract structured data."""
-    import json
-    from datetime import datetime
+    """AJAX endpoint to start story parsing (returns immediately, processes in background)."""
 
     try:
         # Verify document ownership
@@ -1042,100 +1164,95 @@ def parse_story(request, document_id):
                 'error': 'Please enter your story first.',
             })
 
-        from .services.openai_service import OpenAIService
-        from .services.court_lookup_service import CourtLookupService
-        from django.utils import timezone
+        # Check if already processing (prevent duplicate requests)
+        if document.parsing_status == 'processing':
+            # Check if it's been processing for more than 2 minutes (stale)
+            if document.parsing_started_at:
+                elapsed = (timezone.now() - document.parsing_started_at).total_seconds()
+                if elapsed < 120:  # Less than 2 minutes, still processing
+                    return JsonResponse({
+                        'success': True,
+                        'status': 'processing',
+                        'message': 'Analysis already in progress...'
+                    })
 
-        service = OpenAIService()
-        result = service.parse_story(story_text)
+        # Mark as processing and start background thread
+        document.parsing_status = 'processing'
+        document.parsing_started_at = timezone.now()
+        document.parsing_result = None
+        document.parsing_error = ''
+        document.save(update_fields=['parsing_status', 'parsing_started_at', 'parsing_result', 'parsing_error'])
 
-        # Save story text to document if parsing was successful
-        if result.get('success'):
-            document.story_text = story_text
-            document.story_told_at = timezone.now()
-            document.save(update_fields=['story_text', 'story_told_at'])
+        # Start background processing
+        thread = threading.Thread(
+            target=_process_story_background,
+            args=(document_id, story_text),
+            daemon=True
+        )
+        thread.start()
 
-            # Get extracted sections
-            extracted = result.get('sections', {})
-
-            # Call suggest_relief with extracted data
-            relief_result = service.suggest_relief(extracted)
-            if relief_result.get('success'):
-                result['relief_suggestions'] = relief_result.get('relief', {})
-
-            # Auto-apply incident_overview fields
-            incident_data = extracted.get('incident_overview', {})
-
-            if incident_data:
-                doc_section = DocumentSection.objects.get(
-                    document=document, section_type='incident_overview'
-                )
-                obj, created = IncidentOverview.objects.get_or_create(section=doc_section)
-
-                # Apply extracted fields
-                if incident_data.get('incident_date'):
-                    try:
-                        obj.incident_date = datetime.strptime(
-                            incident_data['incident_date'], '%Y-%m-%d'
-                        ).date()
-                    except ValueError:
-                        pass
-                if incident_data.get('incident_time'):
-                    obj.incident_time = incident_data['incident_time']
-                if incident_data.get('incident_location'):
-                    obj.incident_location = incident_data['incident_location']
-                if incident_data.get('city'):
-                    obj.city = incident_data['city']
-                if incident_data.get('state'):
-                    obj.state = incident_data['state']
-                if incident_data.get('location_type'):
-                    obj.location_type = incident_data['location_type']
-                if incident_data.get('was_recording') is not None:
-                    obj.was_recording = incident_data['was_recording'] in [True, 'true', 'True']
-                if incident_data.get('recording_device'):
-                    obj.recording_device = incident_data['recording_device']
-
-                # Auto-lookup federal district court if city/state are provided
-                if obj.city and obj.state and not obj.federal_district_court:
-                    try:
-                        court_service = CourtLookupService()
-                        court_result = court_service.lookup_court(obj.city, obj.state)
-                        if court_result.get('success') and court_result.get('court'):
-                            obj.federal_district_court = court_result['court']
-                            obj.district_lookup_confidence = court_result.get('confidence', 'medium')
-                    except Exception:
-                        pass  # Don't fail if court lookup fails
-
-                obj.save()
-
-                # Update section status
-                if check_section_complete(doc_section, obj):
-                    doc_section.status = 'completed'
-                elif doc_section.status == 'not_started':
-                    doc_section.status = 'in_progress'
-                doc_section.save()
-
-                # Add auto-applied notice to result
-                result['auto_applied'] = {
-                    'incident_overview': True,
-                    'fields_applied': [k for k, v in incident_data.items() if v]
-                }
-
-            # Update story_relevance for all sections based on extracted data
-            _update_section_relevance(document, extracted)
-
-        return JsonResponse(result)
+        return JsonResponse({
+            'success': True,
+            'status': 'processing',
+            'message': 'Analysis started...'
+        })
 
     except json.JSONDecodeError:
         return JsonResponse({
             'success': False,
             'error': 'Invalid request format.',
         })
-    except ValueError as e:
+    except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': str(e),
+            'error': f'An error occurred: {str(e)}',
         })
+
+
+@login_required
+@require_GET
+def parse_story_status(request, document_id):
+    """AJAX endpoint to check story parsing status (for polling)."""
+    try:
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        if document.parsing_status == 'processing':
+            return JsonResponse({
+                'success': True,
+                'status': 'processing',
+                'message': 'Analysis in progress...'
+            })
+        elif document.parsing_status == 'completed':
+            # Return the stored result
+            result = document.parsing_result or {}
+            result['success'] = True
+            result['status'] = 'completed'
+
+            # Reset parsing status for next time
+            document.parsing_status = 'idle'
+            document.save(update_fields=['parsing_status'])
+
+            return JsonResponse(result)
+        elif document.parsing_status == 'failed':
+            error = document.parsing_error or 'Unknown error occurred'
+
+            # Reset parsing status for next time
+            document.parsing_status = 'idle'
+            document.save(update_fields=['parsing_status'])
+
+            return JsonResponse({
+                'success': False,
+                'status': 'failed',
+                'error': error
+            })
+        else:
+            # Idle - no parsing in progress
+            return JsonResponse({
+                'success': True,
+                'status': 'idle',
+                'message': 'Ready to analyze'
+            })
+
     except Exception as e:
         return JsonResponse({
             'success': False,

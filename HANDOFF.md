@@ -226,6 +226,27 @@ When user clicks "Analyze My Story", shows animated progress through sections:
 - Animation runs at 400ms intervals
 - All sections marked complete when results arrive
 
+### Background Processing with Polling (NEW)
+Story analysis now runs in a background thread to prevent timeouts:
+
+**How it works:**
+1. User clicks "Analyze My Story" → POST to `/parse-story/`
+2. Server starts background thread, returns `{status: "processing"}` immediately
+3. Frontend polls `/parse-story/status/` every 3 seconds
+4. When background processing completes, status endpoint returns results
+5. Frontend displays results
+
+**Database fields added to Document model:**
+- `parsing_status`: 'idle', 'processing', 'completed', 'failed'
+- `parsing_result`: JSONField storing parsed sections
+- `parsing_error`: Error message if failed
+- `parsing_started_at`: Timestamp for detecting stale jobs
+
+**Benefits:**
+- No more Gunicorn worker timeouts (was 30s, now irrelevant)
+- User stays on page with progress animation
+- More reliable for slow OpenAI responses
+
 ### AI Extraction Improvements (Recent)
 1. **Inference from Context** - AI extracts info that can be reasonably inferred (e.g., "city hall in Oklahoma City" → city="Oklahoma City", state="OK", location_type="government building")
 2. **Smart Follow-up Questions** - Only asks about truly missing info, skips questions about info already in story
@@ -719,16 +740,18 @@ Finalized documents can be downloaded as professionally formatted PDF files usin
 
 ## Known Issues / Debugging
 
-### "Network error" on Story Analysis (FIXED)
+### "Network error" on Story Analysis (FULLY RESOLVED)
 Users were seeing "Network error. Please try again." when clicking "Analyze My Story" on production.
 
-**Root cause:** Gunicorn default worker timeout is 30 seconds. The OpenAI API calls for story parsing can take longer, causing Gunicorn to kill the worker and return a 500 error (HTML page instead of JSON).
+**Root cause:** Gunicorn default worker timeout is 30 seconds. The OpenAI API calls for story parsing can take longer, causing Gunicorn to kill the worker and return a 500 error.
 
-**Fix applied:**
-1. Added `--timeout 120` to Gunicorn command in `start.sh`
-2. Set 45-second timeout per OpenAI API call in `documents/services/openai_service.py`
+**Solution:** Implemented background processing with polling:
+1. POST to `/parse-story/` returns immediately with `{status: "processing"}`
+2. OpenAI calls run in background thread
+3. Frontend polls `/parse-story/status/` every 3 seconds
+4. Results stored in database, returned when ready
 
-This allows the two sequential OpenAI calls (parse_story + suggest_relief) enough time to complete.
+This completely eliminates timeout issues regardless of how long OpenAI takes.
 
 ### Relief Sought Not Saving (Needs Investigation)
 The relief_sought section may not be saving properly when user clicks "Continue to Document".

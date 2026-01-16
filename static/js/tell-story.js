@@ -7,6 +7,8 @@
 
     let DOCUMENT_ID = '';
     let PARSE_URL = '';
+    let STATUS_URL = '';
+    let pollingInterval = null;
     let parsedSections = null; // Store all parsed sections for auto-apply
     let reliefSuggestions = null; // Store relief suggestions from AI
     let currentQuestions = []; // Store questions for re-analysis
@@ -77,6 +79,7 @@
         if (analyzeBtn) {
             DOCUMENT_ID = analyzeBtn.getAttribute('data-document-id');
             PARSE_URL = `/documents/${DOCUMENT_ID}/parse-story/`;
+            STATUS_URL = `/documents/${DOCUMENT_ID}/parse-story/status/`;
 
             // Load previously marked N/A items from sessionStorage
             const storedNaItems = sessionStorage.getItem(`naItems-${DOCUMENT_ID}`);
@@ -178,7 +181,7 @@
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
                           getCookie('csrftoken');
 
-        // Make API request
+        // Make API request to start background processing
         fetch(PARSE_URL, {
             method: 'POST',
             headers: {
@@ -190,8 +193,11 @@
         })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                // Store relief suggestions separately
+            if (data.success && data.status === 'processing') {
+                // Start polling for results
+                startPolling();
+            } else if (data.success && data.status === 'completed') {
+                // Results returned immediately (shouldn't happen but handle it)
                 reliefSuggestions = data.relief_suggestions || null;
                 showResults(data.sections);
             } else {
@@ -202,6 +208,50 @@
             console.error('Parse error:', error);
             showError('Network error. Please try again.');
         });
+    }
+
+    function startPolling() {
+        // Clear any existing polling interval
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+
+        // Poll every 3 seconds
+        pollingInterval = setInterval(() => {
+            fetch(STATUS_URL, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'completed') {
+                    // Stop polling
+                    stopPolling();
+                    // Show results
+                    reliefSuggestions = data.relief_suggestions || null;
+                    showResults(data.sections);
+                } else if (data.status === 'failed') {
+                    // Stop polling
+                    stopPolling();
+                    // Show error
+                    showError(data.error || 'Analysis failed. Please try again.');
+                }
+                // If still 'processing', continue polling
+            })
+            .catch(error => {
+                console.error('Polling error:', error);
+                // Don't stop polling on network error, it might be temporary
+            });
+        }, 3000);
+    }
+
+    function stopPolling() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
     }
 
     function showLoading() {
@@ -325,7 +375,8 @@
     }
 
     function showResults(sections) {
-        // Stop the progress animation
+        // Stop polling and progress animation
+        stopPolling();
         stopProgressAnimation();
 
         const resultsLoading = document.getElementById('resultsLoading');
@@ -606,7 +657,8 @@
     }
 
     function showError(message) {
-        // Stop the progress animation
+        // Stop polling and progress animation
+        stopPolling();
         stopProgressAnimation();
 
         const resultsLoading = document.getElementById('resultsLoading');
@@ -626,6 +678,7 @@
     }
 
     function hideResults() {
+        stopPolling();
         const resultsPanel = document.getElementById('resultsPanel');
         resultsPanel.style.display = 'none';
     }

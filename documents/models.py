@@ -41,6 +41,30 @@ class Document(models.Model):
         help_text='Paid tier: actual API cost in dollars'
     )
 
+    # Story parsing status (for background processing)
+    PARSING_STATUS_CHOICES = [
+        ('idle', 'Idle'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    parsing_status = models.CharField(
+        max_length=20, choices=PARSING_STATUS_CHOICES, default='idle',
+        help_text='Current status of story parsing'
+    )
+    parsing_result = models.JSONField(
+        null=True, blank=True,
+        help_text='Parsed sections from AI (stored for polling retrieval)'
+    )
+    parsing_error = models.TextField(
+        blank=True,
+        help_text='Error message if parsing failed'
+    )
+    parsing_started_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='When parsing started (to detect stale jobs)'
+    )
+
     class Meta:
         ordering = ['-updated_at']
 
