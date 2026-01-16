@@ -57,6 +57,20 @@
         'other_damages': 'Other Damages'
     };
 
+    // Analysis steps for progress display
+    const ANALYSIS_STEPS = [
+        { key: 'incident_overview', label: 'Incident Overview', icon: 'bi-calendar-event' },
+        { key: 'incident_narrative', label: 'Incident Narrative', icon: 'bi-file-text' },
+        { key: 'defendants', label: 'Government Defendants', icon: 'bi-person-badge' },
+        { key: 'witnesses', label: 'Witnesses', icon: 'bi-people' },
+        { key: 'evidence', label: 'Evidence', icon: 'bi-camera' },
+        { key: 'damages', label: 'Damages', icon: 'bi-bandaid' },
+        { key: 'rights_violated', label: 'Rights Violated', icon: 'bi-shield-exclamation' },
+        { key: 'relief_sought', label: 'Relief Sought', icon: 'bi-trophy' }
+    ];
+
+    let progressInterval = null;
+
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
         const analyzeBtn = document.getElementById('analyzeStoryBtn');
@@ -201,6 +215,53 @@
         resultsContent.style.display = 'none';
         resultsError.style.display = 'none';
 
+        // Build progress steps HTML
+        let progressHtml = `
+            <div class="text-center mb-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5 class="text-primary">Analyzing Your Story</h5>
+                <p class="text-muted small">AI is extracting information for your legal complaint...</p>
+            </div>
+            <div class="progress-steps">
+        `;
+
+        ANALYSIS_STEPS.forEach((step, index) => {
+            progressHtml += `
+                <div class="d-flex align-items-center mb-2 progress-step" data-step="${step.key}">
+                    <div class="step-icon me-3">
+                        <i class="bi ${step.icon} text-muted"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <span class="step-label text-muted">${step.label}</span>
+                    </div>
+                    <div class="step-status">
+                        <i class="bi bi-circle text-muted step-pending"></i>
+                        <i class="bi bi-arrow-repeat text-primary step-processing d-none spin"></i>
+                        <i class="bi bi-check-circle-fill text-success step-complete d-none"></i>
+                    </div>
+                </div>
+            `;
+        });
+
+        progressHtml += '</div>';
+        resultsLoading.innerHTML = progressHtml;
+
+        // Add CSS for spinning animation if not already present
+        if (!document.getElementById('progress-spin-style')) {
+            const style = document.createElement('style');
+            style.id = 'progress-spin-style';
+            style.textContent = `
+                .spin { animation: spin 1s linear infinite; }
+                @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                .progress-step.active .step-label { color: #0d6efd !important; font-weight: 500; }
+                .progress-step.completed .step-label { color: #198754 !important; }
+                .progress-step.completed .step-icon i { color: #198754 !important; }
+            `;
+            document.head.appendChild(style);
+        }
+
         // Scroll to results
         resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -208,9 +269,65 @@
         const analyzeBtn = document.getElementById('analyzeStoryBtn');
         analyzeBtn.disabled = true;
         analyzeBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Analyzing...';
+
+        // Start progress animation
+        startProgressAnimation();
+    }
+
+    function startProgressAnimation() {
+        let currentStep = 0;
+        const steps = document.querySelectorAll('.progress-step');
+
+        // Clear any existing interval
+        if (progressInterval) {
+            clearInterval(progressInterval);
+        }
+
+        progressInterval = setInterval(() => {
+            if (currentStep < steps.length) {
+                // Mark previous step as complete
+                if (currentStep > 0) {
+                    const prevStep = steps[currentStep - 1];
+                    prevStep.classList.remove('active');
+                    prevStep.classList.add('completed');
+                    prevStep.querySelector('.step-processing').classList.add('d-none');
+                    prevStep.querySelector('.step-complete').classList.remove('d-none');
+                }
+
+                // Mark current step as processing
+                const step = steps[currentStep];
+                step.classList.add('active');
+                step.querySelector('.step-pending').classList.add('d-none');
+                step.querySelector('.step-processing').classList.remove('d-none');
+
+                currentStep++;
+            } else {
+                // All steps shown, keep last one spinning until results arrive
+                clearInterval(progressInterval);
+            }
+        }, 400); // Update every 400ms
+    }
+
+    function stopProgressAnimation() {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
+
+        // Mark all steps as complete
+        document.querySelectorAll('.progress-step').forEach(step => {
+            step.classList.remove('active');
+            step.classList.add('completed');
+            step.querySelector('.step-pending').classList.add('d-none');
+            step.querySelector('.step-processing').classList.add('d-none');
+            step.querySelector('.step-complete').classList.remove('d-none');
+        });
     }
 
     function showResults(sections) {
+        // Stop the progress animation
+        stopProgressAnimation();
+
         const resultsLoading = document.getElementById('resultsLoading');
         const resultsContent = document.getElementById('resultsContent');
         const resultsError = document.getElementById('resultsError');
@@ -489,6 +606,9 @@
     }
 
     function showError(message) {
+        // Stop the progress animation
+        stopProgressAnimation();
+
         const resultsLoading = document.getElementById('resultsLoading');
         const resultsContent = document.getElementById('resultsContent');
         const resultsError = document.getElementById('resultsError');
@@ -601,6 +721,10 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                // Log any section-specific errors for debugging
+                if (data.errors && data.errors.length > 0) {
+                    console.warn('Some sections had errors:', data.errors);
+                }
                 // Clear N/A items since we're done with this story
                 sessionStorage.removeItem(`naItems-${DOCUMENT_ID}`);
                 // Go to document
