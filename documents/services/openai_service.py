@@ -140,12 +140,17 @@ Only include rights that are clearly supported by the facts. Be accurate - don't
         prompt = f"""Analyze this personal account of a civil rights incident and extract specific information that can be used to fill out a Section 1983 complaint form.
 
 IMPORTANT RULES:
-- ONLY extract information that is EXPLICITLY stated in the text
-- DO NOT guess, infer, or make up any information
-- If information is not clearly provided, set the field to null
-- Use the exact wording from the story when possible
+- Extract information that is EXPLICITLY stated in the text
 - For dates/times, only extract if explicitly mentioned
 - If the story contains a section labeled "Not applicable or unknown:", DO NOT ask questions about those topics in questions_to_ask - the user has already indicated they don't have that information
+
+AGENCY INFERENCE RULES:
+- If a city and state are mentioned but no specific agency, INFER the most likely agency name
+- For police officers in a city, infer "[City] Police Department" (e.g., "Tampa Police Department")
+- For sheriff's deputies, infer "[County] County Sheriff's Office"
+- For state troopers, infer "[State] Highway Patrol" or "[State] State Police"
+- Set "agency_inferred" to true when you infer the agency, false when explicitly stated
+- This helps users identify the correct agency to serve with legal papers
 
 USER'S STORY:
 {story_text}
@@ -177,7 +182,8 @@ Extract information for the following sections. Set any field to null if not exp
             "name": "officer/official name if mentioned, null otherwise",
             "badge_number": "badge number if mentioned, null otherwise",
             "title": "title like 'Officer', 'Sergeant', etc. if mentioned",
-            "agency": "department or agency name if mentioned, null otherwise",
+            "agency": "department or agency name - INFER from city/state if not explicitly stated",
+            "agency_inferred": "true if agency was inferred from location, false if explicitly stated in story",
             "description": "description of this defendant's role/actions"
         }}
     ],

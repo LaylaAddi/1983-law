@@ -197,12 +197,21 @@ u.save()
 ### Story Parsing Extracts
 - incident_overview: date, time, location, city, state, location_type, was_recording, recording_device
 - incident_narrative: summary, detailed_narrative, what_were_you_doing, initial_contact, what_was_said, physical_actions, how_it_ended
-- defendants: name, badge_number, title, agency, description
+- defendants: name, badge_number, title, agency, agency_inferred, description
 - witnesses: name, description, what_they_saw
 - evidence: type, description
 - damages: physical_injuries, emotional_distress, financial_losses, other_damages
 - rights_violated: suggested_violations with amendment and reason
 - questions_to_ask: follow-up questions for missing info
+
+### Agency Inference Feature
+When a user mentions a location (city/state) but not a specific agency, the AI will infer the likely agency:
+- Police officer in Tampa, FL → "Tampa Police Department"
+- Deputy in Orange County → "Orange County Sheriff's Office"
+- State trooper → "[State] Highway Patrol"
+
+The `agency_inferred` flag indicates when the agency was AI-suggested vs explicitly stated.
+UI shows a yellow warning: "AI suggested - please verify this is correct"
 
 ### Test Stories Feature
 - 20 sample stories with mixed violations for testing
