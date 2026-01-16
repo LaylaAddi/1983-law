@@ -719,6 +719,18 @@ Finalized documents can be downloaded as professionally formatted PDF files usin
 
 ## Known Issues / Debugging
 
+### "Network error" on Story Analysis (FIXED)
+Users were seeing "Network error. Please try again." when clicking "Analyze My Story" on production.
+
+**Root cause:** Two sequential OpenAI API calls (parse_story + suggest_relief) could exceed Render's 30-second request timeout. When the server timed out, it returned an HTML error page instead of JSON, causing the JavaScript to show "Network error".
+
+**Fix applied:** Added 12-second timeout per OpenAI API call in `documents/services/openai_service.py`. This ensures both calls complete within Render's 30-second limit.
+
+**If issue persists:** Check Render logs for actual error. May need to:
+- Increase Render timeout (requires paid plan)
+- Make relief suggestions async/background
+- Combine both OpenAI calls into one prompt
+
 ### Relief Sought Not Saving (Needs Investigation)
 The relief_sought section may not be saving properly when user clicks "Continue to Document".
 

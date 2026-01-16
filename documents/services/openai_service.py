@@ -12,7 +12,8 @@ class OpenAIService:
         api_key = settings.OPENAI_API_KEY
         if not api_key:
             raise ValueError("OPENAI_API_KEY not configured in settings")
-        self.client = OpenAI(api_key=api_key)
+        # Set timeout to 12 seconds per call - allows 2 sequential calls within Render's 30s limit
+        self.client = OpenAI(api_key=api_key, timeout=12.0)
 
     def analyze_rights_violations(self, document_data: dict) -> dict:
         """
