@@ -197,15 +197,15 @@ Extract information for the following sections. Fill in as many fields as possib
     ],
     "evidence": [
         {{
-            "type": "video, photo, document, etc.",
-            "description": "description of the evidence"
+            "type": "video, photo, document, body_cam, surveillance, etc.",
+            "description": "description of the evidence - INCLUDE recordings even if deleted/seized, and potential evidence like body cam footage"
         }}
     ],
     "damages": {{
         "physical_injuries": "description of physical injuries, null if none mentioned",
-        "emotional_distress": "description of emotional harm, null if none mentioned",
-        "financial_losses": "description of financial losses, null if none mentioned",
-        "other_damages": "any other damages mentioned"
+        "emotional_distress": "emotional harm: humiliation, fear, anxiety, loss of irreplaceable memories/photos, etc.",
+        "financial_losses": "financial impact: missed work, damaged property value, etc.",
+        "other_damages": "property damage, destroyed data, reputation harm, etc."
     }},
     "rights_violated": {{
         "suggested_violations": [
@@ -234,7 +234,7 @@ Respond with ONLY the JSON object."""
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a legal document assistant that extracts structured information from personal narratives. Be extremely accurate - only extract what is explicitly stated. Never guess or infer. If information isn't clearly provided, use null. Always respond with valid JSON."
+                        "content": "You are a legal document assistant that extracts structured information from personal narratives. Be thorough - extract all information stated and reasonably inferred from context. Include evidence even if it was deleted or seized. Always respond with valid JSON."
                     },
                     {
                         "role": "user",
