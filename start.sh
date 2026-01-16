@@ -13,4 +13,4 @@ python -c "import django; django.setup(); from config.wsgi import application; p
 
 echo "PORT is: $PORT"
 echo "Starting gunicorn on port ${PORT:-8000}..."
-exec gunicorn --bind 0.0.0.0:${PORT:-8000} --log-level debug --capture-output --access-logfile - --error-logfile - config.wsgi:application
+exec gunicorn --bind 0.0.0.0:${PORT:-8000} --timeout 120 --log-level debug --capture-output --access-logfile - --error-logfile - config.wsgi:application

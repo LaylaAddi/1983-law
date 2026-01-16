@@ -722,14 +722,13 @@ Finalized documents can be downloaded as professionally formatted PDF files usin
 ### "Network error" on Story Analysis (FIXED)
 Users were seeing "Network error. Please try again." when clicking "Analyze My Story" on production.
 
-**Root cause:** Two sequential OpenAI API calls (parse_story + suggest_relief) could exceed Render's 30-second request timeout. When the server timed out, it returned an HTML error page instead of JSON, causing the JavaScript to show "Network error".
+**Root cause:** Gunicorn default worker timeout is 30 seconds. The OpenAI API calls for story parsing can take longer, causing Gunicorn to kill the worker and return a 500 error (HTML page instead of JSON).
 
-**Fix applied:** Added 12-second timeout per OpenAI API call in `documents/services/openai_service.py`. This ensures both calls complete within Render's 30-second limit.
+**Fix applied:**
+1. Added `--timeout 120` to Gunicorn command in `start.sh`
+2. Set 45-second timeout per OpenAI API call in `documents/services/openai_service.py`
 
-**If issue persists:** Check Render logs for actual error. May need to:
-- Increase Render timeout (requires paid plan)
-- Make relief suggestions async/background
-- Combine both OpenAI calls into one prompt
+This allows the two sequential OpenAI calls (parse_story + suggest_relief) enough time to complete.
 
 ### Relief Sought Not Saving (Needs Investigation)
 The relief_sought section may not be saving properly when user clicks "Continue to Document".
