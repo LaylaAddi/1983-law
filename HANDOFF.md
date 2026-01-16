@@ -199,10 +199,39 @@ u.save()
 - incident_narrative: summary, detailed_narrative, what_were_you_doing, initial_contact, what_was_said, physical_actions, how_it_ended
 - defendants: name, badge_number, title, agency, agency_inferred, description
 - witnesses: name, description, what_they_saw
-- evidence: type, description
-- damages: physical_injuries, emotional_distress, financial_losses, other_damages
+- evidence: type, description (includes deleted/seized recordings, potential body cam footage)
+- damages: physical_injuries, emotional_distress (including lost memories/photos), financial_losses, other_damages (destroyed data)
 - rights_violated: suggested_violations with amendment and reason
-- questions_to_ask: follow-up questions for missing info
+- questions_to_ask: follow-up questions for ONLY missing info (skips info already in story)
+
+### Relief Suggestions (Separate AI Prompt)
+After story parsing completes, a second AI call analyzes the extracted data and recommends relief:
+- `suggest_relief(extracted_data)` in `openai_service.py`
+- Returns recommendations for each relief type with case-specific reasoning
+- Displayed in "Relief Sought" accordion section during analysis
+- Saved to database when user clicks "Continue to Document"
+
+Relief types analyzed:
+- Compensatory Damages (based on damages suffered)
+- Punitive Damages (if willful/malicious conduct)
+- Declaratory Relief (with suggested declaration text)
+- Injunctive Relief (with suggested policy changes)
+- Attorney's Fees (always recommended per 42 U.S.C. § 1988)
+- Jury Trial (usually recommended)
+
+### Progress Indicator During Analysis
+When user clicks "Analyze My Story", shows animated progress through sections:
+- Incident Overview → Incident Narrative → Government Defendants → Witnesses → Evidence → Damages → Rights Violated → Relief Sought
+- Each section shows: pending (circle) → processing (spinning arrow) → complete (green checkmark)
+- Animation runs at 400ms intervals
+- All sections marked complete when results arrive
+
+### AI Extraction Improvements (Recent)
+1. **Inference from Context** - AI extracts info that can be reasonably inferred (e.g., "city hall in Oklahoma City" → city="Oklahoma City", state="OK", location_type="government building")
+2. **Smart Follow-up Questions** - Only asks about truly missing info, skips questions about info already in story
+3. **Evidence Capture** - Includes recordings even if deleted/seized, potential body cam footage
+4. **Emotional Distress** - Captures loss of irreplaceable memories/photos
+5. **No Redundant Questions** - Won't ask about location if story mentions where it happened
 
 ### Agency Inference Feature
 When a user mentions a location (city/state) but not a specific agency, the AI will infer the likely agency:
@@ -638,6 +667,25 @@ Set these in Render Dashboard → Environment:
 
 ---
 
+## OpenAI Capabilities Available (for future features)
+
+The OpenAI API has these capabilities that could enhance the app:
+
+| Capability | Potential Use |
+|------------|---------------|
+| ✅ Chat Completions | Currently used for story parsing and relief suggestions |
+| 🔍 Web Search | Look up actual agency addresses, court info, relevant case law |
+| 🖼️ Images | Analyze uploaded evidence photos |
+| 🎤 Audio Transcriptions | Let users speak their story instead of typing (accessibility) |
+| 📁 File Search | Search through legal documents or templates |
+| 🧮 Code Interpreter | Process uploaded documents |
+
+**Most useful additions:**
+1. **Web Search** - Find real agency addresses instead of inferring
+2. **Audio Transcriptions** - Voice-to-text for telling the story
+
+---
+
 ## PDF Download Feature
 
 ### Overview
@@ -666,6 +714,27 @@ Finalized documents can be downloaded as professionally formatted PDF files usin
 
 - **Mobile App Version** - Tell Your Story will be key feature
 - **Voice Input** - Add speech-to-text (Whisper) later
+
+---
+
+## Known Issues / Debugging
+
+### Relief Sought Not Saving (Needs Investigation)
+The relief_sought section may not be saving properly when user clicks "Continue to Document".
+
+**Debug steps:**
+1. Open browser DevTools (F12) → Console tab
+2. Click "Analyze My Story" and wait for results
+3. Check if Relief Sought section appears in the accordion
+4. Click "Continue to Document"
+5. Look in console for:
+   - `Relief fields to apply:` - Shows what's being sent
+   - `Some sections had errors:` - Shows if there were save errors
+
+**Possible causes:**
+- DocumentSection for relief_sought may not exist
+- Boolean value handling in Python
+- Check `apply_story_fields` view in `documents/views.py` around line 1374
 
 ---
 
