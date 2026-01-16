@@ -1056,7 +1056,7 @@ def parse_story(request, document_id):
             document.save(update_fields=['story_text', 'story_told_at'])
 
             # Auto-apply incident_overview fields
-            extracted = result.get('data', {})
+            extracted = result.get('sections', {})
             incident_data = extracted.get('incident_overview', {})
 
             if incident_data:
@@ -1115,7 +1115,6 @@ def parse_story(request, document_id):
                 }
 
             # Update story_relevance for all sections based on extracted data
-            extracted = result.get('data', {}) or result.get('sections', {})
             _update_section_relevance(document, extracted)
 
         return JsonResponse(result)
