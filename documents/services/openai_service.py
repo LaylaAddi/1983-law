@@ -140,9 +140,11 @@ Only include rights that are clearly supported by the facts. Be accurate - don't
         prompt = f"""Analyze this personal account of a civil rights incident and extract specific information that can be used to fill out a Section 1983 complaint form.
 
 IMPORTANT RULES:
-- Extract information that is EXPLICITLY stated in the text
-- For dates/times, only extract if explicitly mentioned
-- If the story contains a section labeled "Not applicable or unknown:", DO NOT ask questions about those topics in questions_to_ask - the user has already indicated they don't have that information
+- Extract ALL information from the text, including details that can be inferred from context
+- Example: "city hall in Oklahoma City" means location="City Hall", city="Oklahoma City", state="OK", location_type="government building"
+- Example: "I was recording" means was_recording=true
+- For dates/times, extract if mentioned in any format
+- If the story contains "Not applicable or unknown:", DO NOT ask questions about those topics
 
 AGENCY INFERENCE RULES:
 - If a city and state are mentioned but no specific agency, INFER the most likely agency name
@@ -150,23 +152,22 @@ AGENCY INFERENCE RULES:
 - For sheriff's deputies, infer "[County] County Sheriff's Office"
 - For state troopers, infer "[State] Highway Patrol" or "[State] State Police"
 - Set "agency_inferred" to true when you infer the agency, false when explicitly stated
-- This helps users identify the correct agency to serve with legal papers
 
 USER'S STORY:
 {story_text}
 
-Extract information for the following sections. Set any field to null if not explicitly mentioned:
+Extract information for the following sections. Fill in as many fields as possible based on the story:
 
 {{
     "incident_overview": {{
-        "incident_date": "YYYY-MM-DD format or partial date if only month/day given, null if not mentioned",
+        "incident_date": "YYYY-MM-DD format or partial date, null if not mentioned",
         "incident_time": "HH:MM format or description like 'afternoon', null if not mentioned",
-        "incident_location": "specific address or location description, null if not mentioned",
-        "city": "city name only if explicitly mentioned, null otherwise",
-        "state": "two-letter state code only if explicitly mentioned, null otherwise",
-        "location_type": "type of location like 'public sidewalk', 'government building', 'police station', 'courthouse', 'DMV', 'post office', 'public park', etc. - infer from context if location is described",
-        "was_recording": "true if the person mentions they were filming, recording, or had a camera, false if they explicitly say they weren't recording, null if not mentioned",
-        "recording_device": "device used for recording like 'cell phone', 'iPhone', 'GoPro', 'body camera', etc. if mentioned, null otherwise"
+        "incident_location": "address or location name like 'City Hall', 'Main Street', etc.",
+        "city": "city name - extract from context (e.g., 'Oklahoma City' from the story)",
+        "state": "two-letter state code - infer from city if possible (e.g., OK for Oklahoma City)",
+        "location_type": "type of location: 'government building', 'public sidewalk', 'police station', 'courthouse', 'public park', etc.",
+        "was_recording": "true if recording/filming mentioned, false if explicitly not, null if unknown",
+        "recording_device": "device used: 'cell phone', 'camera', etc. if mentioned"
     }},
     "incident_narrative": {{
         "summary": "2-3 sentence summary of what happened, written in third person",
@@ -218,19 +219,14 @@ Extract information for the following sections. Set any field to null if not exp
     "questions_to_ask": []
 }}
 
-IMPORTANT: For "questions_to_ask", generate 3-8 specific questions about missing information that would help complete the complaint, such as:
-- What city and state did this happen in?
-- Do you know the officer's badge number?
-- What agency does the officer work for?
-- Did anyone witness the incident?
-- Do you have any video, photos, or documentation?
-- Were you physically injured? Did you seek medical treatment?
-- Did you miss work or lose income because of this?
+QUESTIONS TO ASK - Generate 3-8 follow-up questions, but ONLY for information NOT already in the story:
+- Do NOT ask about location if the story mentions where it happened
+- Do NOT ask about recording if the story mentions filming/recording
+- Do NOT ask about city/state if mentioned in the story
+- DO ask about: officer names/badge numbers, witnesses, evidence, injuries, financial losses - IF NOT mentioned
+- Skip topics marked "Not applicable or unknown"
 
-DO NOT ask about items the user marked as "Not applicable or unknown" - skip those topics entirely.
-Only ask about genuinely missing information that would strengthen the complaint.
-
-Respond with ONLY the JSON object, no additional text."""
+Respond with ONLY the JSON object."""
 
         try:
             response = self.client.chat.completions.create(
