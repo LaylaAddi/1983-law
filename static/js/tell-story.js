@@ -699,6 +699,10 @@
             return;
         }
 
+        // Debug: Log relief_sought fields being sent
+        const reliefFields = fieldsToApply.filter(f => f.section === 'relief_sought');
+        console.log('Relief fields to apply:', reliefFields);
+
         // Disable button and show saving state
         const applyBtn = document.getElementById('applySelectedBtn');
         applyBtn.disabled = true;
