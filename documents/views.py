@@ -1056,7 +1056,7 @@ def parse_story(request, document_id):
             document.save(update_fields=['story_text', 'story_told_at'])
 
             # Auto-apply incident_overview fields
-            extracted = result.get('sections', {})
+            extracted = result.get('data', {})
             incident_data = extracted.get('incident_overview', {})
 
             if incident_data:
@@ -1115,6 +1115,7 @@ def parse_story(request, document_id):
                 }
 
             # Update story_relevance for all sections based on extracted data
+            extracted = result.get('data', {}) or result.get('sections', {})
             _update_section_relevance(document, extracted)
 
         return JsonResponse(result)
@@ -1239,8 +1240,6 @@ def apply_story_fields(request, document_id):
                                 defendant.title_rank = value
                             elif field_name == 'agency':
                                 defendant.agency_name = value
-                            elif field_name == 'agency_address':
-                                defendant.address = value
                             elif field_name == 'description':
                                 defendant.description = value
                             defendant.save()

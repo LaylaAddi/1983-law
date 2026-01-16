@@ -137,15 +137,12 @@ Only include rights that are clearly supported by the facts. Be accurate - don't
                 'error': 'No story text provided',
             }
 
-        prompt = f"""Analyze this personal account of a civil rights incident and extract ALL possible information for a Section 1983 complaint form.
+        prompt = f"""Analyze this personal account of a civil rights incident and extract specific information that can be used to fill out a Section 1983 complaint form.
 
-EXTRACTION RULES:
-- Be THOROUGH - extract everything stated AND reasonably inferred from context
-- Fill in as many fields as possible - do not leave fields null unless truly unknown
-- If the user describes an action, infer who did it and what rights it may have violated
-- Convert casual language to formal legal descriptions (e.g., "they grabbed me" → "Officers used physical force to restrain Plaintiff")
-- If the story mentions a location with city/state, use that for all relevant fields
-- If the story contains "Not applicable or unknown:" section, skip those topics in questions_to_ask
+IMPORTANT RULES:
+- Extract information that is EXPLICITLY stated in the text
+- For dates/times, only extract if explicitly mentioned
+- If the story contains a section labeled "Not applicable or unknown:", DO NOT ask questions about those topics in questions_to_ask - the user has already indicated they don't have that information
 
 AGENCY INFERENCE RULES:
 - If a city and state are mentioned but no specific agency, INFER the most likely agency name
@@ -153,91 +150,87 @@ AGENCY INFERENCE RULES:
 - For sheriff's deputies, infer "[County] County Sheriff's Office"
 - For state troopers, infer "[State] Highway Patrol" or "[State] State Police"
 - Set "agency_inferred" to true when you infer the agency, false when explicitly stated
+- This helps users identify the correct agency to serve with legal papers
 
 USER'S STORY:
 {story_text}
 
-Extract information for the following sections. Be thorough - fill in fields based on context, not just explicit statements:
+Extract information for the following sections. Set any field to null if not explicitly mentioned:
 
 {{
     "incident_overview": {{
-        "incident_date": "YYYY-MM-DD format, or partial like '2024-06' if only month known",
-        "incident_time": "HH:MM format or description like 'afternoon', 'evening'",
-        "incident_location": "specific address or location description",
-        "city": "city name - infer from context if location is described",
-        "state": "two-letter state code - infer from context if location is described",
-        "location_type": "type of location like 'public sidewalk', 'government building', 'police station', etc. - infer from context",
-        "was_recording": "true if filming/recording mentioned, false if explicitly not recording, null only if completely unknown",
-        "recording_device": "device used like 'cell phone', 'camera', etc."
+        "incident_date": "YYYY-MM-DD format or partial date if only month/day given, null if not mentioned",
+        "incident_time": "HH:MM format or description like 'afternoon', null if not mentioned",
+        "incident_location": "specific address or location description, null if not mentioned",
+        "city": "city name only if explicitly mentioned, null otherwise",
+        "state": "two-letter state code only if explicitly mentioned, null otherwise",
+        "location_type": "type of location like 'public sidewalk', 'government building', 'police station', 'courthouse', 'DMV', 'post office', 'public park', etc. - infer from context if location is described",
+        "was_recording": "true if the person mentions they were filming, recording, or had a camera, false if they explicitly say they weren't recording, null if not mentioned",
+        "recording_device": "device used for recording like 'cell phone', 'iPhone', 'GoPro', 'body camera', etc. if mentioned, null otherwise"
     }},
     "incident_narrative": {{
-        "summary": "2-3 sentence summary of what happened, written in third person for legal document",
-        "detailed_narrative": "full chronological account in third person, written formally for legal filing",
+        "summary": "2-3 sentence summary of what happened, written in third person",
+        "detailed_narrative": "full chronological account, written in third person",
         "what_were_you_doing": "what the plaintiff was doing before/during incident",
         "initial_contact": "how the encounter with officials began",
-        "what_was_said": "dialogue or statements made by all parties",
+        "what_was_said": "dialogue or statements made by parties",
         "physical_actions": "any physical actions taken by anyone",
         "how_it_ended": "how the encounter concluded"
     }},
     "defendants": [
         {{
-            "name": "officer/official name if known, otherwise 'John Doe' or 'Jane Doe'",
-            "badge_number": "badge number if mentioned",
-            "title": "title like 'Officer', 'Sergeant', 'Deputy', etc. - infer from context",
-            "agency": "department or agency name - ALWAYS infer from city/state if not explicit",
-            "agency_inferred": "true if agency was inferred, false if explicitly stated",
-            "agency_address": "official address for service of process if known",
-            "description": "description of this defendant's role and specific actions in the incident"
+            "name": "officer/official name if mentioned, null otherwise",
+            "badge_number": "badge number if mentioned, null otherwise",
+            "title": "title like 'Officer', 'Sergeant', etc. if mentioned",
+            "agency": "department or agency name - INFER from city/state if not explicitly stated",
+            "agency_inferred": "true if agency was inferred from location, false if explicitly stated in story",
+            "description": "description of this defendant's role/actions"
         }}
     ],
     "witnesses": [
         {{
-            "name": "witness name, or 'Unknown bystander' if not named",
-            "description": "description like 'female bystander', 'store employee', etc.",
-            "what_they_saw": "what this witness could have observed"
+            "name": "witness name if mentioned, null otherwise",
+            "description": "description like 'a woman', 'my friend', etc.",
+            "what_they_saw": "what this witness observed"
         }}
     ],
     "evidence": [
         {{
-            "type": "video, photo, document, body_cam, dash_cam, surveillance, etc.",
-            "description": "description of the evidence and what it shows"
+            "type": "video, photo, document, etc.",
+            "description": "description of the evidence"
         }}
     ],
     "damages": {{
-        "physical_injuries": "description of physical injuries - include minor injuries like bruises, pain",
-        "emotional_distress": "description of emotional harm - fear, humiliation, anxiety, etc.",
-        "financial_losses": "any financial impact - missed work, legal fees, damaged property",
-        "other_damages": "reputation harm, relationship impacts, etc."
+        "physical_injuries": "description of physical injuries, null if none mentioned",
+        "emotional_distress": "description of emotional harm, null if none mentioned",
+        "financial_losses": "description of financial losses, null if none mentioned",
+        "other_damages": "any other damages mentioned"
     }},
     "rights_violated": {{
         "suggested_violations": [
             {{
-                "right": "field name like first_amendment_speech, fourth_amendment_seizure, etc.",
+                "right": "field name like first_amendment_speech",
                 "amendment": "first, fourth, fifth, or fourteenth",
-                "reason": "specific explanation of how this right was violated based on the story"
+                "reason": "brief explanation of why this right may have been violated"
             }}
         ]
     }},
-    "questions_to_ask": ["GENERATE 3-8 QUESTIONS HERE - see instructions below"]
+    "questions_to_ask": []
 }}
 
-CRITICAL - QUESTIONS TO ASK:
-You MUST generate 3-8 follow-up questions to gather missing information. Examples:
-- "What is the exact date this incident occurred?"
-- "What city and state did this happen in?"
-- "Do you know any of the officers' names or badge numbers?"
-- "What agency employed the officers involved?"
-- "Did anyone else witness the incident?"
-- "Do you have any video, photos, or documentation of the incident?"
-- "Were you physically injured? Did you seek medical treatment?"
-- "Did you miss work or lose income because of this incident?"
-- "Were you detained, arrested, or given any citations?"
-- "What happened to any recordings or property during the incident?"
+IMPORTANT: For "questions_to_ask", generate 3-8 specific questions about missing information that would help complete the complaint, such as:
+- What city and state did this happen in?
+- Do you know the officer's badge number?
+- What agency does the officer work for?
+- Did anyone witness the incident?
+- Do you have any video, photos, or documentation?
+- Were you physically injured? Did you seek medical treatment?
+- Did you miss work or lose income because of this?
 
-SKIP questions about topics in "Not applicable or unknown:" section.
-ALWAYS ask about: officer identification, evidence, injuries/damages, and witnesses if not fully covered.
+DO NOT ask about items the user marked as "Not applicable or unknown" - skip those topics entirely.
+Only ask about genuinely missing information that would strengthen the complaint.
 
-Respond with ONLY the JSON object."""
+Respond with ONLY the JSON object, no additional text."""
 
         try:
             response = self.client.chat.completions.create(
@@ -245,7 +238,7 @@ Respond with ONLY the JSON object."""
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a legal document assistant that extracts structured information from personal narratives. Be thorough - extract all information that is stated or can be reasonably inferred from context. For agencies, infer the most likely agency name from location when not explicitly stated. Always respond with valid JSON."
+                        "content": "You are a legal document assistant that extracts structured information from personal narratives. Be extremely accurate - only extract what is explicitly stated. Never guess or infer. If information isn't clearly provided, use null. Always respond with valid JSON."
                     },
                     {
                         "role": "user",

@@ -43,7 +43,6 @@
         'badge_number': 'Badge Number',
         'title': 'Title',
         'agency': 'Agency',
-        'agency_address': 'Agency Address',
         'description': 'Description',
         // Witnesses
         'what_they_saw': 'What They Saw',
@@ -395,12 +394,12 @@
 
             const fieldName = FIELD_NAMES[fieldKey] || fieldKey;
 
-            // Show warning for inferred agency or agency_address
-            const isInferredField = (fieldKey === 'agency' || fieldKey === 'agency_address') && isAgencyInferred;
-            const warningHtml = isInferredField
+            // Show warning for inferred agency
+            const isInferredAgency = fieldKey === 'agency' && isAgencyInferred;
+            const warningHtml = isInferredAgency
                 ? '<div class="text-warning small mt-1"><i class="bi bi-exclamation-triangle me-1"></i>AI suggested - please verify this is correct</div>'
                 : '';
-            const borderClass = isInferredField ? 'border-warning' : '';
+            const borderClass = isInferredAgency ? 'border-warning' : '';
 
             fieldsHtml += `
                 <div class="field-item mb-2 p-2 border rounded bg-light ${borderClass}">
