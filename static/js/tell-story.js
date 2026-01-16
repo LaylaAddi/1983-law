@@ -8,6 +8,7 @@
     let DOCUMENT_ID = '';
     let PARSE_URL = '';
     let parsedSections = null; // Store all parsed sections for auto-apply
+    let reliefSuggestions = null; // Store relief suggestions from AI
     let currentQuestions = []; // Store questions for re-analysis
     let markedNaItems = []; // Store N/A items to filter from future questions
 
@@ -19,7 +20,8 @@
         'witnesses': 'Witnesses',
         'evidence': 'Evidence',
         'damages': 'Damages',
-        'rights_violated': 'Rights Violated'
+        'rights_violated': 'Rights Violated',
+        'relief_sought': 'Relief Sought'
     };
 
     // Field display names
@@ -175,6 +177,8 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                // Store relief suggestions separately
+                reliefSuggestions = data.relief_suggestions || null;
                 showResults(data.sections);
             } else {
                 showError(data.error || 'An error occurred while analyzing your story.');
@@ -276,6 +280,14 @@
             if (sectionHtml) {
                 accordion.innerHTML += sectionHtml;
                 sectionIndex++;
+            }
+        }
+
+        // Add Relief Sought section if we have suggestions
+        if (reliefSuggestions) {
+            const reliefHtml = buildReliefSoughtSection(reliefSuggestions);
+            if (reliefHtml) {
+                accordion.innerHTML += buildAccordionItem('Relief Sought', 'collapse-relief_sought', false, reliefHtml, 'relief_sought', Object.keys(reliefSuggestions).length);
             }
         }
 
@@ -436,6 +448,46 @@
         return html;
     }
 
+    function buildReliefSoughtSection(relief) {
+        if (!relief) return '';
+
+        const reliefTypes = {
+            'compensatory_damages': 'Compensatory Damages',
+            'punitive_damages': 'Punitive Damages',
+            'declaratory_relief': 'Declaratory Relief',
+            'injunctive_relief': 'Injunctive Relief',
+            'attorney_fees': "Attorney's Fees",
+            'jury_trial': 'Jury Trial'
+        };
+
+        let html = '<p class="text-muted small mb-3">Based on your case, AI recommends the following relief:</p>';
+
+        for (const [key, label] of Object.entries(reliefTypes)) {
+            const item = relief[key];
+            if (!item) continue;
+
+            const recommended = item.recommended === true || item.recommended === 'true';
+            const iconClass = recommended ? 'bi-check-circle-fill text-success' : 'bi-x-circle text-muted';
+            const bgClass = recommended ? 'bg-light' : 'bg-white';
+
+            html += `
+                <div class="field-item mb-2 p-2 border rounded ${bgClass}">
+                    <div class="d-flex align-items-center">
+                        <i class="bi ${iconClass} me-2"></i>
+                        <span class="fw-bold ${recommended ? 'text-primary' : 'text-muted'}">${label}</span>
+                    </div>
+                    <div class="text-muted small mt-1 ms-4">
+                        ${escapeHtml(item.reason || '')}
+                    </div>
+                    ${item.suggested_declaration ? `<div class="text-info small mt-1 ms-4"><strong>Declaration:</strong> ${escapeHtml(item.suggested_declaration)}</div>` : ''}
+                    ${item.suggested_injunction ? `<div class="text-info small mt-1 ms-4"><strong>Injunction:</strong> ${escapeHtml(item.suggested_injunction)}</div>` : ''}
+                </div>
+            `;
+        }
+
+        return html;
+    }
+
     function showError(message) {
         const resultsLoading = document.getElementById('resultsLoading');
         const resultsContent = document.getElementById('resultsContent');
@@ -505,6 +557,20 @@
                         value: String(fieldValue)
                     });
                 }
+            }
+        }
+
+        // Add relief suggestions to fields
+        if (reliefSuggestions) {
+            for (const [key, item] of Object.entries(reliefSuggestions)) {
+                if (!item) continue;
+                const recommended = item.recommended === true || item.recommended === 'true';
+                fieldsToApply.push({
+                    section: 'relief_sought',
+                    field: key,
+                    value: recommended,
+                    reason: item.suggested_declaration || item.suggested_injunction || ''
+                });
             }
         }
 

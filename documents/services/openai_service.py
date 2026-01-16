@@ -259,3 +259,111 @@ Respond with ONLY the JSON object."""
                 'success': False,
                 'error': str(e),
             }
+
+    def suggest_relief(self, extracted_data: dict) -> dict:
+        """
+        Analyze extracted story data and suggest appropriate relief for Section 1983 complaint.
+
+        Args:
+            extracted_data: Dict containing rights_violated, damages, evidence, etc.
+
+        Returns:
+            dict with 'success', 'relief' containing recommendations for each relief type
+        """
+        if not extracted_data:
+            return {
+                'success': False,
+                'error': 'No extracted data provided',
+            }
+
+        # Build context from extracted data
+        rights = extracted_data.get('rights_violated', {}).get('suggested_violations', [])
+        damages = extracted_data.get('damages', {})
+        evidence = extracted_data.get('evidence', [])
+        narrative = extracted_data.get('incident_narrative', {})
+
+        context = f"""
+RIGHTS VIOLATED:
+{rights}
+
+DAMAGES:
+- Physical injuries: {damages.get('physical_injuries', 'None mentioned')}
+- Emotional distress: {damages.get('emotional_distress', 'None mentioned')}
+- Financial losses: {damages.get('financial_losses', 'None mentioned')}
+- Other damages: {damages.get('other_damages', 'None mentioned')}
+
+EVIDENCE:
+{evidence}
+
+INCIDENT SUMMARY:
+{narrative.get('summary', 'No summary available')}
+"""
+
+        prompt = f"""Based on this Section 1983 civil rights case information, recommend appropriate relief:
+
+{context}
+
+Analyze and provide recommendations for each type of relief. Return a JSON object:
+
+{{
+    "compensatory_damages": {{
+        "recommended": true/false,
+        "reason": "Brief explanation of why compensatory damages are appropriate based on the specific damages suffered"
+    }},
+    "punitive_damages": {{
+        "recommended": true/false,
+        "reason": "Brief explanation - recommend if conduct was willful, malicious, or showed reckless disregard for rights"
+    }},
+    "declaratory_relief": {{
+        "recommended": true/false,
+        "reason": "Brief explanation - recommend if a court declaration that rights were violated would be valuable",
+        "suggested_declaration": "What should be declared, e.g., 'Filming in public areas of government buildings is protected by the First Amendment'"
+    }},
+    "injunctive_relief": {{
+        "recommended": true/false,
+        "reason": "Brief explanation - recommend if policy changes or training are needed to prevent future violations",
+        "suggested_injunction": "What changes should be ordered, if any"
+    }},
+    "attorney_fees": {{
+        "recommended": true,
+        "reason": "42 U.S.C. § 1988 allows recovery of attorney fees in civil rights cases - always recommend"
+    }},
+    "jury_trial": {{
+        "recommended": true/false,
+        "reason": "Brief explanation - juries are often sympathetic to civil rights plaintiffs"
+    }}
+}}
+
+Be specific to THIS case. Reference the actual violations, damages, and evidence when explaining recommendations."""
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a legal assistant helping prepare Section 1983 civil rights complaints. Provide thoughtful relief recommendations based on the specific facts of each case. Always respond with valid JSON."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.2,
+                max_tokens=1500,
+                response_format={"type": "json_object"}
+            )
+
+            import json
+            result = json.loads(response.choices[0].message.content)
+
+            return {
+                'success': True,
+                'relief': result,
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+            }

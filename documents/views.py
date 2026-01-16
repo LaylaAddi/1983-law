@@ -1055,8 +1055,15 @@ def parse_story(request, document_id):
             document.story_told_at = timezone.now()
             document.save(update_fields=['story_text', 'story_told_at'])
 
+            # Get extracted sections
+            extracted = result.get('sections', {})
+
+            # Call suggest_relief with extracted data
+            relief_result = service.suggest_relief(extracted)
+            if relief_result.get('success'):
+                result['relief_suggestions'] = relief_result.get('relief', {})
+
             # Auto-apply incident_overview fields
-            extracted = result.get('data', {})
             incident_data = extracted.get('incident_overview', {})
 
             if incident_data:
@@ -1115,7 +1122,6 @@ def parse_story(request, document_id):
                 }
 
             # Update story_relevance for all sections based on extracted data
-            extracted = result.get('data', {}) or result.get('sections', {})
             _update_section_relevance(document, extracted)
 
         return JsonResponse(result)
@@ -1363,6 +1369,36 @@ def apply_story_fields(request, document_id):
                         doc_section.status = 'completed'
                     else:
                         doc_section.status = 'in_progress'
+                    doc_section.save()
+
+                elif section_type == 'relief_sought':
+                    obj, created = ReliefSought.objects.get_or_create(section=doc_section)
+                    for f in section_fields:
+                        field_name = f.get('field')
+                        value = f.get('value')
+                        reason = f.get('reason', '')
+
+                        if field_name == 'compensatory_damages':
+                            obj.compensatory_damages = value in [True, 'true', 'True']
+                        elif field_name == 'punitive_damages':
+                            obj.punitive_damages = value in [True, 'true', 'True']
+                        elif field_name == 'declaratory_relief':
+                            obj.declaratory_relief = value in [True, 'true', 'True']
+                            if reason:
+                                obj.declaratory_description = reason
+                        elif field_name == 'injunctive_relief':
+                            obj.injunctive_relief = value in [True, 'true', 'True']
+                            if reason:
+                                obj.injunctive_description = reason
+                        elif field_name == 'attorney_fees':
+                            obj.attorney_fees = value in [True, 'true', 'True']
+                        elif field_name == 'jury_trial':
+                            obj.jury_trial_demanded = value in [True, 'true', 'True']
+
+                        saved_count += 1
+                    obj.save()
+                    # Auto-complete relief_sought section
+                    doc_section.status = 'completed'
                     doc_section.save()
 
             except Exception as e:
