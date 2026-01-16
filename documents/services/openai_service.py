@@ -184,6 +184,7 @@ Extract information for the following sections. Set any field to null if not exp
             "title": "title like 'Officer', 'Sergeant', etc. if mentioned",
             "agency": "department or agency name - INFER from city/state if not explicitly stated",
             "agency_inferred": "true if agency was inferred from location, false if explicitly stated in story",
+            "agency_address": "official address of the agency for service of process - look up typical address format like '123 Main St, City, ST 12345' if agency is known/inferred, null if unknown",
             "description": "description of this defendant's role/actions"
         }}
     ],
@@ -238,7 +239,7 @@ Respond with ONLY the JSON object, no additional text."""
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a legal document assistant that extracts structured information from personal narratives. Be extremely accurate - only extract what is explicitly stated. Never guess or infer. If information isn't clearly provided, use null. Always respond with valid JSON."
+                        "content": "You are a legal document assistant that extracts structured information from personal narratives. Be thorough - extract all information that is stated or can be reasonably inferred from context. For agencies, infer the most likely agency name from location when not explicitly stated. Always respond with valid JSON."
                     },
                     {
                         "role": "user",

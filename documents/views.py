@@ -1240,6 +1240,8 @@ def apply_story_fields(request, document_id):
                                 defendant.title_rank = value
                             elif field_name == 'agency':
                                 defendant.agency_name = value
+                            elif field_name == 'agency_address':
+                                defendant.address = value
                             elif field_name == 'description':
                                 defendant.description = value
                             defendant.save()
