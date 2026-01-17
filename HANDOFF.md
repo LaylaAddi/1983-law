@@ -323,6 +323,39 @@ When defendants have `agency_inferred=True`, the Government Defendants section c
 - `documents/models.py` - Defendant.agency_inferred field
 - `documents/migrations/0013_defendant_agency_inferred.py` - Migration for new field
 
+### Witness Enhancement Feature (NEW)
+The Witnesses section now includes enhanced fields for tracking evidence captured by witnesses and their prior interactions with defendants.
+
+**Enhanced Witness Fields:**
+| Field | Purpose |
+|-------|---------|
+| `has_evidence` | Boolean - did witness capture video/photo evidence? |
+| `evidence_description` | Text - what they recorded (video, photos, audio) |
+| `prior_interactions` | Text - any prior interactions with defendant(s) |
+| `additional_notes` | Text - other relevant witness information |
+
+**Edit Witness Feature:**
+- Each witness in the list shows an "Edit" button
+- Edit page at `/documents/{id}/witness/{witness_id}/edit/`
+- Form organized into collapsible sections (basic info, what they witnessed, evidence, prior interactions)
+- Visual indicators in witness list show evidence badge and prior interactions indicator
+
+**Document Generation Integration:**
+- Witness evidence data is passed to the AI document generator
+- Statement of Facts now includes witness-captured evidence (video, photos, audio)
+- Prior interactions with defendants can establish pattern or motive
+- AI writes appropriate paragraphs about recordings and witness observations
+
+**Files involved:**
+- `documents/models.py` - Enhanced Witness model with new fields
+- `documents/forms.py` - WitnessForm with new field widgets
+- `documents/views.py` - `edit_witness` view, `_collect_document_data` includes witnesses
+- `documents/urls.py` - Route for edit_witness
+- `documents/services/document_generator.py` - `_generate_facts` incorporates witness evidence
+- `templates/documents/section_edit.html` - Edit button, evidence badges
+- `templates/documents/edit_witness.html` - Full edit form for witnesses
+- `documents/migrations/0014_witness_enhanced_fields.py` - Migration for new fields
+
 ### Test Stories Feature
 - 20 sample stories with mixed violations for testing
 - Only visible to users with `is_test_user=True`
@@ -418,7 +451,7 @@ docker-compose exec web python manage.py createsuperuser
 | Defendant | Individual officers or agencies (multiple per doc) |
 | IncidentNarrative | Detailed story of what happened |
 | RightsViolated | Which amendments were violated |
-| Witness | People who saw the incident (multiple) |
+| Witness | People who saw the incident (multiple) - with enhanced evidence fields |
 | Evidence | Videos, documents, etc. (multiple) |
 | Damages | Physical, emotional, financial harm |
 | PriorComplaints | Previous complaints filed |
