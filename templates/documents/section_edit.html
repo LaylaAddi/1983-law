@@ -967,31 +967,36 @@ function suggestAgency() {
         btn.innerHTML = '<i class="bi bi-search me-1"></i>Suggest Agency';
 
         if (data.success && data.suggestions && data.suggestions.length > 0) {
-            let html = '<p class="small text-muted mb-3">Click to use a suggestion:</p>';
+            let html = '<p class="small text-muted mb-3">Click to use a suggestion (includes agency name and address):</p>';
 
             data.suggestions.forEach((suggestion, index) => {
                 const confidenceColor = suggestion.confidence === 'high' ? 'success' :
                                        suggestion.confidence === 'medium' ? 'warning' : 'secondary';
+                const escapedName = suggestion.agency_name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const escapedAddress = (suggestion.address || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 html += `
-                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded suggestion-item"
+                    <div class="mb-2 p-2 border rounded suggestion-item"
                          style="cursor: pointer;"
-                         onclick="acceptAgencySuggestion('${suggestion.agency_name.replace(/'/g, "\\'")}')">
-                        <div>
-                            <strong>${suggestion.agency_name}</strong>
-                            <br><small class="text-muted">${suggestion.reason}</small>
-                        </div>
-                        <div>
-                            <span class="badge bg-${confidenceColor}">${suggestion.confidence}</span>
-                            <button type="button" class="btn btn-sm btn-outline-success ms-2">
-                                <i class="bi bi-check-lg"></i> Use
-                            </button>
+                         onclick="acceptAgencySuggestion('${escapedName}', '${escapedAddress}')">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <strong>${suggestion.agency_name}</strong>
+                                ${suggestion.address ? `<br><small class="text-primary"><i class="bi bi-geo-alt me-1"></i>${suggestion.address}</small>` : ''}
+                                <br><small class="text-muted">${suggestion.reason}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-${confidenceColor}">${suggestion.confidence}</span>
+                                <br><button type="button" class="btn btn-sm btn-outline-success mt-1">
+                                    <i class="bi bi-check-lg"></i> Use
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
             });
 
             if (data.notes) {
-                html += `<div class="alert alert-warning small mt-2 mb-0"><i class="bi bi-info-circle me-1"></i>${data.notes}</div>`;
+                html += `<div class="alert alert-warning small mt-2 mb-0"><i class="bi bi-exclamation-triangle me-1"></i>${data.notes}</div>`;
             }
 
             suggestionsBody.innerHTML = html;
@@ -1015,16 +1020,26 @@ function suggestAgency() {
     });
 }
 
-function acceptAgencySuggestion(agencyName) {
+function acceptAgencySuggestion(agencyName, agencyAddress) {
     const agencyField = document.querySelector('[name="agency_name"]');
+    const addressField = document.querySelector('[name="address"]');
+
     if (agencyField) {
         agencyField.value = agencyName;
-        // Hide suggestions
-        document.getElementById('agencySuggestions').style.display = 'none';
         // Flash the field to indicate it was filled
         agencyField.classList.add('border-success');
         setTimeout(() => agencyField.classList.remove('border-success'), 2000);
     }
+
+    if (addressField && agencyAddress) {
+        addressField.value = agencyAddress;
+        // Flash the field to indicate it was filled
+        addressField.classList.add('border-success');
+        setTimeout(() => addressField.classList.remove('border-success'), 2000);
+    }
+
+    // Hide suggestions
+    document.getElementById('agencySuggestions').style.display = 'none';
 }
 
 // Add hover effect styles

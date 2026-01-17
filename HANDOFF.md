@@ -275,19 +275,26 @@ The `agency_inferred` flag indicates when the agency was AI-suggested vs explici
 UI shows a yellow warning: "AI suggested - please verify this is correct"
 
 ### Agency Suggestion Feature (Defendant Form)
-In the Government Defendants section, users can click "Suggest Agency" to get AI-powered agency name suggestions.
+In the Government Defendants section, users can click "Suggest Agency" to get AI-powered agency name AND address suggestions.
 
 **How it works:**
 1. User enters city/state in Incident Overview (or inferred from story)
 2. User adds a defendant in Government Defendants section
 3. User clicks "Suggest Agency" button
-4. AI suggests official agency names based on location context
-5. User clicks "Use" to accept a suggestion (auto-fills agency field)
+4. AI suggests official agency names AND headquarters addresses based on location context
+5. User clicks "Use" to accept a suggestion (auto-fills both agency AND address fields)
+
+**Address Lookup:**
+- AI provides the agency's official headquarters address for service of process
+- Address is displayed with a location icon in the suggestion
+- Both agency name and address are auto-filled when user clicks "Use"
+- Warning always displayed: "Please verify the address before filing legal documents"
+- Addresses are from AI's knowledge base and should be verified before filing
 
 **API Endpoint:** `/documents/{id}/suggest-agency/`
 - Method: POST
 - Payload: `{city, state, defendant_name, title, description}`
-- Returns: List of agency suggestions with confidence levels
+- Returns: List of agency suggestions with confidence levels AND addresses
 
 **Defendant model field:**
 - `agency_inferred` (BooleanField, default=False)

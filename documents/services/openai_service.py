@@ -371,13 +371,13 @@ Be specific to THIS case. Reference the actual violations, damages, and evidence
 
     def suggest_agency(self, context: dict) -> dict:
         """
-        Suggest the correct law enforcement agency name based on location and context.
+        Suggest the correct law enforcement agency name and address based on location and context.
 
         Args:
             context: Dict containing city, state, defendant_name, title, description
 
         Returns:
-            dict with 'success', 'suggestions' (list of agency options with confidence)
+            dict with 'success', 'suggestions' (list of agency options with confidence and address)
         """
         city = context.get('city', '')
         state = context.get('state', '')
@@ -391,7 +391,7 @@ Be specific to THIS case. Reference the actual violations, damages, and evidence
                 'error': 'City or state is required to suggest an agency',
             }
 
-        prompt = f"""Based on the following information about a law enforcement encounter, suggest the most likely government agency or agencies involved.
+        prompt = f"""Based on the following information about a law enforcement encounter, suggest the most likely government agency or agencies involved, INCLUDING their official mailing address for service of process.
 
 LOCATION:
 - City: {city or 'Unknown'}
@@ -407,8 +407,9 @@ INSTRUCTIONS:
 2. For city police, use the official department name (e.g., "Miami Police Department", "City of Miami Police Department")
 3. For county sheriff, use official name (e.g., "Miami-Dade County Sheriff's Office", "Orange County Sheriff's Department")
 4. For state police/highway patrol, use the correct state agency name
-5. Consider if multiple agencies might be involved based on the context
-6. Include the agency type for clarity
+5. IMPORTANT: Include the agency's OFFICIAL HEADQUARTERS ADDRESS - this is critical for legal service of process
+6. The address should be the main headquarters or administrative office
+7. Consider if multiple agencies might be involved based on the context
 
 Return a JSON object with this format:
 {{
@@ -416,14 +417,16 @@ Return a JSON object with this format:
         {{
             "agency_name": "Official Agency Name",
             "agency_type": "municipal_police|county_sheriff|state_police|federal|other",
+            "address": "Full street address including city, state, and ZIP code",
             "confidence": "high|medium|low",
             "reason": "Brief explanation of why this agency is suggested"
         }}
     ],
-    "notes": "Any additional context or warnings about the suggestion"
+    "notes": "Any additional context or warnings. ALWAYS include a note reminding the user to verify the address before filing legal documents."
 }}
 
-Provide 1-3 suggestions, with the most likely first. Only include suggestions you're reasonably confident about."""
+Provide 1-3 suggestions, with the most likely first. Only include suggestions you're reasonably confident about.
+For addresses, provide your best knowledge but note that addresses should be verified before legal filing."""
 
         try:
             response = self.client.chat.completions.create(
@@ -431,7 +434,7 @@ Provide 1-3 suggestions, with the most likely first. Only include suggestions yo
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a legal research assistant helping identify the correct government agency names for Section 1983 civil rights complaints. Accuracy is critical - provide official agency names as they would appear in legal documents. Use your knowledge of U.S. law enforcement agencies."
+                        "content": "You are a legal research assistant helping identify the correct government agency names and addresses for Section 1983 civil rights complaints. Accuracy is critical - provide official agency names and headquarters addresses as they would be used for service of process in federal court. Use your knowledge of U.S. law enforcement agencies and their locations."
                     },
                     {
                         "role": "user",
@@ -439,17 +442,22 @@ Provide 1-3 suggestions, with the most likely first. Only include suggestions yo
                     }
                 ],
                 temperature=0.2,
-                max_tokens=1000,
+                max_tokens=1500,
                 response_format={"type": "json_object"}
             )
 
             import json
             result = json.loads(response.choices[0].message.content)
 
+            # Add verification warning if not already in notes
+            notes = result.get('notes', '')
+            if 'verify' not in notes.lower():
+                notes = (notes + ' ' if notes else '') + 'Please verify the address before filing legal documents. Agency addresses may change.'
+
             return {
                 'success': True,
                 'suggestions': result.get('suggestions', []),
-                'notes': result.get('notes', ''),
+                'notes': notes,
             }
 
         except Exception as e:
