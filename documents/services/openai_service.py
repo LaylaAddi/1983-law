@@ -368,3 +368,92 @@ Be specific to THIS case. Reference the actual violations, damages, and evidence
                 'success': False,
                 'error': str(e),
             }
+
+    def suggest_agency(self, context: dict) -> dict:
+        """
+        Suggest the correct law enforcement agency name based on location and context.
+
+        Args:
+            context: Dict containing city, state, defendant_name, title, description
+
+        Returns:
+            dict with 'success', 'suggestions' (list of agency options with confidence)
+        """
+        city = context.get('city', '')
+        state = context.get('state', '')
+        defendant_name = context.get('defendant_name', '')
+        title = context.get('title', '')
+        description = context.get('description', '')
+
+        if not city and not state:
+            return {
+                'success': False,
+                'error': 'City or state is required to suggest an agency',
+            }
+
+        prompt = f"""Based on the following information about a law enforcement encounter, suggest the most likely government agency or agencies involved.
+
+LOCATION:
+- City: {city or 'Unknown'}
+- State: {state or 'Unknown'}
+
+DEFENDANT INFORMATION:
+- Name/Description: {defendant_name or 'Unknown officer'}
+- Title/Rank: {title or 'Unknown'}
+- Role in incident: {description or 'Not provided'}
+
+INSTRUCTIONS:
+1. Research and provide the OFFICIAL, CORRECT name of the law enforcement agency
+2. For city police, use the official department name (e.g., "Miami Police Department", "City of Miami Police Department")
+3. For county sheriff, use official name (e.g., "Miami-Dade County Sheriff's Office", "Orange County Sheriff's Department")
+4. For state police/highway patrol, use the correct state agency name
+5. Consider if multiple agencies might be involved based on the context
+6. Include the agency type for clarity
+
+Return a JSON object with this format:
+{{
+    "suggestions": [
+        {{
+            "agency_name": "Official Agency Name",
+            "agency_type": "municipal_police|county_sheriff|state_police|federal|other",
+            "confidence": "high|medium|low",
+            "reason": "Brief explanation of why this agency is suggested"
+        }}
+    ],
+    "notes": "Any additional context or warnings about the suggestion"
+}}
+
+Provide 1-3 suggestions, with the most likely first. Only include suggestions you're reasonably confident about."""
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a legal research assistant helping identify the correct government agency names for Section 1983 civil rights complaints. Accuracy is critical - provide official agency names as they would appear in legal documents. Use your knowledge of U.S. law enforcement agencies."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.2,
+                max_tokens=1000,
+                response_format={"type": "json_object"}
+            )
+
+            import json
+            result = json.loads(response.choices[0].message.content)
+
+            return {
+                'success': True,
+                'suggestions': result.get('suggestions', []),
+                'notes': result.get('notes', ''),
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+            }

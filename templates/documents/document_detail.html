@@ -116,6 +116,14 @@
                         </div>
                     {% endif %}
 
+                    {% if item.section.section_type == 'defendants' and defendants_needing_review %}
+                        <div class="alert alert-info py-2 small mb-3">
+                            <i class="bi bi-robot me-1"></i>
+                            <strong>AI-Suggested Agencies:</strong> {{ defendants_needing_review|length }} defendant{% if defendants_needing_review|length != 1 %}s{% endif %}
+                            ha{% if defendants_needing_review|length == 1 %}s{% else %}ve{% endif %} AI-inferred agencies that should be reviewed for accuracy.
+                        </div>
+                    {% endif %}
+
                     <a href="{% url 'documents:section_edit' document.id item.section.section_type %}"
                        class="btn btn-sm {% if item.section.status == 'needs_work' %}btn-warning{% elif item.section.status == 'completed' %}btn-outline-success{% elif item.section.status == 'not_applicable' %}btn-outline-secondary{% else %}btn-outline-primary{% endif %}">
                         {% if item.section.status == 'not_started' %}

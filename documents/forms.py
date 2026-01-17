@@ -262,7 +262,7 @@ class DefendantForm(forms.ModelForm):
 
     class Meta:
         model = Defendant
-        exclude = ['section']
+        exclude = ['section', 'agency_inferred']  # agency_inferred is cleared on manual save
         widgets = {
             'defendant_type': forms.Select(attrs={'class': 'form-select'}),
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Agency or officer name'}),
@@ -272,6 +272,14 @@ class DefendantForm(forms.ModelForm):
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Official address for service'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Physical description or identifying info'}),
         }
+
+    def save(self, commit=True):
+        """Clear agency_inferred flag when user manually saves/reviews a defendant."""
+        instance = super().save(commit=False)
+        instance.agency_inferred = False
+        if commit:
+            instance.save()
+        return instance
 
 
 class IncidentNarrativeForm(forms.ModelForm):

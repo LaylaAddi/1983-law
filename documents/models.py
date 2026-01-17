@@ -352,6 +352,7 @@ class Defendant(models.Model):
     badge_number = models.CharField(max_length=50, blank=True)
     title_rank = models.CharField(max_length=100, blank=True, help_text='e.g., Sergeant, Detective, etc.')
     agency_name = models.CharField(max_length=255, blank=True, help_text='For individual officers, their employing agency')
+    agency_inferred = models.BooleanField(default=False, help_text='True if agency was AI-inferred and needs review')
     address = models.TextField(blank=True, help_text='Official address for service')
     description = models.TextField(blank=True, help_text='Physical description or identifying information')
 

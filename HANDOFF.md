@@ -265,7 +265,7 @@ Story analysis now runs in a background thread to prevent timeouts:
 4. **Emotional Distress** - Captures loss of irreplaceable memories/photos
 5. **No Redundant Questions** - Won't ask about location if story mentions where it happened
 
-### Agency Inference Feature
+### Agency Inference Feature (Story Parsing)
 When a user mentions a location (city/state) but not a specific agency, the AI will infer the likely agency:
 - Police officer in Tampa, FL → "Tampa Police Department"
 - Deputy in Orange County → "Orange County Sheriff's Office"
@@ -273,6 +273,40 @@ When a user mentions a location (city/state) but not a specific agency, the AI w
 
 The `agency_inferred` flag indicates when the agency was AI-suggested vs explicitly stated.
 UI shows a yellow warning: "AI suggested - please verify this is correct"
+
+### Agency Suggestion Feature (Defendant Form)
+In the Government Defendants section, users can click "Suggest Agency" to get AI-powered agency name suggestions.
+
+**How it works:**
+1. User enters city/state in Incident Overview (or inferred from story)
+2. User adds a defendant in Government Defendants section
+3. User clicks "Suggest Agency" button
+4. AI suggests official agency names based on location context
+5. User clicks "Use" to accept a suggestion (auto-fills agency field)
+
+**API Endpoint:** `/documents/{id}/suggest-agency/`
+- Method: POST
+- Payload: `{city, state, defendant_name, title, description}`
+- Returns: List of agency suggestions with confidence levels
+
+**Defendant model field:**
+- `agency_inferred` (BooleanField, default=False)
+- Set to True when agency comes from AI (story parsing or suggestion)
+- Cleared to False when user manually saves/edits the defendant
+
+**Document Detail Warning:**
+When defendants have `agency_inferred=True`, the Government Defendants section card shows:
+- Blue info alert: "AI-Suggested Agencies: X defendants have AI-inferred agencies that should be reviewed for accuracy."
+
+**Files involved:**
+- `documents/services/openai_service.py` - `suggest_agency()` method
+- `documents/views.py` - `suggest_agency` view endpoint
+- `documents/urls.py` - Route at `/documents/{id}/suggest-agency/`
+- `templates/documents/section_edit.html` - Suggest Agency button + JavaScript
+- `templates/documents/document_detail.html` - Warning for defendants needing review
+- `documents/forms.py` - DefendantForm clears agency_inferred on save
+- `documents/models.py` - Defendant.agency_inferred field
+- `documents/migrations/0013_defendant_agency_inferred.py` - Migration for new field
 
 ### Test Stories Feature
 - 20 sample stories with mixed violations for testing

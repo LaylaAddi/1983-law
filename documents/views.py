@@ -247,6 +247,12 @@ def document_detail(request, document_id):
 
     sections = document.sections.all()
 
+    # Check for defendants with AI-inferred agencies that need review
+    defendants_needing_review = []
+    defendants_section = sections.filter(section_type='defendants').first()
+    if defendants_section:
+        defendants_needing_review = defendants_section.defendants.filter(agency_inferred=True)
+
     # Add config info to each section
     sections_with_config = []
     for section in sections:
@@ -260,6 +266,7 @@ def document_detail(request, document_id):
     return render(request, 'documents/document_detail.html', {
         'document': document,
         'sections': sections_with_config,
+        'defendants_needing_review': defendants_needing_review,
     })
 
 
@@ -966,6 +973,59 @@ def analyze_rights(request, document_id):
 
 
 @login_required
+@require_POST
+def suggest_agency(request, document_id):
+    """AJAX endpoint to suggest the correct agency name for a defendant."""
+
+    try:
+        # Verify document ownership
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        data = json.loads(request.body)
+
+        # Get incident location from document for context
+        try:
+            incident_section = document.sections.get(section_type='incident_overview')
+            incident = incident_section.incident_overview
+            city = data.get('city') or (incident.city if incident else '')
+            state = data.get('state') or (incident.state if incident else '')
+        except (DocumentSection.DoesNotExist, AttributeError):
+            city = data.get('city', '')
+            state = data.get('state', '')
+
+        context = {
+            'city': city,
+            'state': state,
+            'defendant_name': data.get('defendant_name', ''),
+            'title': data.get('title', ''),
+            'description': data.get('description', ''),
+        }
+
+        if not city and not state:
+            return JsonResponse({
+                'success': False,
+                'error': 'Please fill out the Incident Overview section first (city and state are needed to suggest an agency).',
+            })
+
+        from .services.openai_service import OpenAIService
+        service = OpenAIService()
+        result = service.suggest_agency(context)
+
+        return JsonResponse(result)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid request format.',
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}',
+        })
+
+
+@login_required
 def lookup_district_court(request):
     """AJAX endpoint to lookup federal district court based on city and state."""
     city = request.GET.get('city', '').strip()
@@ -1344,10 +1404,20 @@ def apply_story_fields(request, document_id):
                     doc_section.save()
 
                 elif section_type == 'defendants':
+                    # Track which defendants have inferred agencies
+                    defendant_agency_inferred = {}
+                    for f in section_fields:
+                        if f.get('field') == 'agency_inferred':
+                            idx = f.get('itemIndex')
+                            if idx is not None:
+                                defendant_agency_inferred[int(idx)] = f.get('value') in [True, 'true', 'True', 1, '1']
+
                     for f in section_fields:
                         item_index = f.get('itemIndex')
                         field_name = f.get('field')
                         value = f.get('value')
+                        if field_name == 'agency_inferred':
+                            continue  # Already processed above
                         if item_index is not None and value:
                             defendants = list(Defendant.objects.filter(section=doc_section))
                             idx = int(item_index)
@@ -1363,6 +1433,9 @@ def apply_story_fields(request, document_id):
                                 defendant.title_rank = value
                             elif field_name == 'agency':
                                 defendant.agency_name = value
+                                # Set agency_inferred if this defendant's agency was AI-inferred
+                                if idx in defendant_agency_inferred:
+                                    defendant.agency_inferred = defendant_agency_inferred[idx]
                             elif field_name == 'description':
                                 defendant.description = value
                             defendant.save()
