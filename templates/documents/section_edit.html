@@ -1033,6 +1033,9 @@ function saveDefendantAjax() {
     });
 }
 
+// Store suggestions globally so we can reference them by index
+let currentSuggestions = [];
+
 function suggestAgency() {
     const btn = document.getElementById('suggestAgencyBtn');
     const suggestionsDiv = document.getElementById('agencySuggestions');
@@ -1070,6 +1073,9 @@ function suggestAgency() {
         btn.innerHTML = '<i class="bi bi-search me-1"></i>Suggest Agency';
 
         if (data.success && data.suggestions && data.suggestions.length > 0) {
+            // Store suggestions globally
+            currentSuggestions = data.suggestions;
+
             let html = '<p class="small text-muted mb-3">Click "Add" to add each defendant to your case:</p>';
 
             data.suggestions.forEach((suggestion, index) => {
@@ -1080,23 +1086,20 @@ function suggestAgency() {
                 const typeLabel = isAgency ? 'Government Agency' : 'Individual Officer';
                 const typeBadgeColor = isAgency ? 'primary' : 'info';
 
-                // Escape values for onclick
-                const suggestionJson = JSON.stringify(suggestion).replace(/'/g, "\\'").replace(/"/g, '&quot;');
-
                 html += `
-                    <div class="mb-2 p-3 border rounded suggestion-item ${isAgency ? 'border-primary' : 'border-info'}">
+                    <div class="mb-2 p-3 border rounded suggestion-item ${isAgency ? 'border-primary' : 'border-info'}" data-suggestion-index="${index}">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
                                 <span class="badge bg-${typeBadgeColor} mb-1"><i class="${typeIcon} me-1"></i>${typeLabel}</span>
-                                <br><strong>${suggestion.name}</strong>
-                                ${!isAgency && suggestion.agency_name ? `<br><small class="text-muted"><i class="bi bi-building me-1"></i>Agency: ${suggestion.agency_name}</small>` : ''}
-                                ${suggestion.title_rank ? `<br><small class="text-muted"><i class="bi bi-person-badge me-1"></i>Title: ${suggestion.title_rank}</small>` : ''}
-                                ${suggestion.address ? `<br><small class="text-primary"><i class="bi bi-geo-alt me-1"></i>${suggestion.address}</small>` : ''}
-                                <br><small class="text-muted">${suggestion.reason}</small>
+                                <br><strong>${escapeHtml(suggestion.name)}</strong>
+                                ${!isAgency && suggestion.agency_name ? `<br><small class="text-muted"><i class="bi bi-building me-1"></i>Agency: ${escapeHtml(suggestion.agency_name)}</small>` : ''}
+                                ${suggestion.title_rank ? `<br><small class="text-muted"><i class="bi bi-person-badge me-1"></i>Title: ${escapeHtml(suggestion.title_rank)}</small>` : ''}
+                                ${suggestion.address ? `<br><small class="text-primary"><i class="bi bi-geo-alt me-1"></i>${escapeHtml(suggestion.address)}</small>` : ''}
+                                <br><small class="text-muted">${escapeHtml(suggestion.reason)}</small>
                             </div>
                             <div class="text-end">
                                 <span class="badge bg-${confidenceColor}">${suggestion.confidence}</span>
-                                <br><button type="button" class="btn btn-sm btn-success mt-1" onclick='acceptDefendantSuggestion(${JSON.stringify(suggestion)}, this)'>
+                                <br><button type="button" class="btn btn-sm btn-success mt-1 add-suggestion-btn" data-index="${index}">
                                     <i class="bi bi-plus-lg me-1"></i>Add
                                 </button>
                             </div>
@@ -1106,11 +1109,19 @@ function suggestAgency() {
             });
 
             if (data.notes) {
-                html += `<div class="alert alert-warning small mt-2 mb-0"><i class="bi bi-exclamation-triangle me-1"></i>${data.notes}</div>`;
+                html += `<div class="alert alert-warning small mt-2 mb-0"><i class="bi bi-exclamation-triangle me-1"></i>${escapeHtml(data.notes)}</div>`;
             }
 
             suggestionsBody.innerHTML = html;
             suggestionsDiv.style.display = 'block';
+
+            // Attach click handlers to all add buttons
+            suggestionsBody.querySelectorAll('.add-suggestion-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    acceptDefendantSuggestion(currentSuggestions[index], this);
+                });
+            });
         } else {
             suggestionsBody.innerHTML = `<div class="alert alert-warning mb-0">
                 <i class="bi bi-exclamation-triangle me-1"></i>
@@ -1128,6 +1139,14 @@ function suggestAgency() {
         </div>`;
         suggestionsDiv.style.display = 'block';
     });
+}
+
+// Helper function to escape HTML to prevent XSS
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function acceptDefendantSuggestion(suggestion, buttonElement) {
