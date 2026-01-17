@@ -497,13 +497,14 @@
                         {% endfor %}
                         {% if section.section_type == 'defendants' %}
                         <div class="d-flex gap-2 flex-wrap">
-                            <button type="submit" class="btn btn-success">
+                            <button type="button" class="btn btn-success" id="saveDefendantBtn" onclick="saveDefendantAjax()">
                                 <i class="bi bi-plus-lg me-1"></i>Save Defendant
                             </button>
                             <button type="button" class="btn btn-info text-white" id="suggestAgencyBtn" onclick="suggestAgency()">
                                 <i class="bi bi-robot me-1"></i>AI Suggest Defendants
                             </button>
                         </div>
+                        <div id="saveDefendantFeedback" class="mt-2" style="display: none;"></div>
                         <small class="text-muted mt-2 d-block">Fill in the form manually, or click "AI Suggest Defendants" to get suggestions for both the agency and individual officers.</small>
                         <!-- Agency suggestions container -->
                         <div id="agencySuggestions" class="mt-3" style="display: none;">
@@ -964,6 +965,74 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endif %}
 {% if section.section_type == 'defendants' %}
 <script>
+function saveDefendantAjax() {
+    const btn = document.getElementById('saveDefendantBtn');
+    const feedbackDiv = document.getElementById('saveDefendantFeedback');
+    const form = btn.closest('form');
+
+    // Get form values
+    const nameField = form.querySelector('[name="name"]');
+    const name = nameField ? nameField.value.trim() : '';
+
+    // Validate - at least name is required
+    if (!name) {
+        feedbackDiv.innerHTML = '<div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle me-1"></i>Please enter at least the defendant\'s name.</div>';
+        feedbackDiv.style.display = 'block';
+        return;
+    }
+
+    // Disable button and show loading
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving...';
+    feedbackDiv.style.display = 'none';
+
+    // Build form data from the form fields
+    const formData = new FormData(form);
+
+    // Submit via AJAX
+    fetch('{% url "documents:add_multiple_item" document.id "defendants" %}', {
+        method: 'POST',
+        body: formData,
+    })
+    .then(response => {
+        if (response.ok || response.redirected) {
+            // Success - show feedback and clear form
+            feedbackDiv.innerHTML = '<div class="alert alert-success py-2"><i class="bi bi-check-circle me-1"></i>Defendant added successfully!</div>';
+            feedbackDiv.style.display = 'block';
+
+            // Clear form fields
+            form.querySelectorAll('input[type="text"], textarea, select').forEach(field => {
+                if (field.name !== 'csrfmiddlewaretoken') {
+                    if (field.tagName === 'SELECT') {
+                        field.selectedIndex = 0;
+                    } else {
+                        field.value = '';
+                    }
+                }
+            });
+
+            // Update the defendant list
+            updateDefendantsList();
+
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+                feedbackDiv.style.display = 'none';
+            }, 3000);
+        } else {
+            throw new Error('Failed to add defendant');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        feedbackDiv.innerHTML = '<div class="alert alert-danger py-2"><i class="bi bi-x-circle me-1"></i>Failed to add defendant. Please try again.</div>';
+        feedbackDiv.style.display = 'block';
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Save Defendant';
+    });
+}
+
 function suggestAgency() {
     const btn = document.getElementById('suggestAgencyBtn');
     const suggestionsDiv = document.getElementById('agencySuggestions');
