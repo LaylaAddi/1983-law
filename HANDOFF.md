@@ -298,11 +298,19 @@ In the Government Defendants section, users can click "Suggest Agency" to get AI
 When defendants have `agency_inferred=True`, the Government Defendants section card shows:
 - Blue info alert: "AI-Suggested Agencies: X defendants have AI-inferred agencies that should be reviewed for accuracy."
 
+**Editing Existing Defendants:**
+- Defendants list shows "Edit" button for each defendant
+- Shows AI-suggested warning badge for defendants with agency_inferred=True
+- Displays the agency name inline for each defendant
+- Edit page at `/documents/{id}/defendant/{defendant_id}/edit/`
+- Edit page includes Suggest Agency button with same functionality
+
 **Files involved:**
 - `documents/services/openai_service.py` - `suggest_agency()` method
-- `documents/views.py` - `suggest_agency` view endpoint
-- `documents/urls.py` - Route at `/documents/{id}/suggest-agency/`
-- `templates/documents/section_edit.html` - Suggest Agency button + JavaScript
+- `documents/views.py` - `suggest_agency` and `edit_defendant` view endpoints
+- `documents/urls.py` - Routes for suggest-agency and edit-defendant
+- `templates/documents/section_edit.html` - Suggest Agency button, Edit button for existing defendants
+- `templates/documents/edit_defendant.html` - Edit defendant form with Suggest Agency
 - `templates/documents/document_detail.html` - Warning for defendants needing review
 - `documents/forms.py` - DefendantForm clears agency_inferred on save
 - `documents/models.py` - Defendant.agency_inferred field
