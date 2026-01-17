@@ -388,32 +388,38 @@
 
                     {% if items %}
                         <div class="mb-4">
-                            <h5>Added Items</h5>
+                            <h5><i class="bi bi-people me-2"></i>Current Defendants ({{ items|length }})</h5>
                             <div class="list-group mb-3">
                                 {% for item in items %}
                                     <div class="list-group-item {% if section.section_type == 'defendants' and item.defendant_type == 'individual' and not item.agency_name %}list-group-item-danger{% elif section.section_type == 'defendants' and item.agency_inferred %}list-group-item-warning{% endif %}">
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div class="flex-grow-1">
-                                                <span>{{ item }}</span>
+                                                <strong>{{ item }}</strong>
+                                                {% if section.section_type == 'defendants' and item.title_rank %}
+                                                <span class="text-muted">({{ item.title_rank }})</span>
+                                                {% endif %}
                                                 {% if section.section_type == 'defendants' and item.defendant_type == 'individual' and not item.agency_name %}
                                                 <br><small class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Missing agency - required for proper service</small>
                                                 {% elif section.section_type == 'defendants' and item.agency_inferred %}
                                                 <br><small class="text-warning"><i class="bi bi-robot me-1"></i>AI-suggested agency - please verify accuracy</small>
                                                 {% endif %}
                                                 {% if section.section_type == 'defendants' and item.agency_name %}
-                                                <br><small class="text-muted">Agency: {{ item.agency_name }}</small>
+                                                <br><small class="text-muted"><i class="bi bi-building me-1"></i>{{ item.agency_name }}</small>
+                                                {% endif %}
+                                                {% if section.section_type == 'defendants' and item.address %}
+                                                <br><small class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ item.address }}</small>
                                                 {% endif %}
                                             </div>
                                             <div class="d-flex gap-2">
                                                 {% if section.section_type == 'defendants' %}
                                                 <a href="{% url 'documents:edit_defendant' document.id item.id %}"
-                                                   class="btn btn-outline-primary btn-sm">
-                                                    <i class="bi bi-pencil"></i> Edit
+                                                   class="btn btn-primary btn-sm">
+                                                    <i class="bi bi-pencil me-1"></i>Edit
                                                 </a>
                                                 {% endif %}
                                                 <a href="{% url 'documents:delete_multiple_item' document.id section.section_type item.id %}"
                                                    class="btn btn-outline-danger btn-sm"
-                                                   onclick="return confirm('Delete this item?')">
+                                                   onclick="return confirm('Delete this defendant?')">
                                                     <i class="bi bi-trash"></i>
                                                 </a>
                                             </div>
@@ -424,7 +430,7 @@
                         </div>
                     {% endif %}
 
-                    <h5>Add New</h5>
+                    <h5><i class="bi bi-plus-circle me-2"></i>{% if section.section_type == 'defendants' %}Add New Defendant{% else %}Add New{% endif %}</h5>
                     <form method="post" action="{% url 'documents:add_multiple_item' document.id section.section_type %}">
                         {% csrf_token %}
                         {% for field in form %}
@@ -463,14 +469,15 @@
                             </div>
                         {% endfor %}
                         {% if section.section_type == 'defendants' %}
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-outline-primary">
-                                <i class="bi bi-plus-lg me-1"></i>Add
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-plus-lg me-1"></i>Save Defendant
                             </button>
-                            <button type="button" class="btn btn-outline-info" id="suggestAgencyBtn" onclick="suggestAgency()">
-                                <i class="bi bi-search me-1"></i>Suggest Agency
+                            <button type="button" class="btn btn-info text-white" id="suggestAgencyBtn" onclick="suggestAgency()">
+                                <i class="bi bi-search me-1"></i>Suggest Agency & Address
                             </button>
                         </div>
+                        <small class="text-muted mt-2 d-block">Fill in the form above, then click "Save Defendant" to add to your case.</small>
                         <!-- Agency suggestions container -->
                         <div id="agencySuggestions" class="mt-3" style="display: none;">
                             <div class="card border-info">
