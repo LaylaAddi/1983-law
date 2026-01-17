@@ -63,6 +63,9 @@ The app is functional with the following features complete:
    - **Parse Story API** - Backend endpoint for AI parsing (`/documents/{id}/parse-story/`)
    - **Auto-apply incident_overview** - Extracted fields automatically saved to database
    - **Legal Document Generator** - AI writes court-ready federal complaint
+   - **Context-aware Rights Section** - Shows different messages based on section status:
+     - If completed/in_progress: Green alert "Rights analyzed based on your story" + "Re-analyze" button
+     - If not started: Blue alert "Not sure which rights?" + "Analyze My Case" button
 
 7. **Helper Features**
    - Federal district court lookup by city/state (auto-lookup on story parse)
