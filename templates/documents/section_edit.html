@@ -1000,7 +1000,7 @@ function suggestAgency() {
                             </div>
                             <div class="text-end">
                                 <span class="badge bg-${confidenceColor}">${suggestion.confidence}</span>
-                                <br><button type="button" class="btn btn-sm btn-success mt-1" onclick='acceptDefendantSuggestion(${JSON.stringify(suggestion)})'>
+                                <br><button type="button" class="btn btn-sm btn-success mt-1" onclick='acceptDefendantSuggestion(${JSON.stringify(suggestion)}, this)'>
                                     <i class="bi bi-plus-lg me-1"></i>Add
                                 </button>
                             </div>
@@ -1034,51 +1034,81 @@ function suggestAgency() {
     });
 }
 
-function acceptDefendantSuggestion(suggestion) {
-    // Fill in all form fields from the suggestion
-    const typeField = document.querySelector('[name="defendant_type"]');
-    const nameField = document.querySelector('[name="name"]');
-    const titleField = document.querySelector('[name="title_rank"]');
-    const agencyField = document.querySelector('[name="agency_name"]');
-    const addressField = document.querySelector('[name="address"]');
+function acceptDefendantSuggestion(suggestion, buttonElement) {
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-    if (typeField && suggestion.defendant_type) {
-        typeField.value = suggestion.defendant_type;
+    // Disable the button and show loading
+    if (buttonElement) {
+        buttonElement.disabled = true;
+        buttonElement.innerHTML = '<i class="bi bi-hourglass-split"></i>';
     }
 
-    if (nameField && suggestion.name) {
-        nameField.value = suggestion.name;
-    }
+    // Build form data
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', csrfToken);
+    formData.append('defendant_type', suggestion.defendant_type || 'individual');
+    formData.append('name', suggestion.name || '');
+    formData.append('title_rank', suggestion.title_rank || '');
+    formData.append('agency_name', suggestion.agency_name || '');
+    formData.append('address', suggestion.address || '');
+    formData.append('badge_number', '');
+    formData.append('description', '');
 
-    if (titleField) {
-        titleField.value = suggestion.title_rank || '';
-    }
-
-    if (agencyField) {
-        agencyField.value = suggestion.agency_name || '';
-    }
-
-    if (addressField && suggestion.address) {
-        addressField.value = suggestion.address;
-    }
-
-    // Flash all fields green
-    [typeField, nameField, titleField, agencyField, addressField].forEach(field => {
-        if (field) {
-            field.classList.add('border-success');
-            field.style.backgroundColor = '#d4edda';
-            setTimeout(() => {
-                field.classList.remove('border-success');
-                field.style.backgroundColor = '';
-            }, 1500);
+    // Submit via AJAX
+    fetch('{% url "documents:add_multiple_item" document.id "defendants" %}', {
+        method: 'POST',
+        body: formData,
+    })
+    .then(response => {
+        if (response.ok || response.redirected) {
+            // Success - mark this suggestion as added
+            if (buttonElement) {
+                const card = buttonElement.closest('.suggestion-item');
+                if (card) {
+                    card.classList.remove('border-primary', 'border-info');
+                    card.classList.add('border-success', 'bg-success', 'bg-opacity-10');
+                    buttonElement.outerHTML = '<span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Added</span>';
+                }
+            }
+            // Update the defendant count/list by refreshing just that section
+            updateDefendantsList();
+        } else {
+            throw new Error('Failed to add defendant');
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (buttonElement) {
+            buttonElement.disabled = false;
+            buttonElement.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Add';
+            buttonElement.classList.remove('btn-success');
+            buttonElement.classList.add('btn-danger');
+        }
+        alert('Failed to add defendant. Please try again.');
     });
+}
 
-    // Submit the form to save the defendant
-    const form = document.querySelector('form[action*="add"]');
-    if (form) {
-        form.submit();
-    }
+function updateDefendantsList() {
+    // Fetch the updated defendants list and refresh the display
+    fetch(window.location.href)
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newList = doc.querySelector('.list-group.mb-3');
+            const currentList = document.querySelector('.list-group.mb-3');
+            if (newList && currentList) {
+                currentList.innerHTML = newList.innerHTML;
+            }
+            // Update the header count
+            const newHeader = doc.querySelector('h5 i.bi-people');
+            const currentHeader = document.querySelector('h5 i.bi-people');
+            if (newHeader && currentHeader) {
+                currentHeader.parentElement.innerHTML = newHeader.parentElement.innerHTML;
+            }
+        })
+        .catch(err => console.log('Could not refresh list:', err));
 }
 
 // Legacy function for backwards compatibility
@@ -1086,7 +1116,7 @@ function acceptAgencySuggestion(agencyName, agencyAddress) {
     acceptDefendantSuggestion({
         agency_name: agencyName,
         address: agencyAddress
-    });
+    }, null);
 }
 
 // Add hover effect styles
