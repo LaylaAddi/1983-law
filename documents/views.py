@@ -503,6 +503,32 @@ def edit_defendant(request, document_id, defendant_id):
 
 
 @login_required
+def edit_witness(request, document_id, witness_id):
+    """Edit a specific witness with enhanced fields."""
+    from .forms import WitnessForm
+
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    witness = get_object_or_404(Witness, id=witness_id, section__document=document)
+    section = witness.section
+
+    if request.method == 'POST':
+        form = WitnessForm(request.POST, instance=witness)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Witness updated successfully.')
+            return redirect('documents:section_edit', document_id=document.id, section_type='witnesses')
+    else:
+        form = WitnessForm(instance=witness)
+
+    return render(request, 'documents/edit_witness.html', {
+        'document': document,
+        'witness': witness,
+        'form': form,
+        'section': section,
+    })
+
+
+@login_required
 @require_POST
 def update_section_status(request, document_id, section_type):
     """Update the status of a section (AJAX endpoint)."""
@@ -794,6 +820,25 @@ def _collect_document_data(document):
             'jury_trial_demanded': rs.jury_trial_demanded,
         }
     except (DocumentSection.DoesNotExist, ReliefSought.DoesNotExist):
+        pass
+
+    # Witnesses (with enhanced fields for evidence capture)
+    data['witnesses'] = []
+    try:
+        witnesses_section = document.sections.get(section_type='witnesses')
+        for w in Witness.objects.filter(section=witnesses_section):
+            data['witnesses'].append({
+                'name': w.name,
+                'contact_info': w.contact_info,
+                'relationship': w.relationship,
+                'what_they_witnessed': w.what_they_witnessed,
+                'willing_to_testify': w.willing_to_testify,
+                'has_evidence': w.has_evidence,
+                'evidence_description': w.evidence_description,
+                'prior_interactions': w.prior_interactions,
+                'additional_notes': w.additional_notes,
+            })
+    except DocumentSection.DoesNotExist:
         pass
 
     # Check if we have minimum data to generate

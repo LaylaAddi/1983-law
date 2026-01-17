@@ -425,6 +425,16 @@ class Witness(models.Model):
     what_they_witnessed = models.TextField(blank=True)
     willing_to_testify = models.BooleanField(default=False)
 
+    # Evidence captured by witness
+    has_evidence = models.BooleanField(default=False, help_text='Did this witness capture video/photo evidence?')
+    evidence_description = models.TextField(blank=True, help_text='Describe what they recorded (video, photos, audio)')
+
+    # Prior interactions with defendants
+    prior_interactions = models.TextField(blank=True, help_text='Any prior interactions this witness had with the defendant(s)')
+
+    # Additional notes
+    additional_notes = models.TextField(blank=True, help_text='Any other relevant information about this witness')
+
     def __str__(self):
         return self.name
 

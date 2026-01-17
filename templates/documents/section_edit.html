@@ -388,10 +388,18 @@
 
                     {% if items %}
                         <div class="mb-4">
-                            <h5><i class="bi bi-people me-2"></i>Current Defendants ({{ items|length }})</h5>
+                            <h5>
+                                {% if section.section_type == 'defendants' %}
+                                <i class="bi bi-people me-2"></i>Current Defendants ({{ items|length }})
+                                {% elif section.section_type == 'witnesses' %}
+                                <i class="bi bi-eye me-2"></i>Current Witnesses ({{ items|length }})
+                                {% else %}
+                                <i class="bi bi-list me-2"></i>Added Items ({{ items|length }})
+                                {% endif %}
+                            </h5>
                             <div class="list-group mb-3">
                                 {% for item in items %}
-                                    <div class="list-group-item {% if section.section_type == 'defendants' and item.defendant_type == 'individual' and not item.agency_name %}list-group-item-danger{% elif section.section_type == 'defendants' and item.agency_inferred %}list-group-item-warning{% endif %}">
+                                    <div class="list-group-item {% if section.section_type == 'defendants' and item.defendant_type == 'individual' and not item.agency_name %}list-group-item-danger{% elif section.section_type == 'defendants' and item.agency_inferred %}list-group-item-warning{% elif section.section_type == 'witnesses' and item.has_evidence %}list-group-item-success{% endif %}">
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div class="flex-grow-1">
                                                 <strong>{{ item }}</strong>
@@ -409,6 +417,20 @@
                                                 {% if section.section_type == 'defendants' and item.address %}
                                                 <br><small class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ item.address }}</small>
                                                 {% endif %}
+                                                {% if section.section_type == 'witnesses' %}
+                                                    {% if item.relationship %}
+                                                    <br><small class="text-muted"><i class="bi bi-person-lines-fill me-1"></i>{{ item.relationship }}</small>
+                                                    {% endif %}
+                                                    {% if item.has_evidence %}
+                                                    <br><small class="text-success"><i class="bi bi-camera-video me-1"></i>Has video/photo evidence</small>
+                                                    {% endif %}
+                                                    {% if item.prior_interactions %}
+                                                    <br><small class="text-info"><i class="bi bi-clock-history me-1"></i>Has prior interactions with defendant(s)</small>
+                                                    {% endif %}
+                                                    {% if item.willing_to_testify %}
+                                                    <br><small class="text-success"><i class="bi bi-check-circle me-1"></i>Willing to testify</small>
+                                                    {% endif %}
+                                                {% endif %}
                                             </div>
                                             <div class="d-flex gap-2">
                                                 {% if section.section_type == 'defendants' %}
@@ -416,10 +438,15 @@
                                                    class="btn btn-primary btn-sm">
                                                     <i class="bi bi-pencil me-1"></i>Edit
                                                 </a>
+                                                {% elif section.section_type == 'witnesses' %}
+                                                <a href="{% url 'documents:edit_witness' document.id item.id %}"
+                                                   class="btn btn-primary btn-sm">
+                                                    <i class="bi bi-pencil me-1"></i>Edit
+                                                </a>
                                                 {% endif %}
                                                 <a href="{% url 'documents:delete_multiple_item' document.id section.section_type item.id %}"
                                                    class="btn btn-outline-danger btn-sm"
-                                                   onclick="return confirm('Delete this defendant?')">
+                                                   onclick="return confirm('Delete this {{ section.section_type|slice:':-1' }}?')">
                                                     <i class="bi bi-trash"></i>
                                                 </a>
                                             </div>
@@ -430,7 +457,7 @@
                         </div>
                     {% endif %}
 
-                    <h5><i class="bi bi-plus-circle me-2"></i>{% if section.section_type == 'defendants' %}Add New Defendant{% else %}Add New{% endif %}</h5>
+                    <h5><i class="bi bi-plus-circle me-2"></i>{% if section.section_type == 'defendants' %}Add New Defendant{% elif section.section_type == 'witnesses' %}Add New Witness{% else %}Add New{% endif %}</h5>
                     <form method="post" action="{% url 'documents:add_multiple_item' document.id section.section_type %}">
                         {% csrf_token %}
                         {% for field in form %}

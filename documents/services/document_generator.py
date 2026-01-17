@@ -210,8 +210,23 @@ ________________________________________"""
         narrative = data.get('narrative', {})
         plaintiff = data.get('plaintiff', {})
         defendants = data.get('defendants', [])
+        witnesses = data.get('witnesses', [])
 
         plaintiff_name = f"{plaintiff.get('first_name', '')} {plaintiff.get('last_name', '')}".strip() or "Plaintiff"
+
+        # Build witness information for context
+        witness_info = []
+        for w in witnesses:
+            witness_entry = {
+                'name': w.get('name', 'Unknown witness'),
+                'relationship': w.get('relationship', ''),
+                'what_they_witnessed': w.get('what_they_witnessed', ''),
+                'has_evidence': w.get('has_evidence', False),
+                'evidence_description': w.get('evidence_description', ''),
+                'prior_interactions': w.get('prior_interactions', ''),
+                'willing_to_testify': w.get('willing_to_testify', False),
+            }
+            witness_info.append(witness_entry)
 
         # Build context for AI
         context = {
@@ -229,7 +244,26 @@ ________________________________________"""
             'physical_actions': narrative.get('physical_actions', ''),
             'how_it_ended': narrative.get('how_it_ended', ''),
             'defendants': [d.get('name', '') for d in defendants],
+            'witnesses': witness_info,
         }
+
+        # Build witness section for prompt
+        witness_prompt_section = ""
+        if witness_info:
+            witness_prompt_section = "\n\nWITNESSES AND THEIR EVIDENCE:\n"
+            for w in witness_info:
+                witness_prompt_section += f"\n- {w['name']}"
+                if w['relationship']:
+                    witness_prompt_section += f" ({w['relationship']})"
+                witness_prompt_section += ":"
+                if w['what_they_witnessed']:
+                    witness_prompt_section += f"\n  What they witnessed: {w['what_they_witnessed']}"
+                if w['has_evidence'] and w['evidence_description']:
+                    witness_prompt_section += f"\n  CAPTURED EVIDENCE: {w['evidence_description']}"
+                if w['prior_interactions']:
+                    witness_prompt_section += f"\n  Prior interactions with defendants: {w['prior_interactions']}"
+                if w['willing_to_testify']:
+                    witness_prompt_section += "\n  (Willing to testify)"
 
         prompt = f"""Write the STATEMENT OF FACTS section for a Section 1983 federal complaint based on these details:
 
@@ -246,7 +280,7 @@ NARRATIVE DETAILS:
 - Physical actions: {context['physical_actions']}
 - How it ended: {context['how_it_ended']}
 
-DEFENDANTS: {', '.join(context['defendants'])}
+DEFENDANTS: {', '.join(context['defendants'])}{witness_prompt_section}
 
 REQUIREMENTS:
 1. Write in formal legal style with numbered paragraphs
@@ -257,6 +291,8 @@ REQUIREMENTS:
 6. Start paragraph numbers at 10 (previous sections used 1-9)
 7. Reference defendants by name where known
 8. Include specific details that support the constitutional claims
+9. If witnesses captured video/photo evidence, include a paragraph stating that the incident was recorded and describing what the recording captured
+10. If witnesses have prior interactions with defendants, this may be relevant to establishing pattern or motive - include if appropriate
 
 Write ONLY the Statement of Facts section, starting with the header "STATEMENT OF FACTS"."""
 

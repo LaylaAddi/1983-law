@@ -370,6 +370,10 @@ class WitnessForm(forms.ModelForm):
             'relationship': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Bystander, Fellow auditor, Store owner'}),
             'what_they_witnessed': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'What did this person see?'}),
             'willing_to_testify': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'has_evidence': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'evidence_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Describe any video, photos, or audio they captured'}),
+            'prior_interactions': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Any prior experiences this witness had with the defendant(s)'}),
+            'additional_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Any other relevant information'}),
         }
 
 
