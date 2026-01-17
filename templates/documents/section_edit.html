@@ -350,6 +350,19 @@
 
                 {% if section.section_type == 'rights_violated' %}
                 <!-- AI Analysis for Rights Violated -->
+                {% if section.status == 'completed' or section.status == 'in_progress' %}
+                <div class="alert alert-success mb-4">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <strong><i class="bi bi-check-circle me-2"></i>Rights analyzed based on your story</strong>
+                            <p class="mb-0 small">Review the selections below and adjust if needed. You can also re-analyze for fresh suggestions.</p>
+                        </div>
+                        <button type="button" class="btn btn-outline-success btn-sm" id="analyzeRightsBtn" data-document-id="{{ document.id }}">
+                            <i class="bi bi-arrow-repeat me-1"></i>Re-analyze
+                        </button>
+                    </div>
+                </div>
+                {% else %}
                 <div class="alert alert-primary mb-4">
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                         <div>
@@ -361,6 +374,7 @@
                         </button>
                     </div>
                 </div>
+                {% endif %}
                 <div id="rightsAnalysisContainer"></div>
                 {% endif %}
 
