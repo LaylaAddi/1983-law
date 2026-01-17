@@ -44,310 +44,186 @@
 }
 
 /* ========================================
-   TECH PROGRESS INDICATOR STYLES
+   TERMINAL PROGRESS INDICATOR STYLES
    ======================================== */
 
-.tech-progress-container {
-    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
-    border-radius: 12px;
-    padding: 2rem;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 0 40px rgba(0, 255, 136, 0.1), inset 0 0 60px rgba(0, 0, 0, 0.5);
-}
-
-.tech-progress-container::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #00ff88, transparent);
-    animation: scanline 2s linear infinite;
-}
-
-@keyframes scanline {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-}
-
-.tech-header {
-    text-align: center;
-    margin-bottom: 1.5rem;
-}
-
-.tech-title {
-    font-family: 'Courier New', monospace;
-    font-size: 1.1rem;
-    color: #00ff88;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88;
-    margin-bottom: 0.5rem;
-    animation: flicker 3s infinite;
-}
-
-@keyframes flicker {
-    0%, 100% { opacity: 1; }
-    92% { opacity: 1; }
-    93% { opacity: 0.8; }
-    94% { opacity: 1; }
-    95% { opacity: 0.9; }
-}
-
-.tech-subtitle {
-    font-family: 'Courier New', monospace;
-    font-size: 0.75rem;
-    color: #666;
-    letter-spacing: 1px;
-}
-
-.tech-percentage {
-    font-family: 'Courier New', monospace;
-    font-size: 3rem;
-    font-weight: bold;
-    color: #00ff88;
-    text-shadow: 0 0 20px #00ff88;
-    margin: 1rem 0;
-}
-
-.tech-percentage::after {
-    content: '%';
-    font-size: 1.5rem;
-    opacity: 0.7;
-}
-
-.main-progress-bar {
-    height: 4px;
-    background: #1a1a2e;
-    border-radius: 2px;
-    margin: 1rem 0 2rem;
-    overflow: hidden;
-    position: relative;
-}
-
-.main-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #00ff88, #00d4ff);
-    border-radius: 2px;
-    width: 0%;
-    transition: width 0.3s ease;
-    box-shadow: 0 0 10px #00ff88;
-}
-
-.tech-steps {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.tech-step {
-    display: flex;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+.terminal-container {
+    background: #1e1e1e;
     border-radius: 8px;
-    transition: all 0.3s ease;
-    position: relative;
     overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
 }
 
-.tech-step::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 0%;
-    background: linear-gradient(90deg, rgba(0, 255, 136, 0.1), transparent);
-    transition: width 0.5s ease;
-}
-
-.tech-step.processing::before {
-    width: 100%;
-    animation: processingPulse 1.5s ease-in-out infinite;
-}
-
-@keyframes processingPulse {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 0.6; }
-}
-
-.tech-step.completed {
-    border-color: rgba(0, 255, 136, 0.3);
-    background: rgba(0, 255, 136, 0.05);
-}
-
-.tech-step.completed::before {
-    width: 100%;
-    background: linear-gradient(90deg, rgba(0, 255, 136, 0.15), transparent);
-}
-
-.step-number {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
+.terminal-header {
+    background: #323232;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-family: 'Courier New', monospace;
-    font-size: 0.75rem;
-    font-weight: bold;
-    margin-right: 1rem;
-    position: relative;
-    z-index: 1;
-    transition: all 0.3s ease;
+    gap: 8px;
+    border-bottom: 1px solid #404040;
 }
 
-.tech-step.pending .step-number {
-    background: rgba(255, 255, 255, 0.1);
-    color: #444;
-    border: 1px solid #333;
+.terminal-buttons {
+    display: flex;
+    gap: 6px;
 }
 
-.tech-step.processing .step-number {
-    background: transparent;
-    color: #00d4ff;
-    border: 2px solid #00d4ff;
-    animation: pulse 1s ease-in-out infinite;
-    box-shadow: 0 0 15px #00d4ff;
+.terminal-btn {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
 }
 
-@keyframes pulse {
-    0%, 100% { transform: scale(1); box-shadow: 0 0 10px #00d4ff; }
-    50% { transform: scale(1.1); box-shadow: 0 0 20px #00d4ff; }
-}
+.terminal-btn.close { background: #ff5f56; }
+.terminal-btn.minimize { background: #ffbd2e; }
+.terminal-btn.maximize { background: #27ca40; }
 
-.tech-step.completed .step-number {
-    background: #00ff88;
-    color: #0a0a0a;
-    border: none;
-    box-shadow: 0 0 15px #00ff88;
-}
-
-.step-content {
+.terminal-title {
     flex: 1;
-    position: relative;
-    z-index: 1;
-}
-
-.step-name {
-    font-family: 'Courier New', monospace;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    transition: color 0.3s ease;
-}
-
-.tech-step.pending .step-name {
-    color: #444;
-}
-
-.tech-step.processing .step-name {
-    color: #00d4ff;
-    text-shadow: 0 0 5px #00d4ff;
-}
-
-.tech-step.completed .step-name {
-    color: #00ff88;
-    text-shadow: 0 0 5px #00ff88;
-}
-
-.step-status-text {
-    font-family: 'Courier New', monospace;
-    font-size: 0.65rem;
-    margin-top: 2px;
+    text-align: center;
+    color: #888;
+    font-size: 12px;
     letter-spacing: 0.5px;
 }
 
-.tech-step.pending .step-status-text {
-    color: #333;
+.terminal-body {
+    padding: 16px;
+    max-height: 400px;
+    overflow-y: auto;
 }
 
-.tech-step.processing .step-status-text {
-    color: #00d4ff;
-    animation: blink 0.5s step-end infinite;
+.terminal-line {
+    margin-bottom: 4px;
+    line-height: 1.6;
+    font-size: 13px;
+    opacity: 0;
+    animation: terminalFadeIn 0.3s ease forwards;
 }
 
-@keyframes blink {
-    50% { opacity: 0; }
+@keyframes terminalFadeIn {
+    to { opacity: 1; }
 }
 
-.tech-step.completed .step-status-text {
-    color: #00ff88;
+.terminal-prompt {
+    color: #4ec9b0;
 }
 
-.step-icon {
-    width: 24px;
-    text-align: center;
-    position: relative;
-    z-index: 1;
+.terminal-path {
+    color: #569cd6;
 }
 
-.step-icon i {
-    font-size: 1rem;
-    transition: all 0.3s ease;
+.terminal-command {
+    color: #dcdcdc;
 }
 
-.tech-step.pending .step-icon i {
-    color: #333;
+.terminal-flag {
+    color: #ce9178;
 }
 
-.tech-step.processing .step-icon i {
-    color: #00d4ff;
-    animation: spin 1s linear infinite;
+.terminal-string {
+    color: #ce9178;
 }
 
-.tech-step.completed .step-icon i {
-    color: #00ff88;
+.terminal-output {
+    color: #6a9955;
+    padding-left: 8px;
 }
 
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+.terminal-comment {
+    color: #6a9955;
+    font-style: italic;
 }
 
-.tech-footer {
-    text-align: center;
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+.terminal-success {
+    color: #4ec9b0;
 }
 
-.tech-footer-text {
-    font-family: 'Courier New', monospace;
-    font-size: 0.7rem;
-    color: #444;
-    letter-spacing: 1px;
+.terminal-info {
+    color: #569cd6;
 }
 
-.tech-footer-text .blinking-cursor {
-    animation: blink 1s step-end infinite;
+.terminal-warning {
+    color: #dcdcaa;
 }
 
-/* Grid overlay effect */
-.tech-progress-container::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.1) 2px,
-        rgba(0, 0, 0, 0.1) 4px
-    );
-    pointer-events: none;
-    opacity: 0.3;
+.terminal-spinner {
+    display: inline-block;
+    color: #569cd6;
+}
+
+.terminal-spinner::after {
+    content: '⠋';
+    animation: terminalSpin 0.8s steps(10) infinite;
+}
+
+@keyframes terminalSpin {
+    0% { content: '⠋'; }
+    10% { content: '⠙'; }
+    20% { content: '⠹'; }
+    30% { content: '⠸'; }
+    40% { content: '⠼'; }
+    50% { content: '⠴'; }
+    60% { content: '⠦'; }
+    70% { content: '⠧'; }
+    80% { content: '⠇'; }
+    90% { content: '⠏'; }
+}
+
+.terminal-progress-bar {
+    background: #404040;
+    height: 4px;
+    border-radius: 2px;
+    margin: 12px 0;
+    overflow: hidden;
+}
+
+.terminal-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4ec9b0, #569cd6);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 2px;
+}
+
+.terminal-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px solid #404040;
+    margin-top: 12px;
+}
+
+.terminal-status-text {
+    color: #888;
+    font-size: 11px;
+}
+
+.terminal-percentage {
+    color: #4ec9b0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Cursor blink */
+.terminal-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 14px;
+    background: #dcdcdc;
+    animation: cursorBlink 1s step-end infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+}
+
+@keyframes cursorBlink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
 }
 
 /* ========================================
-   END TECH PROGRESS STYLES
+   END TERMINAL PROGRESS STYLES
    ======================================== */
 
 /* Loading spinner */

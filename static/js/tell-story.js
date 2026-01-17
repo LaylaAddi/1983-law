@@ -72,6 +72,8 @@
     ];
 
     let progressInterval = null;
+    let terminalLineIndex = 0;
+    let currentStoryText = '';
 
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
@@ -265,47 +267,29 @@
         resultsContent.style.display = 'none';
         resultsError.style.display = 'none';
 
-        // Build tech-style progress HTML
+        // Store current story for command generation
+        currentStoryText = document.getElementById('storyText').value.trim();
+
+        // Build terminal-style progress HTML
         let progressHtml = `
-            <div class="tech-progress-container">
-                <div class="tech-header">
-                    <div class="tech-title">AI Analysis in Progress</div>
-                    <div class="tech-subtitle">EXTRACTING LEGAL COMPLAINT DATA</div>
-                </div>
-
-                <div class="text-center">
-                    <div class="tech-percentage" id="progressPercent">0</div>
-                </div>
-
-                <div class="main-progress-bar">
-                    <div class="main-progress-fill" id="mainProgressFill"></div>
-                </div>
-
-                <div class="tech-steps">
-        `;
-
-        ANALYSIS_STEPS.forEach((step, index) => {
-            progressHtml += `
-                <div class="tech-step pending" data-step="${step.key}" data-index="${index}">
-                    <div class="step-number">${String(index + 1).padStart(2, '0')}</div>
-                    <div class="step-content">
-                        <div class="step-name">${step.label}</div>
-                        <div class="step-status-text">WAITING</div>
+            <div class="terminal-container">
+                <div class="terminal-header">
+                    <div class="terminal-buttons">
+                        <span class="terminal-btn close"></span>
+                        <span class="terminal-btn minimize"></span>
+                        <span class="terminal-btn maximize"></span>
                     </div>
-                    <div class="step-icon">
-                        <i class="bi bi-three-dots"></i>
-                    </div>
+                    <div class="terminal-title">1983law — analyzing story</div>
                 </div>
-            `;
-        });
-
-        progressHtml += `
+                <div class="terminal-body" id="terminalBody">
+                    <!-- Commands will be added here dynamically -->
                 </div>
-
-                <div class="tech-footer">
-                    <div class="tech-footer-text">
-                        PROCESSING<span class="blinking-cursor">_</span>
-                    </div>
+                <div class="terminal-progress-bar">
+                    <div class="terminal-progress-fill" id="terminalProgressFill"></div>
+                </div>
+                <div class="terminal-status">
+                    <span class="terminal-status-text" id="terminalStatusText">Initializing analysis...</span>
+                    <span class="terminal-percentage" id="terminalPercentage">0%</span>
                 </div>
             </div>
         `;
@@ -318,58 +302,224 @@
         // Disable analyze button
         const analyzeBtn = document.getElementById('analyzeStoryBtn');
         analyzeBtn.disabled = true;
-        analyzeBtn.innerHTML = '<i class="bi bi-cpu me-1"></i>Processing...';
+        analyzeBtn.innerHTML = '<i class="bi bi-terminal me-1"></i>Analyzing...';
 
-        // Start progress animation
-        startProgressAnimation();
+        // Start terminal animation
+        terminalLineIndex = 0;
+        startTerminalAnimation();
     }
 
-    function startProgressAnimation() {
-        let currentStep = 0;
-        const steps = document.querySelectorAll('.tech-step');
-        const totalSteps = steps.length;
-        const progressPercent = document.getElementById('progressPercent');
-        const mainProgressFill = document.getElementById('mainProgressFill');
+    function extractStoryContext(story) {
+        // Extract useful snippets from the story for commands
+        const context = {
+            date: null,
+            location: null,
+            officer: null,
+            city: null,
+            action: null
+        };
+
+        // Try to extract date patterns
+        const dateMatch = story.match(/(?:on\s+)?(\w+\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?|\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+        if (dateMatch) context.date = dateMatch[1].trim().substring(0, 20);
+
+        // Try to extract officer/person names
+        const officerMatch = story.match(/(?:officer|deputy|sergeant|detective|agent|trooper)\s+(\w+)/i);
+        if (officerMatch) context.officer = officerMatch[0].trim().substring(0, 25);
+
+        // Try to extract location
+        const locationMatch = story.match(/(?:at|outside|in|near)\s+(?:the\s+)?([^,.]{3,30})/i);
+        if (locationMatch) context.location = locationMatch[1].trim().substring(0, 25);
+
+        // Try to extract city
+        const cityMatch = story.match(/(?:in|at)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?),?\s*(?:[A-Z]{2})?/);
+        if (cityMatch) context.city = cityMatch[1].trim().substring(0, 20);
+
+        // Try to extract an action word
+        const actionMatch = story.match(/(?:arrested|detained|searched|seized|handcuffed|pushed|grabbed|tased|shot|threatened)/i);
+        if (actionMatch) context.action = actionMatch[0].toLowerCase();
+
+        return context;
+    }
+
+    function generateTerminalCommands(story) {
+        const ctx = extractStoryContext(story);
+        const wordCount = story.split(/\s+/).length;
+
+        const commands = [
+            // Initial setup commands
+            {
+                type: 'command',
+                prompt: '~',
+                text: `cat story.txt | wc -w`,
+                output: `${wordCount} words loaded`
+            },
+            {
+                type: 'command',
+                prompt: '~',
+                text: `parse-1983 --init --analyze-narrative`,
+                output: 'Initialized Section 1983 complaint parser'
+            },
+
+            // Date/time extraction
+            {
+                type: 'command',
+                prompt: '~/incident',
+                text: ctx.date
+                    ? `grep -oE "\\b${ctx.date.split(' ')[0]}[^.]*" story.txt`
+                    : `awk '/[0-9]{1,2}[\\/\\-][0-9]{1,2}/ {print}' story.txt`,
+                output: ctx.date ? `Found: "${ctx.date}"` : 'Scanning for date patterns...'
+            },
+
+            // Location extraction
+            {
+                type: 'command',
+                prompt: '~/incident',
+                text: ctx.location
+                    ? `extract --location "${ctx.location.substring(0, 15)}..."`
+                    : `nlp extract --type=location story.txt`,
+                output: ctx.location ? `Location identified: ${ctx.location}` : 'Analyzing location context...'
+            },
+
+            // Defendant identification
+            {
+                type: 'command',
+                prompt: '~/defendants',
+                text: ctx.officer
+                    ? `grep -i "officer\\|deputy\\|sergeant" story.txt | head -3`
+                    : `parse-defendants --scan-titles story.txt`,
+                output: ctx.officer ? `Defendant found: "${ctx.officer}"` : 'Scanning for government actors...'
+            },
+
+            // Agency lookup
+            {
+                type: 'command',
+                prompt: '~/defendants',
+                text: ctx.city
+                    ? `lookup-agency --city="${ctx.city}" --infer`
+                    : `infer-agency --from-context story.txt`,
+                output: ctx.city ? `Searching ${ctx.city} agencies...` : 'Inferring agency from narrative...'
+            },
+
+            // Narrative parsing
+            {
+                type: 'command',
+                prompt: '~/narrative',
+                text: `nlp parse --chronological --extract-quotes story.txt`,
+                output: 'Building incident timeline...'
+            },
+
+            // Rights analysis
+            {
+                type: 'command',
+                prompt: '~/rights',
+                text: ctx.action
+                    ? `analyze-rights --action="${ctx.action}" --amendments=1,4,5,14`
+                    : `analyze-rights --scan-violations story.txt`,
+                output: 'Analyzing constitutional violations...'
+            },
+
+            // Evidence scan
+            {
+                type: 'command',
+                prompt: '~/evidence',
+                text: `grep -iE "video|photo|recording|body.?cam|witness" story.txt`,
+                output: 'Cataloging potential evidence...'
+            },
+
+            // Damages assessment
+            {
+                type: 'command',
+                prompt: '~/damages',
+                text: `extract --type=damages --categories=physical,emotional,financial`,
+                output: 'Assessing documented harms...'
+            },
+
+            // Relief suggestions
+            {
+                type: 'command',
+                prompt: '~/relief',
+                text: `suggest-relief --based-on=violations,damages --usc=42-1983`,
+                output: 'Generating relief recommendations...'
+            },
+
+            // Final compilation
+            {
+                type: 'command',
+                prompt: '~',
+                text: `compile-sections --output=complaint.json --validate`,
+                output: 'Compiling all sections...'
+            }
+        ];
+
+        return commands;
+    }
+
+    function addTerminalLine(html, delay = 0) {
+        const terminalBody = document.getElementById('terminalBody');
+        if (!terminalBody) return;
+
+        const line = document.createElement('div');
+        line.className = 'terminal-line';
+        line.style.animationDelay = delay + 'ms';
+        line.innerHTML = html;
+        terminalBody.appendChild(line);
+
+        // Auto-scroll to bottom
+        terminalBody.scrollTop = terminalBody.scrollHeight;
+    }
+
+    function startTerminalAnimation() {
+        const commands = generateTerminalCommands(currentStoryText);
+        const totalCommands = commands.length;
+        let commandIndex = 0;
 
         // Clear any existing interval
         if (progressInterval) {
             clearInterval(progressInterval);
         }
 
+        // Add initial line
+        addTerminalLine(`<span class="terminal-comment"># Analyzing civil rights complaint narrative...</span>`);
+
         progressInterval = setInterval(() => {
-            if (currentStep < totalSteps) {
-                // Mark previous step as complete
-                if (currentStep > 0) {
-                    const prevStep = steps[currentStep - 1];
-                    prevStep.classList.remove('processing');
-                    prevStep.classList.add('completed');
-                    prevStep.querySelector('.step-status-text').textContent = 'COMPLETE';
-                    prevStep.querySelector('.step-icon i').className = 'bi bi-check-lg';
-                }
+            if (commandIndex < totalCommands) {
+                const cmd = commands[commandIndex];
+                const percent = Math.round(((commandIndex + 1) / totalCommands) * 95);
 
-                // Mark current step as processing
-                const step = steps[currentStep];
-                step.classList.remove('pending');
-                step.classList.add('processing');
-                step.querySelector('.step-status-text').textContent = 'ANALYZING...';
-                step.querySelector('.step-icon i').className = 'bi bi-gear-fill';
+                // Add command line
+                addTerminalLine(`
+                    <span class="terminal-prompt">❯</span>
+                    <span class="terminal-path">${cmd.prompt}</span>
+                    <span class="terminal-command"> ${escapeHtml(cmd.text)}</span>
+                `);
 
-                // Update percentage and progress bar
-                const percent = Math.round(((currentStep + 0.5) / totalSteps) * 100);
-                if (progressPercent) progressPercent.textContent = percent;
-                if (mainProgressFill) mainProgressFill.style.width = percent + '%';
+                // Add output after small delay
+                setTimeout(() => {
+                    addTerminalLine(`<span class="terminal-output">→ ${escapeHtml(cmd.output)}</span>`);
+                }, 200);
 
-                currentStep++;
+                // Update progress
+                const progressFill = document.getElementById('terminalProgressFill');
+                const percentDisplay = document.getElementById('terminalPercentage');
+                const statusText = document.getElementById('terminalStatusText');
+
+                if (progressFill) progressFill.style.width = percent + '%';
+                if (percentDisplay) percentDisplay.textContent = percent + '%';
+                if (statusText) statusText.textContent = cmd.output;
+
+                commandIndex++;
             } else {
-                // All steps shown as processing, keep last one spinning until results arrive
+                // Done with commands, show waiting state
                 clearInterval(progressInterval);
                 progressInterval = null;
 
-                // Show 95% while waiting for final results
-                if (progressPercent) progressPercent.textContent = '95';
-                if (mainProgressFill) mainProgressFill.style.width = '95%';
+                addTerminalLine(`<span class="terminal-info"><span class="terminal-spinner"></span> Waiting for AI response...</span>`);
+
+                const statusText = document.getElementById('terminalStatusText');
+                if (statusText) statusText.textContent = 'Waiting for analysis to complete...';
             }
-        }, 600); // Update every 600ms for better effect
+        }, 800);
     }
 
     function stopProgressAnimation() {
@@ -378,25 +528,17 @@
             progressInterval = null;
         }
 
-        // Mark all steps as complete
-        document.querySelectorAll('.tech-step').forEach((step, index) => {
-            step.classList.remove('pending', 'processing');
-            step.classList.add('completed');
-            step.querySelector('.step-status-text').textContent = 'COMPLETE';
-            step.querySelector('.step-icon i').className = 'bi bi-check-lg';
-        });
+        // Update terminal to show completion
+        const progressFill = document.getElementById('terminalProgressFill');
+        const percentDisplay = document.getElementById('terminalPercentage');
+        const statusText = document.getElementById('terminalStatusText');
 
-        // Set to 100%
-        const progressPercent = document.getElementById('progressPercent');
-        const mainProgressFill = document.getElementById('mainProgressFill');
-        if (progressPercent) progressPercent.textContent = '100';
-        if (mainProgressFill) mainProgressFill.style.width = '100%';
+        if (progressFill) progressFill.style.width = '100%';
+        if (percentDisplay) percentDisplay.textContent = '100%';
+        if (statusText) statusText.textContent = 'Analysis complete';
 
-        // Update footer
-        const footer = document.querySelector('.tech-footer-text');
-        if (footer) {
-            footer.innerHTML = 'ANALYSIS COMPLETE <i class="bi bi-check-circle-fill text-success"></i>';
-        }
+        // Add completion message to terminal
+        addTerminalLine(`<span class="terminal-success">✓ Analysis complete — sections ready for review</span>`);
     }
 
     function showResults(sections) {
