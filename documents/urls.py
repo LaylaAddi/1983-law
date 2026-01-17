@@ -19,6 +19,9 @@ urlpatterns = [
     path('<int:document_id>/section/<str:section_type>/delete/<int:item_id>/', views.delete_multiple_item, name='delete_multiple_item'),
     path('<int:document_id>/section/<str:section_type>/status/', views.update_section_status, name='update_section_status'),
 
+    # Edit individual defendant
+    path('<int:document_id>/defendant/<int:defendant_id>/edit/', views.edit_defendant, name='edit_defendant'),
+
     # AJAX endpoints for preview page
     path('<int:document_id>/section/<str:section_type>/save/', views.section_save_ajax, name='section_save_ajax'),
     path('<int:document_id>/section/<str:section_type>/delete-item/<int:item_id>/', views.delete_item_ajax, name='delete_item_ajax'),

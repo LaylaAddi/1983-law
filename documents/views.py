@@ -468,6 +468,41 @@ def delete_multiple_item(request, document_id, section_type, item_id):
 
 
 @login_required
+def edit_defendant(request, document_id, defendant_id):
+    """Edit a specific defendant with agency suggestion support."""
+    from .forms import DefendantForm
+
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    defendant = get_object_or_404(Defendant, id=defendant_id, section__document=document)
+    section = defendant.section
+
+    # Get incident overview for city/state context
+    incident_overview = None
+    try:
+        overview_section = document.sections.get(section_type='incident_overview')
+        incident_overview = IncidentOverview.objects.get(section=overview_section)
+    except (DocumentSection.DoesNotExist, IncidentOverview.DoesNotExist):
+        pass
+
+    if request.method == 'POST':
+        form = DefendantForm(request.POST, instance=defendant)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Defendant updated successfully.')
+            return redirect('documents:section_edit', document_id=document.id, section_type='defendants')
+    else:
+        form = DefendantForm(instance=defendant)
+
+    return render(request, 'documents/edit_defendant.html', {
+        'document': document,
+        'defendant': defendant,
+        'form': form,
+        'incident_overview': incident_overview,
+        'section': section,
+    })
+
+
+@login_required
 @require_POST
 def update_section_status(request, document_id, section_type):
     """Update the status of a section (AJAX endpoint)."""
