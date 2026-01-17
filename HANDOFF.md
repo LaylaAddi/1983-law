@@ -310,14 +310,21 @@ When defendants have `agency_inferred=True`, the Government Defendants section c
 - Shows AI-suggested warning badge for defendants with agency_inferred=True
 - Displays the agency name inline for each defendant
 - Edit page at `/documents/{id}/defendant/{defendant_id}/edit/`
-- Edit page has Save/Cancel buttons only (no Suggest Agency - users editing already know what to change)
+- Edit page has Save/Cancel and **Lookup Address** buttons
+
+**Address Lookup Feature (Web Search):**
+- "Lookup Address" button on edit defendant page
+- Uses OpenAI web search to find official agency headquarters address
+- User enters agency name, clicks button, gets real address from web
+- Shows result with "Use This Address" button to fill the form field
+- API endpoint: `/documents/{id}/lookup-address/`
 
 **Files involved:**
-- `documents/services/openai_service.py` - `suggest_agency()` method
-- `documents/views.py` - `suggest_agency` and `edit_defendant` view endpoints
-- `documents/urls.py` - Routes for suggest-agency and edit-defendant
+- `documents/services/openai_service.py` - `suggest_agency()` and `lookup_agency_address()` methods
+- `documents/views.py` - `suggest_agency`, `edit_defendant`, and `lookup_address` view endpoints
+- `documents/urls.py` - Routes for suggest-agency, edit-defendant, and lookup-address
 - `templates/documents/section_edit.html` - Suggest Agency button, Edit button for existing defendants
-- `templates/documents/edit_defendant.html` - Edit defendant form with Suggest Agency
+- `templates/documents/edit_defendant.html` - Edit defendant form with Lookup Address button
 - `templates/documents/document_detail.html` - Warning for defendants needing review
 - `documents/forms.py` - DefendantForm clears agency_inferred on save
 - `documents/models.py` - Defendant.agency_inferred field
@@ -876,7 +883,7 @@ The relief_sought section may not be saving properly when user clicks "Continue 
 - Ask what the user wants to work on
 - Go step by step - explain what you plan to do BEFORE doing it
 - Get approval before writing code
-- Update this HANDOFF.md after completing features
+- **ALWAYS update this HANDOFF.md after ANY change** (features, bug fixes, removals, etc.)
 - **Always provide git pull and merge commands at the end of a session**
 
 **To continue work:**
@@ -885,7 +892,7 @@ The relief_sought section may not be saving properly when user clicks "Continue 
 3. User approves
 4. You implement
 5. User tests
-6. Update HANDOFF.md
+6. **Update HANDOFF.md** (document what changed - this is mandatory for every change)
 7. Provide merge commands (see below)
 8. Repeat
 
