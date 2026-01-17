@@ -83,18 +83,48 @@ class DocumentGenerator:
         if not plaintiff_name:
             plaintiff_name = "PLAINTIFF"
 
-        # Build defendant line for caption
-        # Legal convention: use "et al." (and others) when multiple defendants
-        if not defendants:
-            defendant_line = "DEFENDANT(S)"
-        elif len(defendants) == 1:
-            d = defendants[0]
-            name = d.get('name', 'DEFENDANT')
-            defendant_line = name.upper()
+        # Build defendant lines for caption
+        # Separate individuals from agencies, and collect unique agencies
+        individual_defendants = []
+        agency_defendants = []
+        agencies_from_individuals = set()
+
+        for d in defendants:
+            d_type = d.get('defendant_type', 'individual')
+            name = d.get('name', '')
+            title = d.get('title_rank', '')
+            agency = d.get('agency_name', '')
+
+            if d_type == 'individual' and name:
+                # Format: OFFICER JOHN DOE or SGT. JOHN DOE
+                if title:
+                    formatted_name = f"{title.upper()} {name.upper()}"
+                else:
+                    formatted_name = name.upper()
+                individual_defendants.append(formatted_name)
+                # Track agency for inclusion
+                if agency:
+                    agencies_from_individuals.add(agency.upper())
+            elif d_type == 'agency' and name:
+                agency_defendants.append(name.upper())
+
+        # Also add agencies from individuals if not already listed as agency defendants
+        for agency in agencies_from_individuals:
+            if agency not in agency_defendants:
+                agency_defendants.append(agency)
+
+        # Build the defendant block
+        all_defendants = individual_defendants + agency_defendants
+
+        if not all_defendants:
+            defendant_block = "UNKNOWN DEFENDANTS"
+        elif len(all_defendants) == 1:
+            defendant_block = f"{all_defendants[0]},\n    individually and in official capacity"
+        elif len(all_defendants) == 2:
+            defendant_block = f"{all_defendants[0]}, individually and\n    in official capacity, and\n{all_defendants[1]}"
         else:
-            # Multiple defendants - use first defendant + "et al."
-            first_defendant = defendants[0].get('name', 'DEFENDANT')
-            defendant_line = f"{first_defendant.upper()}, et al."
+            # Multiple defendants - list first two + et al.
+            defendant_block = f"{all_defendants[0]}, individually and\n    in official capacity,\n{all_defendants[1]}, et al."
 
         caption = f"""{court.upper()}
 
@@ -103,8 +133,8 @@ class DocumentGenerator:
 
 v.                                          Case No. ________________
 
-{defendant_line},
-    Defendant(s).
+{defendant_block},
+    Defendants.
 
 ________________________________________
 

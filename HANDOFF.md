@@ -400,7 +400,11 @@ AI-powered document generation that creates a professionally written Section 198
 - **Third Person** - "Plaintiff" not "I"
 - **Numbered Paragraphs** - Following federal court conventions
 - **Print-Ready** - Document formatted for court filing
-- **Et al. Convention** - Multiple defendants shown as "FIRST DEFENDANT, et al." in caption
+- **Proper Caption Format** - Includes:
+  - Individual defendants with title (e.g., "OFFICER JOHN DOE")
+  - "individually and in official capacity" language
+  - Agency name (e.g., "TAMPA POLICE DEPARTMENT")
+  - "et al." when more than 2 defendants
 - **Missing Agency Warning** - Individual defendants without agency shown in red with warning
 
 ### Files
