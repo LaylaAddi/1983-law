@@ -50,14 +50,103 @@
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-check-lg me-1"></i>Save Changes
                             </button>
+                            <button type="button" class="btn btn-outline-info" id="lookupAddressBtn" onclick="lookupAddress()">
+                                <i class="bi bi-search me-1"></i>Lookup Address
+                            </button>
                             <a href="{% url 'documents:section_edit' document.id 'defendants' %}" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-1"></i>Cancel
                             </a>
                         </div>
                     </form>
+
+                    <!-- Address lookup result -->
+                    <div id="addressResult" class="mt-3" style="display: none;">
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white py-2">
+                                <i class="bi bi-geo-alt-fill me-1"></i>Address Found
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-2" id="foundAddress"></p>
+                                <small class="text-muted" id="addressNote"></small>
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-sm btn-success" onclick="useAddress()">
+                                        <i class="bi bi-check-lg me-1"></i>Use This Address
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+let foundAddressValue = '';
+
+function lookupAddress() {
+    const btn = document.getElementById('lookupAddressBtn');
+    const resultDiv = document.getElementById('addressResult');
+    const agencyField = document.querySelector('[name="agency_name"]');
+
+    const agencyName = agencyField ? agencyField.value.trim() : '';
+
+    if (!agencyName) {
+        alert('Please enter an agency name first.');
+        return;
+    }
+
+    // Disable button and show loading
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Searching...';
+    resultDiv.style.display = 'none';
+
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    fetch('{% url "documents:lookup_address" document.id %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({
+            agency_name: agencyName,
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-search me-1"></i>Lookup Address';
+
+        if (data.success && data.address) {
+            foundAddressValue = data.address;
+            document.getElementById('foundAddress').innerHTML = '<strong>' + data.address + '</strong>';
+            document.getElementById('addressNote').textContent = data.source_note || 'Found via web search. Please verify before filing.';
+            resultDiv.style.display = 'block';
+        } else {
+            alert(data.error || 'Could not find address for this agency.');
+        }
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-search me-1"></i>Lookup Address';
+        console.error('Error:', error);
+        alert('Network error. Please try again.');
+    });
+}
+
+function useAddress() {
+    const addressField = document.querySelector('[name="address"]');
+    if (addressField && foundAddressValue) {
+        addressField.value = foundAddressValue;
+        addressField.style.backgroundColor = '#d4edda';
+        setTimeout(() => {
+            addressField.style.backgroundColor = '';
+        }, 1500);
+        document.getElementById('addressResult').style.display = 'none';
+    }
+}
+</script>
 {% endblock %}

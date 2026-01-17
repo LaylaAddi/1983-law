@@ -1125,6 +1125,53 @@ def suggest_agency(request, document_id):
 
 
 @login_required
+@require_http_methods(["POST"])
+def lookup_address(request, document_id):
+    """AJAX endpoint to lookup agency address using web search."""
+
+    try:
+        # Verify document ownership
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        data = json.loads(request.body)
+        agency_name = data.get('agency_name', '').strip()
+
+        if not agency_name:
+            return JsonResponse({
+                'success': False,
+                'error': 'Agency name is required.',
+            })
+
+        # Get city/state from incident overview for context
+        city = ''
+        state = ''
+        try:
+            incident_section = document.sections.get(section_type='incident_overview')
+            incident = incident_section.incident_overview
+            city = incident.city if incident else ''
+            state = incident.state if incident else ''
+        except (DocumentSection.DoesNotExist, AttributeError):
+            pass
+
+        from .services.openai_service import OpenAIService
+        service = OpenAIService()
+        result = service.lookup_agency_address(agency_name, city, state)
+
+        return JsonResponse(result)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid request format.',
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}',
+        })
+
+
+@login_required
 def lookup_district_court(request):
     """AJAX endpoint to lookup federal district court based on city and state."""
     city = request.GET.get('city', '').strip()

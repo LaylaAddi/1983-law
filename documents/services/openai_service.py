@@ -496,3 +496,106 @@ Return a JSON object with this format:
                 'success': False,
                 'error': str(e),
             }
+
+    def lookup_agency_address(self, agency_name: str, city: str = '', state: str = '') -> dict:
+        """
+        Look up the official address for a government agency using web search.
+
+        Args:
+            agency_name: Name of the agency (e.g., "Tampa Police Department")
+            city: City for context
+            state: State for context
+
+        Returns:
+            dict with 'success', 'address', 'source'
+        """
+        if not agency_name:
+            return {
+                'success': False,
+                'error': 'Agency name is required',
+            }
+
+        location_context = ""
+        if city and state:
+            location_context = f" in {city}, {state}"
+        elif city:
+            location_context = f" in {city}"
+        elif state:
+            location_context = f" in {state}"
+
+        query = f"What is the official headquarters address for {agency_name}{location_context}? I need the physical street address for legal service of process."
+
+        try:
+            # Use OpenAI with web search tool
+            response = self.client.responses.create(
+                model="gpt-4o-mini",
+                tools=[{"type": "web_search_preview"}],
+                input=query
+            )
+
+            # Extract the text response
+            address_text = ""
+            for item in response.output:
+                if hasattr(item, 'content'):
+                    for content in item.content:
+                        if hasattr(content, 'text'):
+                            address_text = content.text
+                            break
+
+            if not address_text:
+                return {
+                    'success': False,
+                    'error': 'No address found in search results',
+                }
+
+            # Parse the response to extract just the address
+            parse_prompt = f"""Extract ONLY the street address from this text. Return a JSON object:
+
+Text: {address_text}
+
+Return format:
+{{
+    "address": "Full street address including city, state, and ZIP",
+    "confidence": "high" or "medium" or "low",
+    "source_note": "Brief note about the source"
+}}
+
+If no clear address is found, return:
+{{
+    "address": null,
+    "confidence": "low",
+    "source_note": "Could not find official address"
+}}"""
+
+            parse_response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "Extract addresses from text. Return only valid JSON."},
+                    {"role": "user", "content": parse_prompt}
+                ],
+                temperature=0.1,
+                max_tokens=500,
+                response_format={"type": "json_object"}
+            )
+
+            import json
+            result = json.loads(parse_response.choices[0].message.content)
+
+            if result.get('address'):
+                return {
+                    'success': True,
+                    'address': result['address'],
+                    'confidence': result.get('confidence', 'medium'),
+                    'source_note': result.get('source_note', 'Found via web search'),
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Could not find official address for this agency',
+                }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+            }
