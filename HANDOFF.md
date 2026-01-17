@@ -310,7 +310,7 @@ When defendants have `agency_inferred=True`, the Government Defendants section c
 - Shows AI-suggested warning badge for defendants with agency_inferred=True
 - Displays the agency name inline for each defendant
 - Edit page at `/documents/{id}/defendant/{defendant_id}/edit/`
-- Edit page includes Suggest Agency button with same functionality
+- Edit page has Save/Cancel buttons only (no Suggest Agency - users editing already know what to change)
 
 **Files involved:**
 - `documents/services/openai_service.py` - `suggest_agency()` method
@@ -877,6 +877,7 @@ The relief_sought section may not be saving properly when user clicks "Continue 
 - Go step by step - explain what you plan to do BEFORE doing it
 - Get approval before writing code
 - Update this HANDOFF.md after completing features
+- **Always provide git pull and merge commands at the end of a session**
 
 **To continue work:**
 1. User will tell you what feature they want
@@ -885,7 +886,22 @@ The relief_sought section may not be saving properly when user clicks "Continue 
 4. You implement
 5. User tests
 6. Update HANDOFF.md
-7. Repeat
+7. Provide merge commands (see below)
+8. Repeat
+
+**After completing work - provide these merge commands:**
+```bash
+# Pull the changes
+git fetch origin <branch-name>
+
+# Switch to master and merge
+git checkout master
+git pull origin master
+git merge <branch-name>
+
+# Push merged master
+git push origin master
+```
 
 ---
 
