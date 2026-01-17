@@ -230,7 +230,14 @@ When user clicks "Analyze My Story", shows a cool tech-themed progress display:
 - Grid overlay for tech aesthetic
 - All steps turn green with checkmarks when complete
 
-### Background Processing with Polling (NEW)
+### Story Persistence on Revisit
+When users revisit the Tell Your Story page after completing analysis:
+- Textarea is pre-filled with their saved story
+- Green notice explains they can edit and re-analyze
+- No limits on re-analysis (users often remember more details later)
+- Re-analyzing updates document sections with new information
+
+### Background Processing with Polling
 Story analysis now runs in a background thread to prevent timeouts:
 
 **How it works:**

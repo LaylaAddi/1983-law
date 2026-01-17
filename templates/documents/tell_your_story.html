@@ -57,6 +57,26 @@
                     </ul>
                 </div>
 
+                {% if document.has_story %}
+                <!-- Already analyzed notice -->
+                <div class="alert alert-success mb-4">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-check-circle-fill me-2 mt-1"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">Story Already Analyzed</h6>
+                            <p class="mb-2 small">
+                                You've already told your story and it was used to fill in your document sections.
+                                Your original story is shown below.
+                            </p>
+                            <p class="mb-0 small">
+                                <strong>Want to make changes?</strong> Edit your story and click "Analyze My Story" again.
+                                This will update your document sections with any new information.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 {% if test_stories %}
                 <!-- Test User: Sample Stories Dropdown -->
                 <div class="mb-4">
@@ -83,7 +103,7 @@
                         class="form-control"
                         rows="12"
                         placeholder="Example: I was recording outside the library on the sidewalk when a lady came up to me and said I couldn't record. She called the cops. Officer Higgins arrived and said I needed to move or I would be arrested. I had to leave because I didn't want to be arrested. This happened around 1:15 PM on August 8th..."
-                    ></textarea>
+                    >{{ document.story_text }}</textarea>
                     <div class="form-text">
                         <i class="bi bi-lightbulb me-1"></i>
                         Include details like: when and where it happened, who was involved (names, badge numbers),
