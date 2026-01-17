@@ -265,52 +265,52 @@
         resultsContent.style.display = 'none';
         resultsError.style.display = 'none';
 
-        // Build progress steps HTML
+        // Build tech-style progress HTML
         let progressHtml = `
-            <div class="text-center mb-4">
-                <div class="spinner-border text-primary mb-3" role="status">
-                    <span class="visually-hidden">Loading...</span>
+            <div class="tech-progress-container">
+                <div class="tech-header">
+                    <div class="tech-title">AI Analysis in Progress</div>
+                    <div class="tech-subtitle">EXTRACTING LEGAL COMPLAINT DATA</div>
                 </div>
-                <h5 class="text-primary">Analyzing Your Story</h5>
-                <p class="text-muted small">AI is extracting information for your legal complaint...</p>
-            </div>
-            <div class="progress-steps">
+
+                <div class="text-center">
+                    <div class="tech-percentage" id="progressPercent">0</div>
+                </div>
+
+                <div class="main-progress-bar">
+                    <div class="main-progress-fill" id="mainProgressFill"></div>
+                </div>
+
+                <div class="tech-steps">
         `;
 
         ANALYSIS_STEPS.forEach((step, index) => {
             progressHtml += `
-                <div class="d-flex align-items-center mb-2 progress-step" data-step="${step.key}">
-                    <div class="step-icon me-3">
-                        <i class="bi ${step.icon} text-muted"></i>
+                <div class="tech-step pending" data-step="${step.key}" data-index="${index}">
+                    <div class="step-number">${String(index + 1).padStart(2, '0')}</div>
+                    <div class="step-content">
+                        <div class="step-name">${step.label}</div>
+                        <div class="step-status-text">WAITING</div>
                     </div>
-                    <div class="flex-grow-1">
-                        <span class="step-label text-muted">${step.label}</span>
-                    </div>
-                    <div class="step-status">
-                        <i class="bi bi-circle text-muted step-pending"></i>
-                        <i class="bi bi-arrow-repeat text-primary step-processing d-none spin"></i>
-                        <i class="bi bi-check-circle-fill text-success step-complete d-none"></i>
+                    <div class="step-icon">
+                        <i class="bi bi-three-dots"></i>
                     </div>
                 </div>
             `;
         });
 
-        progressHtml += '</div>';
-        resultsLoading.innerHTML = progressHtml;
+        progressHtml += `
+                </div>
 
-        // Add CSS for spinning animation if not already present
-        if (!document.getElementById('progress-spin-style')) {
-            const style = document.createElement('style');
-            style.id = 'progress-spin-style';
-            style.textContent = `
-                .spin { animation: spin 1s linear infinite; }
-                @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-                .progress-step.active .step-label { color: #0d6efd !important; font-weight: 500; }
-                .progress-step.completed .step-label { color: #198754 !important; }
-                .progress-step.completed .step-icon i { color: #198754 !important; }
-            `;
-            document.head.appendChild(style);
-        }
+                <div class="tech-footer">
+                    <div class="tech-footer-text">
+                        PROCESSING<span class="blinking-cursor">_</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        resultsLoading.innerHTML = progressHtml;
 
         // Scroll to results
         resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -318,7 +318,7 @@
         // Disable analyze button
         const analyzeBtn = document.getElementById('analyzeStoryBtn');
         analyzeBtn.disabled = true;
-        analyzeBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Analyzing...';
+        analyzeBtn.innerHTML = '<i class="bi bi-cpu me-1"></i>Processing...';
 
         // Start progress animation
         startProgressAnimation();
@@ -326,7 +326,10 @@
 
     function startProgressAnimation() {
         let currentStep = 0;
-        const steps = document.querySelectorAll('.progress-step');
+        const steps = document.querySelectorAll('.tech-step');
+        const totalSteps = steps.length;
+        const progressPercent = document.getElementById('progressPercent');
+        const mainProgressFill = document.getElementById('mainProgressFill');
 
         // Clear any existing interval
         if (progressInterval) {
@@ -334,28 +337,39 @@
         }
 
         progressInterval = setInterval(() => {
-            if (currentStep < steps.length) {
+            if (currentStep < totalSteps) {
                 // Mark previous step as complete
                 if (currentStep > 0) {
                     const prevStep = steps[currentStep - 1];
-                    prevStep.classList.remove('active');
+                    prevStep.classList.remove('processing');
                     prevStep.classList.add('completed');
-                    prevStep.querySelector('.step-processing').classList.add('d-none');
-                    prevStep.querySelector('.step-complete').classList.remove('d-none');
+                    prevStep.querySelector('.step-status-text').textContent = 'COMPLETE';
+                    prevStep.querySelector('.step-icon i').className = 'bi bi-check-lg';
                 }
 
                 // Mark current step as processing
                 const step = steps[currentStep];
-                step.classList.add('active');
-                step.querySelector('.step-pending').classList.add('d-none');
-                step.querySelector('.step-processing').classList.remove('d-none');
+                step.classList.remove('pending');
+                step.classList.add('processing');
+                step.querySelector('.step-status-text').textContent = 'ANALYZING...';
+                step.querySelector('.step-icon i').className = 'bi bi-gear-fill';
+
+                // Update percentage and progress bar
+                const percent = Math.round(((currentStep + 0.5) / totalSteps) * 100);
+                if (progressPercent) progressPercent.textContent = percent;
+                if (mainProgressFill) mainProgressFill.style.width = percent + '%';
 
                 currentStep++;
             } else {
-                // All steps shown, keep last one spinning until results arrive
+                // All steps shown as processing, keep last one spinning until results arrive
                 clearInterval(progressInterval);
+                progressInterval = null;
+
+                // Show 95% while waiting for final results
+                if (progressPercent) progressPercent.textContent = '95';
+                if (mainProgressFill) mainProgressFill.style.width = '95%';
             }
-        }, 400); // Update every 400ms
+        }, 600); // Update every 600ms for better effect
     }
 
     function stopProgressAnimation() {
@@ -365,13 +379,24 @@
         }
 
         // Mark all steps as complete
-        document.querySelectorAll('.progress-step').forEach(step => {
-            step.classList.remove('active');
+        document.querySelectorAll('.tech-step').forEach((step, index) => {
+            step.classList.remove('pending', 'processing');
             step.classList.add('completed');
-            step.querySelector('.step-pending').classList.add('d-none');
-            step.querySelector('.step-processing').classList.add('d-none');
-            step.querySelector('.step-complete').classList.remove('d-none');
+            step.querySelector('.step-status-text').textContent = 'COMPLETE';
+            step.querySelector('.step-icon i').className = 'bi bi-check-lg';
         });
+
+        // Set to 100%
+        const progressPercent = document.getElementById('progressPercent');
+        const mainProgressFill = document.getElementById('mainProgressFill');
+        if (progressPercent) progressPercent.textContent = '100';
+        if (mainProgressFill) mainProgressFill.style.width = '100%';
+
+        // Update footer
+        const footer = document.querySelector('.tech-footer-text');
+        if (footer) {
+            footer.innerHTML = 'ANALYSIS COMPLETE <i class="bi bi-check-circle-fill text-success"></i>';
+        }
     }
 
     function showResults(sections) {

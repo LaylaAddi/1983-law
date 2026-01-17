@@ -219,12 +219,16 @@ Relief types analyzed:
 - Attorney's Fees (always recommended per 42 U.S.C. § 1988)
 - Jury Trial (usually recommended)
 
-### Progress Indicator During Analysis
-When user clicks "Analyze My Story", shows animated progress through sections:
-- Incident Overview → Incident Narrative → Government Defendants → Witnesses → Evidence → Damages → Rights Violated → Relief Sought
-- Each section shows: pending (circle) → processing (spinning arrow) → complete (green checkmark)
-- Animation runs at 400ms intervals
-- All sections marked complete when results arrive
+### Progress Indicator During Analysis (Tech Style)
+When user clicks "Analyze My Story", shows a cool tech-themed progress display:
+- Dark background with glowing green/cyan accents
+- Large percentage counter (0% → 100%)
+- Animated progress bar
+- 8 steps with status: WAITING → ANALYZING... → COMPLETE
+- Pulsing/glowing effects on active steps
+- Scanline animation across top
+- Grid overlay for tech aesthetic
+- All steps turn green with checkmarks when complete
 
 ### Background Processing with Polling (NEW)
 Story analysis now runs in a background thread to prevent timeouts:
