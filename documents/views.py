@@ -1010,7 +1010,7 @@ def analyze_rights(request, document_id):
 @login_required
 @require_POST
 def suggest_agency(request, document_id):
-    """AJAX endpoint to suggest the correct agency name for a defendant."""
+    """AJAX endpoint to suggest defendants (agencies and individuals) based on story and location."""
 
     try:
         # Verify document ownership
@@ -1019,6 +1019,8 @@ def suggest_agency(request, document_id):
         data = json.loads(request.body)
 
         # Get incident location from document for context
+        city = ''
+        state = ''
         try:
             incident_section = document.sections.get(section_type='incident_overview')
             incident = incident_section.incident_overview
@@ -1028,9 +1030,26 @@ def suggest_agency(request, document_id):
             city = data.get('city', '')
             state = data.get('state', '')
 
+        # Get the story text from the document - this contains defendant names
+        story_text = document.story_text or ''
+
+        # Get existing defendants to avoid duplicates
+        existing_defendants = []
+        try:
+            defendants_section = document.sections.get(section_type='defendants')
+            for defendant in defendants_section.defendants.all():
+                existing_defendants.append({
+                    'name': defendant.name,
+                    'type': defendant.defendant_type,
+                })
+        except DocumentSection.DoesNotExist:
+            pass
+
         context = {
             'city': city,
             'state': state,
+            'story_text': story_text,
+            'existing_defendants': existing_defendants,
             'defendant_name': data.get('defendant_name', ''),
             'title': data.get('title', ''),
             'description': data.get('description', ''),
@@ -1039,7 +1058,7 @@ def suggest_agency(request, document_id):
         if not city and not state:
             return JsonResponse({
                 'success': False,
-                'error': 'Please fill out the Incident Overview section first (city and state are needed to suggest an agency).',
+                'error': 'Please fill out the Incident Overview section first (city and state are needed to suggest defendants).',
             })
 
         from .services.openai_service import OpenAIService

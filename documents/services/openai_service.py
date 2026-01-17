@@ -371,16 +371,18 @@ Be specific to THIS case. Reference the actual violations, damages, and evidence
 
     def suggest_agency(self, context: dict) -> dict:
         """
-        Suggest defendants (both individual officers and agencies) based on location and context.
+        Suggest defendants (both individual officers and agencies) based on story and location.
 
         Args:
-            context: Dict containing city, state, defendant_name, title, description
+            context: Dict containing city, state, story_text, existing_defendants, etc.
 
         Returns:
             dict with 'success', 'suggestions' (list of defendant suggestions - both individuals and agencies)
         """
         city = context.get('city', '')
         state = context.get('state', '')
+        story_text = context.get('story_text', '')
+        existing_defendants = context.get('existing_defendants', [])
         defendant_name = context.get('defendant_name', '')
         title = context.get('title', '')
         description = context.get('description', '')
@@ -391,59 +393,71 @@ Be specific to THIS case. Reference the actual violations, damages, and evidence
                 'error': 'City or state is required to suggest defendants',
             }
 
-        prompt = f"""Based on the following information about a law enforcement encounter, suggest the defendants that should be named in a Section 1983 civil rights complaint.
+        # Format existing defendants for the prompt
+        existing_list = ""
+        if existing_defendants:
+            existing_list = "\n".join([f"- {d.get('name', 'Unknown')} ({d.get('type', 'unknown')})" for d in existing_defendants])
+        else:
+            existing_list = "None yet"
+
+        prompt = f"""Based on the following story about a civil rights violation, identify ALL defendants that should be named in a Section 1983 complaint.
 
 LOCATION:
 - City: {city or 'Unknown'}
 - State: {state or 'Unknown'}
 
-DEFENDANT INFORMATION (if known):
-- Name/Description: {defendant_name or 'Unknown officer'}
-- Title/Rank: {title or 'Unknown'}
+PLAINTIFF'S STORY:
+{story_text or 'No story provided - use form context below'}
+
+ADDITIONAL CONTEXT (from form):
+- Name/Description: {defendant_name or 'Not provided'}
+- Title/Rank: {title or 'Not provided'}
 - Role in incident: {description or 'Not provided'}
 
-INSTRUCTIONS:
-For a Section 1983 case, you typically need BOTH:
-1. INDIVIDUAL OFFICERS - Named as defendants in their individual and official capacity
-2. GOVERNMENT AGENCY - The employing agency/municipality (for Monell liability claims)
+ALREADY ADDED DEFENDANTS (DO NOT SUGGEST THESE - they are already saved):
+{existing_list}
 
-For each defendant, provide:
-- The official name
-- The defendant type (individual or agency)
-- For individuals: their employing agency name
-- The official headquarters address for service of process
+INSTRUCTIONS:
+Read the story carefully and identify ALL potential defendants mentioned:
+1. INDIVIDUAL OFFICERS/EMPLOYEES - Any government employee who violated rights (police officers, security guards, government clerks, etc.)
+2. GOVERNMENT AGENCIES - Their employing agencies/municipalities (for Monell liability claims)
+
+For EACH person mentioned in the story who may have violated rights:
+- Extract their name exactly as mentioned (e.g., "Officer Stevens", "Security Guard Bob")
+- Determine their employing agency based on context
+- Provide the official agency headquarters address
+
+CRITICAL RULES:
+- Do NOT suggest any defendant already in the "ALREADY ADDED DEFENDANTS" list
+- Security guards at government buildings = employed by the city (e.g., "City of Oklahoma City")
+- Police officers = employed by the police department (e.g., "Oklahoma City Police Department")
+- If someone works at "City Hall" their employer is "City of [City Name]"
+- Include BOTH the individual AND their employing agency as separate defendants
 
 Return a JSON object with this format:
 {{
     "suggestions": [
         {{
             "defendant_type": "agency",
-            "name": "Official Agency Name (e.g., Miami Police Department)",
+            "name": "Official Agency Name",
             "agency_name": "",
             "title_rank": "",
-            "address": "Full headquarters address including city, state, and ZIP code",
+            "address": "Full headquarters address",
             "confidence": "high|medium|low",
-            "reason": "Brief explanation"
+            "reason": "Why this defendant should be named"
         }},
         {{
             "defendant_type": "individual",
-            "name": "Officer Name or 'Unknown Officer' if not provided",
-            "agency_name": "Their employing agency name",
-            "title_rank": "Their title/rank if known",
-            "address": "Agency headquarters address (same as agency)",
+            "name": "Person's name from story",
+            "agency_name": "Their employing agency",
+            "title_rank": "Their title (Officer, Security Guard, etc.)",
+            "address": "Agency headquarters address",
             "confidence": "high|medium|low",
-            "reason": "Brief explanation"
+            "reason": "Their role in the violation"
         }}
     ],
-    "notes": "Reminder to verify information before filing. For unknown officers, plaintiff can amend complaint once identity is discovered through discovery."
-}}
-
-IMPORTANT:
-- Always suggest the government agency as a defendant (for Monell claims)
-- If officer name is unknown, use "Unknown Officer" or "John Doe" as placeholder
-- Use official agency names as they appear in legal documents
-- Provide the agency headquarters address for service
-- Verify addresses should be verified before filing"""
+    "notes": "Any important notes"
+}}"""
 
         try:
             response = self.client.chat.completions.create(
@@ -451,7 +465,7 @@ IMPORTANT:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a legal research assistant helping identify defendants for Section 1983 civil rights complaints in federal court. You must suggest BOTH the government agency AND individual officers as defendants. Provide official names and addresses for service of process."
+                        "content": "You are a legal research assistant helping identify ALL defendants for Section 1983 civil rights complaints. Read the plaintiff's story carefully and extract every government employee mentioned who may have violated their rights. Include both individuals AND their employing agencies. Do not suggest duplicates of already-added defendants."
                     },
                     {
                         "role": "user",
@@ -459,7 +473,7 @@ IMPORTANT:
                     }
                 ],
                 temperature=0.2,
-                max_tokens=2000,
+                max_tokens=3000,
                 response_format={"type": "json_object"}
             )
 
