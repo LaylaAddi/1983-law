@@ -371,13 +371,13 @@ Be specific to THIS case. Reference the actual violations, damages, and evidence
 
     def suggest_agency(self, context: dict) -> dict:
         """
-        Suggest the correct law enforcement agency name and address based on location and context.
+        Suggest defendants (both individual officers and agencies) based on location and context.
 
         Args:
             context: Dict containing city, state, defendant_name, title, description
 
         Returns:
-            dict with 'success', 'suggestions' (list of agency options with confidence and address)
+            dict with 'success', 'suggestions' (list of defendant suggestions - both individuals and agencies)
         """
         city = context.get('city', '')
         state = context.get('state', '')
@@ -388,45 +388,62 @@ Be specific to THIS case. Reference the actual violations, damages, and evidence
         if not city and not state:
             return {
                 'success': False,
-                'error': 'City or state is required to suggest an agency',
+                'error': 'City or state is required to suggest defendants',
             }
 
-        prompt = f"""Based on the following information about a law enforcement encounter, suggest the most likely government agency or agencies involved, INCLUDING their official mailing address for service of process.
+        prompt = f"""Based on the following information about a law enforcement encounter, suggest the defendants that should be named in a Section 1983 civil rights complaint.
 
 LOCATION:
 - City: {city or 'Unknown'}
 - State: {state or 'Unknown'}
 
-DEFENDANT INFORMATION:
+DEFENDANT INFORMATION (if known):
 - Name/Description: {defendant_name or 'Unknown officer'}
 - Title/Rank: {title or 'Unknown'}
 - Role in incident: {description or 'Not provided'}
 
 INSTRUCTIONS:
-1. Research and provide the OFFICIAL, CORRECT name of the law enforcement agency
-2. For city police, use the official department name (e.g., "Miami Police Department", "City of Miami Police Department")
-3. For county sheriff, use official name (e.g., "Miami-Dade County Sheriff's Office", "Orange County Sheriff's Department")
-4. For state police/highway patrol, use the correct state agency name
-5. IMPORTANT: Include the agency's OFFICIAL HEADQUARTERS ADDRESS - this is critical for legal service of process
-6. The address should be the main headquarters or administrative office
-7. Consider if multiple agencies might be involved based on the context
+For a Section 1983 case, you typically need BOTH:
+1. INDIVIDUAL OFFICERS - Named as defendants in their individual and official capacity
+2. GOVERNMENT AGENCY - The employing agency/municipality (for Monell liability claims)
+
+For each defendant, provide:
+- The official name
+- The defendant type (individual or agency)
+- For individuals: their employing agency name
+- The official headquarters address for service of process
 
 Return a JSON object with this format:
 {{
     "suggestions": [
         {{
-            "agency_name": "Official Agency Name",
-            "agency_type": "municipal_police|county_sheriff|state_police|federal|other",
-            "address": "Full street address including city, state, and ZIP code",
+            "defendant_type": "agency",
+            "name": "Official Agency Name (e.g., Miami Police Department)",
+            "agency_name": "",
+            "title_rank": "",
+            "address": "Full headquarters address including city, state, and ZIP code",
             "confidence": "high|medium|low",
-            "reason": "Brief explanation of why this agency is suggested"
+            "reason": "Brief explanation"
+        }},
+        {{
+            "defendant_type": "individual",
+            "name": "Officer Name or 'Unknown Officer' if not provided",
+            "agency_name": "Their employing agency name",
+            "title_rank": "Their title/rank if known",
+            "address": "Agency headquarters address (same as agency)",
+            "confidence": "high|medium|low",
+            "reason": "Brief explanation"
         }}
     ],
-    "notes": "Any additional context or warnings. ALWAYS include a note reminding the user to verify the address before filing legal documents."
+    "notes": "Reminder to verify information before filing. For unknown officers, plaintiff can amend complaint once identity is discovered through discovery."
 }}
 
-Provide 1-3 suggestions, with the most likely first. Only include suggestions you're reasonably confident about.
-For addresses, provide your best knowledge but note that addresses should be verified before legal filing."""
+IMPORTANT:
+- Always suggest the government agency as a defendant (for Monell claims)
+- If officer name is unknown, use "Unknown Officer" or "John Doe" as placeholder
+- Use official agency names as they appear in legal documents
+- Provide the agency headquarters address for service
+- Verify addresses should be verified before filing"""
 
         try:
             response = self.client.chat.completions.create(
@@ -434,7 +451,7 @@ For addresses, provide your best knowledge but note that addresses should be ver
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a legal research assistant helping identify the correct government agency names and addresses for Section 1983 civil rights complaints. Accuracy is critical - provide official agency names and headquarters addresses as they would be used for service of process in federal court. Use your knowledge of U.S. law enforcement agencies and their locations."
+                        "content": "You are a legal research assistant helping identify defendants for Section 1983 civil rights complaints in federal court. You must suggest BOTH the government agency AND individual officers as defendants. Provide official names and addresses for service of process."
                     },
                     {
                         "role": "user",
@@ -442,7 +459,7 @@ For addresses, provide your best knowledge but note that addresses should be ver
                     }
                 ],
                 temperature=0.2,
-                max_tokens=1500,
+                max_tokens=2000,
                 response_format={"type": "json_object"}
             )
 
@@ -452,7 +469,7 @@ For addresses, provide your best knowledge but note that addresses should be ver
             # Add verification warning if not already in notes
             notes = result.get('notes', '')
             if 'verify' not in notes.lower():
-                notes = (notes + ' ' if notes else '') + 'Please verify the address before filing legal documents. Agency addresses may change.'
+                notes = (notes + ' ' if notes else '') + 'Please verify all information before filing legal documents.'
 
             return {
                 'success': True,

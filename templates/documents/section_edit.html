@@ -474,10 +474,10 @@
                                 <i class="bi bi-plus-lg me-1"></i>Save Defendant
                             </button>
                             <button type="button" class="btn btn-info text-white" id="suggestAgencyBtn" onclick="suggestAgency()">
-                                <i class="bi bi-search me-1"></i>Suggest Agency & Address
+                                <i class="bi bi-robot me-1"></i>AI Suggest Defendants
                             </button>
                         </div>
-                        <small class="text-muted mt-2 d-block">Fill in the form above, then click "Save Defendant" to add to your case.</small>
+                        <small class="text-muted mt-2 d-block">Fill in the form manually, or click "AI Suggest Defendants" to get suggestions for both the agency and individual officers.</small>
                         <!-- Agency suggestions container -->
                         <div id="agencySuggestions" class="mt-3" style="display: none;">
                             <div class="card border-info">
@@ -974,27 +974,34 @@ function suggestAgency() {
         btn.innerHTML = '<i class="bi bi-search me-1"></i>Suggest Agency';
 
         if (data.success && data.suggestions && data.suggestions.length > 0) {
-            let html = '<p class="small text-muted mb-3">Click to use a suggestion (includes agency name and address):</p>';
+            let html = '<p class="small text-muted mb-3">Click "Add" to add each defendant to your case:</p>';
 
             data.suggestions.forEach((suggestion, index) => {
                 const confidenceColor = suggestion.confidence === 'high' ? 'success' :
                                        suggestion.confidence === 'medium' ? 'warning' : 'secondary';
-                const escapedName = suggestion.agency_name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                const escapedAddress = (suggestion.address || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const isAgency = suggestion.defendant_type === 'agency';
+                const typeIcon = isAgency ? 'bi-building' : 'bi-person';
+                const typeLabel = isAgency ? 'Government Agency' : 'Individual Officer';
+                const typeBadgeColor = isAgency ? 'primary' : 'info';
+
+                // Escape values for onclick
+                const suggestionJson = JSON.stringify(suggestion).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
                 html += `
-                    <div class="mb-2 p-2 border rounded suggestion-item"
-                         style="cursor: pointer;"
-                         onclick="acceptAgencySuggestion('${escapedName}', '${escapedAddress}')">
+                    <div class="mb-2 p-3 border rounded suggestion-item ${isAgency ? 'border-primary' : 'border-info'}">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
-                                <strong>${suggestion.agency_name}</strong>
+                                <span class="badge bg-${typeBadgeColor} mb-1"><i class="${typeIcon} me-1"></i>${typeLabel}</span>
+                                <br><strong>${suggestion.name}</strong>
+                                ${!isAgency && suggestion.agency_name ? `<br><small class="text-muted"><i class="bi bi-building me-1"></i>Agency: ${suggestion.agency_name}</small>` : ''}
+                                ${suggestion.title_rank ? `<br><small class="text-muted"><i class="bi bi-person-badge me-1"></i>Title: ${suggestion.title_rank}</small>` : ''}
                                 ${suggestion.address ? `<br><small class="text-primary"><i class="bi bi-geo-alt me-1"></i>${suggestion.address}</small>` : ''}
                                 <br><small class="text-muted">${suggestion.reason}</small>
                             </div>
                             <div class="text-end">
                                 <span class="badge bg-${confidenceColor}">${suggestion.confidence}</span>
-                                <br><button type="button" class="btn btn-sm btn-outline-success mt-1">
-                                    <i class="bi bi-check-lg"></i> Use
+                                <br><button type="button" class="btn btn-sm btn-success mt-1" onclick='acceptDefendantSuggestion(${JSON.stringify(suggestion)})'>
+                                    <i class="bi bi-plus-lg me-1"></i>Add
                                 </button>
                             </div>
                         </div>
@@ -1027,26 +1034,59 @@ function suggestAgency() {
     });
 }
 
-function acceptAgencySuggestion(agencyName, agencyAddress) {
+function acceptDefendantSuggestion(suggestion) {
+    // Fill in all form fields from the suggestion
+    const typeField = document.querySelector('[name="defendant_type"]');
+    const nameField = document.querySelector('[name="name"]');
+    const titleField = document.querySelector('[name="title_rank"]');
     const agencyField = document.querySelector('[name="agency_name"]');
     const addressField = document.querySelector('[name="address"]');
 
+    if (typeField && suggestion.defendant_type) {
+        typeField.value = suggestion.defendant_type;
+    }
+
+    if (nameField && suggestion.name) {
+        nameField.value = suggestion.name;
+    }
+
+    if (titleField) {
+        titleField.value = suggestion.title_rank || '';
+    }
+
     if (agencyField) {
-        agencyField.value = agencyName;
-        // Flash the field to indicate it was filled
-        agencyField.classList.add('border-success');
-        setTimeout(() => agencyField.classList.remove('border-success'), 2000);
+        agencyField.value = suggestion.agency_name || '';
     }
 
-    if (addressField && agencyAddress) {
-        addressField.value = agencyAddress;
-        // Flash the field to indicate it was filled
-        addressField.classList.add('border-success');
-        setTimeout(() => addressField.classList.remove('border-success'), 2000);
+    if (addressField && suggestion.address) {
+        addressField.value = suggestion.address;
     }
 
-    // Hide suggestions
-    document.getElementById('agencySuggestions').style.display = 'none';
+    // Flash all fields green
+    [typeField, nameField, titleField, agencyField, addressField].forEach(field => {
+        if (field) {
+            field.classList.add('border-success');
+            field.style.backgroundColor = '#d4edda';
+            setTimeout(() => {
+                field.classList.remove('border-success');
+                field.style.backgroundColor = '';
+            }, 1500);
+        }
+    });
+
+    // Submit the form to save the defendant
+    const form = document.querySelector('form[action*="add"]');
+    if (form) {
+        form.submit();
+    }
+}
+
+// Legacy function for backwards compatibility
+function acceptAgencySuggestion(agencyName, agencyAddress) {
+    acceptDefendantSuggestion({
+        agency_name: agencyName,
+        address: agencyAddress
+    });
 }
 
 // Add hover effect styles
