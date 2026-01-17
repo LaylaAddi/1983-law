@@ -219,16 +219,17 @@ Relief types analyzed:
 - Attorney's Fees (always recommended per 42 U.S.C. § 1988)
 - Jury Trial (usually recommended)
 
-### Progress Indicator During Analysis (Tech Style)
-When user clicks "Analyze My Story", shows a cool tech-themed progress display:
-- Dark background with glowing green/cyan accents
-- Large percentage counter (0% → 100%)
-- Animated progress bar
-- 8 steps with status: WAITING → ANALYZING... → COMPLETE
-- Pulsing/glowing effects on active steps
-- Scanline animation across top
-- Grid overlay for tech aesthetic
-- All steps turn green with checkmarks when complete
+### Progress Indicator During Analysis (Terminal Style)
+When user clicks "Analyze My Story", shows a modern terminal/CLI-themed progress display:
+- macOS-style terminal window with close/minimize/maximize buttons
+- Dark background (#1e1e1e) with monospace font
+- Dynamic bash-like commands that incorporate the user's story content
+- Commands extract and display real info from the story (dates, names, locations, actions)
+- Example commands: `grep -i "officer" story.txt`, `lookup-agency --city="Tampa"`
+- Progress bar at bottom with percentage
+- Spinner animation while waiting for AI response
+- Green checkmark and "Analysis complete" when done
+- Commands scroll like a real terminal output
 
 ### Story Persistence on Revisit
 When users revisit the Tell Your Story page after completing analysis:
