@@ -183,10 +183,10 @@
                     <a href="{% url 'documents:document_preview' document.id %}?generate=true" class="btn btn-success">
                         <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
                     </a>
-                {% elif document.payment_status == 'paid' %}
-                    {% if document.get_completion_percentage == 100 %}
+                {% elif document.payment_status == 'paid' or user.has_unlimited_access %}
+                    {% if document.get_completion_percentage == 100 or user.has_unlimited_access %}
                     <a href="{% url 'documents:finalize' document.id %}" class="btn btn-success">
-                        <i class="bi bi-file-earmark-pdf me-1"></i>Finalize & Generate PDF
+                        <i class="bi bi-file-earmark-pdf me-1"></i>{% if user.has_unlimited_access and document.get_completion_percentage < 100 %}Preview PDF (Admin){% else %}Finalize & Generate PDF{% endif %}
                     </a>
                     {% else %}
                     <button class="btn btn-secondary" disabled title="Complete all sections first">

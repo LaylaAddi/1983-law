@@ -237,6 +237,19 @@
                 <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
                     <i class="bi bi-printer me-1"></i>Print
                 </button>
+                {% if document.payment_status == 'finalized' %}
+                    <a href="{% url 'documents:document_preview' document.id %}?generate=true" class="btn btn-success btn-sm">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+                    </a>
+                {% elif document.payment_status == 'paid' or request.user.has_unlimited_access %}
+                    <a href="{% url 'documents:finalize' document.id %}" class="btn btn-success btn-sm">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Generate PDF
+                    </a>
+                {% else %}
+                    <a href="{% url 'documents:checkout' document.id %}" class="btn btn-success btn-sm">
+                        <i class="bi bi-credit-card me-1"></i>Pay & Generate PDF
+                    </a>
+                {% endif %}
             </div>
         </div>
     </div>
