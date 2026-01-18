@@ -199,9 +199,49 @@ u.save()
 - `static/js/rights-analyze.js` - Rights analysis frontend
 - `static/css/tell-story.css` - Tell Your Story styles
 
+### Database-Editable AI Prompts (NEW)
+AI prompts can now be edited via admin without code changes.
+
+**Admin URL:** `/admin/documents/aiprompt/`
+
+**Prompt Types:**
+| Type | Title | Purpose |
+|------|-------|---------|
+| `find_law_enforcement` | Find Law Enforcement Agency | Identifies correct police/sheriff |
+| `parse_story` | Parse User Story | Analyzes "Tell Your Story" input |
+| `analyze_rights` | Analyze Constitutional Rights | Identifies rights violations |
+| `suggest_relief` | Suggest Legal Relief | Recommends damages/injunctions |
+
+**Each Prompt Has:**
+- **Title** - Human-readable name
+- **Description** - What it does and when called
+- **System Message** - AI persona/behavior
+- **Prompt Template** - Main prompt with `{variable}` placeholders
+- **Available Variables** - List of placeholders (e.g., city, state, story_text)
+- **Model Name** - OpenAI model (default: gpt-4o-mini)
+- **Temperature** - 0.0 = consistent, 1.0 = creative
+- **Max Tokens** - Response length limit
+- **Is Active** - Disable to fall back to hardcoded
+- **Version** - Auto-increments on edit
+- **Last Edited By** - Audit trail
+
+**Setup After Deploy:**
+```bash
+python manage.py migrate
+python manage.py seed_ai_prompts
+```
+
+**Files:**
+- `documents/models.py` - AIPrompt model
+- `documents/admin.py` - Admin interface with monospace text areas
+- `documents/management/commands/seed_ai_prompts.py` - Initial prompt seeding
+- `documents/migrations/0018_aiprompt.py` - Migration
+
 ### OpenAI Service Methods
 1. `analyze_rights_violations(document_data)` - Suggests rights violated
 2. `parse_story(story_text)` - Extracts structured data from user's story
+3. `find_law_enforcement_agency(city, state)` - Identifies correct police/sheriff jurisdiction
+4. `_verify_inferred_agencies(parsed_result)` - Post-processes to correct small town agencies
 
 ### Story Parsing Extracts
 - incident_overview: date, time, location, city, state, location_type, was_recording, recording_device
@@ -291,6 +331,33 @@ When a user mentions a location (city/state) but not a specific agency, the AI w
 The `agency_inferred` flag indicates when the agency was AI-suggested vs explicitly stated.
 UI shows a yellow warning: "AI suggested - please verify this is correct"
 
+### Smart Law Enforcement Agency Detection (NEW)
+The AI now intelligently detects when a location doesn't have its own police department and suggests the correct jurisdiction.
+
+**Problem solved:**
+- Small towns like "Zama, Mississippi" don't have local police
+- AI was incorrectly suggesting "Zama Police Department"
+- Now correctly identifies County Sheriff jurisdiction
+
+**How it works:**
+1. When parsing a story OR suggesting agencies, AI first checks if the location has local police
+2. Uses `find_law_enforcement_agency()` method to determine:
+   - Is this a major city (population >10,000) with its own police?
+   - Or a small town/unincorporated area served by County Sheriff?
+   - What county is this location in?
+3. For small towns: Suggests County Sheriff instead of inventing a police department
+4. Shows prominent **VERIFICATION REQUIRED** warning
+
+**Example (Zama, Mississippi):**
+- Location type: Unincorporated community
+- County: Attala
+- AI suggests: "Attala County Sheriff's Office" (NOT "Zama Police Department")
+- Warning displayed: "This location does not have its own police department"
+
+**Files involved:**
+- `documents/services/openai_service.py` - `find_law_enforcement_agency()`, `_verify_inferred_agencies()`
+- `templates/documents/section_edit.html` - Verification warning display
+
 ### Agency Suggestion Feature (Defendant Form)
 In the Government Defendants section, users can click "Suggest Agency" to get AI-powered agency name AND address suggestions.
 
@@ -298,8 +365,9 @@ In the Government Defendants section, users can click "Suggest Agency" to get AI
 1. User enters city/state in Incident Overview (or inferred from story)
 2. User adds a defendant in Government Defendants section
 3. User clicks "Suggest Agency" button
-4. AI suggests official agency names AND headquarters addresses based on location context
-5. User clicks "Use" to accept a suggestion (auto-fills both agency AND address fields)
+4. **AI first checks if location has local police** (see Smart Law Enforcement above)
+5. AI suggests official agency names AND headquarters addresses based on verified jurisdiction
+6. User clicks "Use" to accept a suggestion (auto-fills both agency AND address fields)
 
 **Address Lookup:**
 - AI provides the agency's official headquarters address for service of process
@@ -307,6 +375,7 @@ In the Government Defendants section, users can click "Suggest Agency" to get AI
 - Both agency name and address are auto-filled when user clicks "Use"
 - Warning always displayed: "Please verify the address before filing legal documents"
 - Addresses are from AI's knowledge base and should be verified before filing
+- **Works for both agency defendants (uses "name" field) and individual officers (uses "agency_name" field)**
 
 **API Endpoint:** `/documents/{id}/suggest-agency/`
 - Method: POST
@@ -907,6 +976,24 @@ Users must check two required checkboxes during registration:
 2. "I agree to the Privacy Policy" (links to `/legal/privacy/`)
 
 Both are required to create an account.
+
+### Terms Agreement Tracking (NEW)
+Admin can see which users agreed to terms and when.
+
+**User Model Fields:**
+| Field | Purpose |
+|-------|---------|
+| `agreed_to_terms` | Boolean - did user agree to Terms of Service |
+| `agreed_to_privacy` | Boolean - did user agree to Privacy Policy |
+| `terms_agreed_at` | Timestamp when user agreed |
+| `terms_agreed_ip` | IP address when terms were agreed (for audit) |
+
+**Admin View:**
+- User list shows "Agreed to terms" and "Terms agreed at" columns
+- Filter users by "Agreed to terms" and "Agreed to privacy"
+- User detail page has "Terms Agreement" section (read-only timestamp/IP)
+
+**Migration:** `accounts/migrations/0007_user_terms_agreement.py`
 
 ### Footer Links
 All pages include footer links to:
