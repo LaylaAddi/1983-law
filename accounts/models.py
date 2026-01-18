@@ -270,9 +270,124 @@ class SiteSettings(models.Model):
         return f"Site Settings ({self.company_name})"
 
     def save(self, *args, **kwargs):
-        """Ensure only one instance exists."""
+        """Ensure only one instance exists and create default legal documents."""
+        is_new = not SiteSettings.objects.filter(pk=1).exists()
         self.pk = 1
         super().save(*args, **kwargs)
+
+        # Auto-create legal documents if this is the first save
+        if is_new:
+            self._create_default_legal_documents()
+
+    def _create_default_legal_documents(self):
+        """Create default legal documents with placeholder content."""
+        from datetime import date
+
+        defaults = [
+            {
+                'document_type': 'terms',
+                'title': 'Terms of Service',
+                'content': f'''<h2>Terms of Service for {self.company_name}</h2>
+<p><strong>Effective Date:</strong> {date.today().strftime("%B %d, %Y")}</p>
+
+<h3>1. Acceptance of Terms</h3>
+<p>By accessing and using {self.website_url}, you agree to be bound by these Terms of Service.</p>
+
+<h3>2. Description of Service</h3>
+<p>{self.company_name} provides tools to help users create legal documents. We are not a law firm and do not provide legal advice.</p>
+
+<h3>3. User Responsibilities</h3>
+<p>You are responsible for the accuracy of information you provide and for reviewing all generated documents before use.</p>
+
+<h3>4. Disclaimer</h3>
+<p>Documents generated through this service are templates and starting points. We strongly recommend having an attorney review any legal document before filing.</p>
+
+<h3>5. Governing Law</h3>
+<p>These terms are governed by the laws of the State of {self.governing_law_state}.</p>
+
+<h3>6. Contact</h3>
+<p>Questions? Contact us at {self.contact_email}</p>
+''',
+            },
+            {
+                'document_type': 'privacy',
+                'title': 'Privacy Policy',
+                'content': f'''<h2>Privacy Policy for {self.company_name}</h2>
+<p><strong>Effective Date:</strong> {date.today().strftime("%B %d, %Y")}</p>
+
+<h3>1. Information We Collect</h3>
+<p>We collect information you provide directly, including name, email, and document content.</p>
+
+<h3>2. How We Use Your Information</h3>
+<p>We use your information to provide our services, process payments, and improve our platform.</p>
+
+<h3>3. Third-Party Services</h3>
+<p>We use {self.payment_processor} for payment processing{" and OpenAI for AI-assisted features" if self.uses_openai else ""}.</p>
+
+<h3>4. Data Security</h3>
+<p>We implement industry-standard security measures to protect your information.</p>
+
+<h3>5. Your Rights</h3>
+<p>You may request access to, correction of, or deletion of your personal data by contacting {self.contact_email}.</p>
+
+<h3>6. Contact</h3>
+<p>Privacy questions? Contact us at {self.contact_email}</p>
+''',
+            },
+            {
+                'document_type': 'disclaimer',
+                'title': 'Legal Disclaimer',
+                'content': f'''<h2>Legal Disclaimer</h2>
+
+<h3>Not Legal Advice</h3>
+<p><strong>{self.company_name} is not a law firm and does not provide legal advice.</strong></p>
+
+<p>The documents and information provided through this service are for informational purposes only and should not be construed as legal advice. Use of this service does not create an attorney-client relationship.</p>
+
+<h3>No Guarantee of Results</h3>
+<p>We cannot guarantee any particular outcome from using documents created through our service. Legal outcomes depend on many factors beyond document preparation.</p>
+
+<h3>Recommendation</h3>
+<p>We strongly recommend consulting with a licensed attorney in your jurisdiction before filing any legal documents.</p>
+
+<h3>Contact</h3>
+<p>Questions? Contact us at {self.contact_email}</p>
+''',
+            },
+            {
+                'document_type': 'cookies',
+                'title': 'Cookie Policy',
+                'content': f'''<h2>Cookie Policy for {self.company_name}</h2>
+
+<h3>What Are Cookies</h3>
+<p>Cookies are small text files stored on your device when you visit our website.</p>
+
+<h3>How We Use Cookies</h3>
+<p>We use cookies for:</p>
+<ul>
+<li><strong>Essential cookies:</strong> Required for the website to function (login sessions, security)</li>
+<li><strong>Analytics cookies:</strong> Help us understand how visitors use our site{" (Google Analytics)" if self.uses_google_analytics else ""}</li>
+</ul>
+
+<h3>Managing Cookies</h3>
+<p>You can control cookies through your browser settings. Note that disabling cookies may affect website functionality.</p>
+
+<h3>Contact</h3>
+<p>Questions about cookies? Contact us at {self.contact_email}</p>
+''',
+            },
+        ]
+
+        for doc_data in defaults:
+            LegalDocument.objects.get_or_create(
+                document_type=doc_data['document_type'],
+                defaults={
+                    'title': doc_data['title'],
+                    'content': doc_data['content'],
+                    'effective_date': date.today(),
+                    'is_active': True,
+                }
+            )
 
     @classmethod
     def get_settings(cls):
