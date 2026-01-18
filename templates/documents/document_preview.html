@@ -41,9 +41,32 @@
 
     .legal-document .caption {
         text-align: center;
-        white-space: pre-line;
         margin-bottom: 2rem;
         line-height: 1.8;
+    }
+
+    .legal-document .caption-court {
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-bottom: 1.5rem;
+    }
+
+    .legal-document .caption-parties {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .legal-document .caption-box {
+        border: 1px solid #000;
+        padding: 1rem 2rem;
+        min-width: 300px;
+    }
+
+    .legal-document .caption-vs {
+        text-align: center;
+        margin: 0.5rem 0;
+        font-weight: bold;
     }
 
     .legal-document .section-header {
@@ -51,6 +74,11 @@
         font-weight: bold;
         text-decoration: underline;
         margin: 2rem 0 1rem 0;
+    }
+
+    .legal-document .subsection-header {
+        font-weight: bold;
+        margin: 1.5rem 0 0.5rem 0;
     }
 
     .legal-document .cause-header {
@@ -69,16 +97,38 @@
         text-indent: 0;
     }
 
+    .legal-document .numbered-para {
+        margin-left: 0.5in;
+        text-indent: -0.5in;
+        margin-bottom: 0.5rem;
+    }
+
     .legal-document .signature-block {
         margin-top: 3rem;
-        white-space: pre-line;
         line-height: 1.5;
+    }
+
+    .legal-document .signature-line {
+        margin-top: 2rem;
+        border-top: 1px solid #000;
+        width: 250px;
+        padding-top: 0.25rem;
     }
 
     .legal-document .prayer-item {
         margin-left: 0.5in;
         text-indent: -0.25in;
         margin-bottom: 0.5rem;
+    }
+
+    /* Amendment detail box */
+    .amendment-details {
+        margin-left: 0.5in;
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-left: 3px solid #6c757d;
+        margin-bottom: 1rem;
+        font-style: italic;
     }
 
     /* Preview controls */
@@ -101,27 +151,9 @@
         margin-bottom: 2rem;
     }
 
-    /* Tab styling */
-    .nav-tabs .nav-link {
-        color: #6c757d;
-    }
-    .nav-tabs .nav-link.active {
-        font-weight: 600;
-    }
-
-    /* Raw data view styling */
-    .raw-data-section {
-        border-left: 4px solid #dee2e6;
-        padding-left: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    .raw-data-section.completed {
-        border-left-color: #198754;
-    }
-
     /* Print styles */
     @media print {
-        .no-print, .preview-controls, .nav-tabs {
+        .no-print, .preview-controls {
             display: none !important;
         }
         .legal-document {
@@ -131,6 +163,10 @@
         }
         body {
             background: white;
+        }
+        .amendment-details {
+            background: #fff;
+            border-left-color: #000;
         }
     }
 </style>
@@ -155,18 +191,8 @@
                 <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-primary">
                     <i class="bi bi-pencil-square me-1"></i>Edit Sections
                 </a>
-                {% if used_cache and generated_at %}
-                <span class="text-muted small">
-                    <i class="bi bi-clock me-1"></i>Generated {{ generated_at|timesince }} ago
-                </span>
-                {% endif %}
             </div>
             <div class="d-flex gap-2">
-                {% if generated_document %}
-                <a href="?regenerate=true" class="btn btn-warning" title="Clear cache and regenerate with latest data">
-                    <i class="bi bi-arrow-repeat me-1"></i>Regenerate
-                </a>
-                {% endif %}
                 <button class="btn btn-outline-secondary" onclick="window.print()">
                     <i class="bi bi-printer me-1"></i>Print
                 </button>
@@ -181,82 +207,13 @@
 </div>
 
 <div class="container-fluid py-4">
-    {% if generation_error %}
-    <div class="container mb-4">
-        <div class="alert alert-danger">
-            <h5><i class="bi bi-exclamation-triangle me-2"></i>Document Generation Error</h5>
-            <p class="mb-0">{{ generation_error }}</p>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if generated_document %}
-    <!-- GENERATED LEGAL DOCUMENT VIEW -->
-    <div class="legal-document">
-        <!-- Caption -->
-        <div class="caption">
-{{ generated_document.caption }}
-        </div>
-
-        <!-- Introduction -->
-        <p class="no-indent">{{ generated_document.introduction }}</p>
-
-        <!-- Jurisdiction and Venue -->
-        <div class="section">
-{{ generated_document.jurisdiction|linebreaks }}
-        </div>
-
-        <!-- Parties -->
-        <div class="section">
-{{ generated_document.parties|linebreaks }}
-        </div>
-
-        <!-- Statement of Facts -->
-        <div class="section">
-{{ generated_document.facts|linebreaks }}
-        </div>
-
-        <!-- Causes of Action -->
-        <div class="section-header">CAUSES OF ACTION</div>
-        {% for cause in generated_document.causes_of_action %}
-        <div class="section">
-{{ cause.content|linebreaks }}
-        </div>
-        {% empty %}
-        <div class="alert alert-warning my-3 no-print">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            <strong>No causes of action generated.</strong><br>
-            <span class="small">To fix this: Click <strong>Edit Sections</strong> above, go to <strong>Rights Violated</strong>, select which constitutional rights were violated, then return here and click <strong>Regenerate</strong>.</span>
-        </div>
-        {% endfor %}
-
-        <!-- Prayer for Relief -->
-        <div class="section">
-{{ generated_document.prayer|linebreaks }}
-        </div>
-
-        <!-- Jury Demand -->
-        {% if generated_document.jury_demand %}
-        <div class="section">
-{{ generated_document.jury_demand|linebreaks }}
-        </div>
-        {% endif %}
-
-        <!-- Signature Block -->
-        <div class="signature-block">
-{{ generated_document.signature }}
-        </div>
-    </div>
-
-    {% else %}
-    <!-- RAW DATA VIEW (when document not generated or missing data) -->
 
     {% if not document_data.has_minimum_data %}
     <!-- Missing Data Warning -->
     <div class="container">
         <div class="missing-data-card">
             <h5><i class="bi bi-exclamation-triangle me-2"></i>More Information Needed</h5>
-            <p class="mb-2">To generate a legal document, please complete the following:</p>
+            <p class="mb-2">To complete your legal document, please provide:</p>
             <ul class="mb-3">
                 {% if not document_data.plaintiff.first_name or not document_data.plaintiff.last_name %}
                 <li>Complete your <a href="{% url 'documents:section_edit' document.id 'plaintiff_info' %}">Plaintiff Information</a> (need first and last name)</li>
@@ -268,152 +225,384 @@
                 <li>Select which <a href="{% url 'documents:section_edit' document.id 'rights_violated' %}">Rights Were Violated</a> (need at least one amendment)</li>
                 {% endif %}
             </ul>
-            <details class="mt-3">
-                <summary class="text-muted" style="cursor: pointer;">Debug: Current Data Status</summary>
-                <pre class="mt-2 p-2 bg-light" style="font-size: 0.8rem;">
-Plaintiff: {{ document_data.plaintiff.first_name }} {{ document_data.plaintiff.last_name }}
-Has Narrative: {{ document_data.narrative.detailed_narrative|yesno:"Yes,No" }}
-First Amendment: {{ document_data.rights_violated.first_amendment|yesno:"Yes,No" }}
-Fourth Amendment: {{ document_data.rights_violated.fourth_amendment|yesno:"Yes,No" }}
-Fifth Amendment: {{ document_data.rights_violated.fifth_amendment|yesno:"Yes,No" }}
-Fourteenth Amendment: {{ document_data.rights_violated.fourteenth_amendment|yesno:"Yes,No" }}
-Has Minimum Data: {{ document_data.has_minimum_data|yesno:"Yes,No" }}
-                </pre>
-            </details>
             <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-primary mt-3">
                 <i class="bi bi-pencil me-1"></i>Continue Editing
             </a>
         </div>
     </div>
-    {% endif %}
+    {% else %}
 
-    <!-- Raw Data Display -->
-    <div class="container">
-        <h2 class="mb-4">{{ document.title }}</h2>
+    <!-- LEGAL DOCUMENT -->
+    <div class="legal-document">
 
-        <!-- Plaintiff Information -->
-        {% with section_data=sections_data.plaintiff_info %}
-        {% if section_data %}
-        <div class="raw-data-section {% if section_data.section.status == 'completed' %}completed{% endif %}">
-            <h4><i class="bi bi-person me-2"></i>Plaintiff Information</h4>
-            {% if section_data.data %}
-            <p><strong>Name:</strong> {{ section_data.data.first_name }} {{ section_data.data.middle_name }} {{ section_data.data.last_name }}</p>
-            <p><strong>Address:</strong> {{ section_data.data.street_address }}, {{ section_data.data.city }}, {{ section_data.data.state }} {{ section_data.data.zip_code }}</p>
-            <p><strong>Phone:</strong> {{ section_data.data.phone }}</p>
-            <p><strong>Email:</strong> {{ section_data.data.email }}</p>
-            <p><strong>Representation:</strong> {% if section_data.data.is_pro_se %}Pro Se{% else %}Represented by {{ section_data.data.attorney_name }}{% endif %}</p>
-            {% else %}
-            <p class="text-muted"><em>No information provided yet.</em></p>
-            {% endif %}
-        </div>
-        {% endif %}
-        {% endwith %}
+        <!-- CAPTION -->
+        <div class="caption">
+            <div class="caption-court">
+                {% if document_data.court %}
+                {{ document_data.court }}
+                {% else %}
+                UNITED STATES DISTRICT COURT<br>
+                [DISTRICT TO BE DETERMINED]
+                {% endif %}
+            </div>
 
-        <!-- Incident Overview -->
-        {% with section_data=sections_data.incident_overview %}
-        {% if section_data %}
-        <div class="raw-data-section {% if section_data.section.status == 'completed' %}completed{% endif %}">
-            <h4><i class="bi bi-calendar-event me-2"></i>Incident Overview</h4>
-            {% if section_data.data %}
-            <p><strong>Date:</strong> {{ section_data.data.incident_date|date:"F j, Y"|default:"Not provided" }}</p>
-            <p><strong>Time:</strong> {{ section_data.data.incident_time|time:"g:i A"|default:"Not provided" }}</p>
-            <p><strong>Location:</strong> {{ section_data.data.incident_location }}, {{ section_data.data.city }}, {{ section_data.data.state }}</p>
-            <p><strong>Federal Court:</strong> {{ section_data.data.federal_district_court|default:"Not determined" }}</p>
-            {% else %}
-            <p class="text-muted"><em>No information provided yet.</em></p>
-            {% endif %}
-        </div>
-        {% endif %}
-        {% endwith %}
-
-        <!-- Defendants -->
-        {% with section_data=sections_data.defendants %}
-        {% if section_data %}
-        <div class="raw-data-section {% if section_data.section.status == 'completed' %}completed{% endif %}">
-            <h4><i class="bi bi-shield-exclamation me-2"></i>Defendants</h4>
-            {% if section_data.data %}
-            {% for defendant in section_data.data %}
-            <div class="card mb-2 {% if defendant.defendant_type == 'individual' and not defendant.agency_name %}border-danger{% endif %}">
-                <div class="card-body py-2">
-                    <strong>{{ defendant.name }}</strong>
-                    {% if defendant.title_rank %} - {{ defendant.title_rank }}{% endif %}
-                    {% if defendant.agency_name %}
-                    <br><small class="text-muted">{{ defendant.agency_name }}</small>
-                    {% elif defendant.defendant_type == 'individual' %}
-                    <br><small class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Missing agency - required for proper service</small>
-                    {% endif %}
+            <div class="caption-box">
+                <div>
+                    {{ document_data.plaintiff.first_name|upper }} {{ document_data.plaintiff.middle_name|upper }} {{ document_data.plaintiff.last_name|upper }},<br>
+                    <span style="margin-left: 2rem;">Plaintiff,</span>
+                </div>
+                <div class="caption-vs">v.</div>
+                <div>
+                    {% for defendant in document_data.defendants %}
+                    {{ defendant.name|upper }}{% if defendant.agency_name %},<br>
+                    <span style="margin-left: 1rem; font-size: 0.9em;">in {{ defendant.title_rank|default:"their" }} capacity</span>{% endif %}{% if not forloop.last %};{% else %},{% endif %}<br>
+                    {% empty %}
+                    [DEFENDANTS TO BE NAMED],
+                    {% endfor %}
+                    <span style="margin-left: 2rem;">Defendant{% if document_data.defendants|length > 1 %}s{% endif %}.</span>
                 </div>
             </div>
-            {% endfor %}
-            {% else %}
-            <p class="text-muted"><em>No defendants added yet.</em></p>
-            {% endif %}
+
+            <div style="margin-top: 1rem; font-weight: bold;">
+                CIVIL ACTION NO. _______________
+            </div>
+
+            <div style="margin-top: 1rem; font-weight: bold; text-transform: uppercase;">
+                Complaint for Violation of Civil Rights<br>
+                Under 42 U.S.C. &sect; 1983
+            </div>
         </div>
-        {% endif %}
+
+        <!-- INTRODUCTION -->
+        <div class="section-header">INTRODUCTION</div>
+        <p class="numbered-para">
+            1. Plaintiff {{ document_data.plaintiff.first_name }} {{ document_data.plaintiff.last_name }}
+            brings this civil rights action pursuant to 42 U.S.C. &sect; 1983 against the above-named
+            Defendant{% if document_data.defendants|length > 1 %}s{% endif %} for violations of
+            Plaintiff's rights secured by the Constitution and laws of the United States.
+        </p>
+
+        <!-- JURISDICTION AND VENUE -->
+        <div class="section-header">JURISDICTION AND VENUE</div>
+        <p class="numbered-para">
+            2. This Court has original jurisdiction over this action pursuant to 28 U.S.C. &sect;&sect; 1331
+            and 1343, as this action arises under the Constitution and laws of the United States,
+            specifically 42 U.S.C. &sect; 1983.
+        </p>
+        <p class="numbered-para">
+            3. Venue is proper in this judicial district pursuant to 28 U.S.C. &sect; 1391(b)
+            because the events giving rise to this action occurred in this district{% if document_data.incident.city %},
+            specifically in or near {{ document_data.incident.city }}, {{ document_data.incident.state }}{% endif %}.
+        </p>
+
+        <!-- PARTIES -->
+        <div class="section-header">PARTIES</div>
+        <p class="numbered-para">
+            4. Plaintiff {{ document_data.plaintiff.first_name }} {{ document_data.plaintiff.middle_name }} {{ document_data.plaintiff.last_name }}
+            is an individual residing at {{ document_data.plaintiff.street_address }},
+            {{ document_data.plaintiff.city }}, {{ document_data.plaintiff.state }} {{ document_data.plaintiff.zip_code }}.
+        </p>
+        {% for defendant in document_data.defendants %}
+        <p class="numbered-para">
+            {{ forloop.counter|add:4 }}. Defendant {{ defendant.name }}
+            {% if defendant.defendant_type == 'individual' %}
+            is an individual who, at all times relevant to this Complaint,
+            {% if defendant.title_rank %}held the position of {{ defendant.title_rank }}{% else %}was employed{% endif %}
+            {% if defendant.agency_name %}by {{ defendant.agency_name }}{% endif %}.
+            {% if defendant.badge_number %}Defendant's badge number is {{ defendant.badge_number }}.{% endif %}
+            Defendant {{ defendant.name }} is sued in both their individual and official capacities.
+            {% else %}
+            is a government entity that is responsible for the actions of its employees and agents.
+            {% endif %}
+        </p>
+        {% endfor %}
+
+        <!-- STATEMENT OF FACTS -->
+        <div class="section-header">STATEMENT OF FACTS</div>
+
+        {% with para_num=document_data.defendants|length|add:5 %}
+        <p class="numbered-para">
+            {{ para_num }}. On or about {{ document_data.incident.incident_date|default:"[DATE]" }}
+            {% if document_data.incident.incident_time %}, at approximately {{ document_data.incident.incident_time }}{% endif %},
+            Plaintiff was located at {{ document_data.incident.incident_location|default:"[LOCATION]" }},
+            {{ document_data.incident.city|default:"[CITY]" }}, {{ document_data.incident.state|default:"[STATE]" }}.
+        </p>
         {% endwith %}
 
-        <!-- Incident Narrative -->
-        {% with section_data=sections_data.incident_narrative %}
-        {% if section_data %}
-        <div class="raw-data-section {% if section_data.section.status == 'completed' %}completed{% endif %}">
-            <h4><i class="bi bi-journal-text me-2"></i>Incident Narrative</h4>
-            {% if section_data.data %}
-            <p>{{ section_data.data.detailed_narrative|default:"No narrative provided"|linebreaks }}</p>
-            {% else %}
-            <p class="text-muted"><em>No information provided yet.</em></p>
+        {% if document_data.narrative.what_were_you_doing %}
+        <p class="numbered-para">
+            {{ document_data.defendants|length|add:6 }}. At the time of the incident, Plaintiff was {{ document_data.narrative.what_were_you_doing }}
+        </p>
+        {% endif %}
+
+        {% if document_data.narrative.detailed_narrative %}
+        <p class="numbered-para">
+            {{ document_data.defendants|length|add:7 }}. {{ document_data.narrative.detailed_narrative }}
+        </p>
+        {% endif %}
+
+        {% if document_data.narrative.initial_contact %}
+        <p class="numbered-para">
+            {{ document_data.defendants|length|add:8 }}. The initial contact occurred as follows: {{ document_data.narrative.initial_contact }}
+        </p>
+        {% endif %}
+
+        {% if document_data.narrative.physical_actions %}
+        <p class="numbered-para">
+            {{ document_data.defendants|length|add:9 }}. The following physical actions were taken: {{ document_data.narrative.physical_actions }}
+        </p>
+        {% endif %}
+
+        {% if document_data.incident.was_recording %}
+        <p class="numbered-para">
+            The incident was recorded{% if document_data.incident.recording_device %} using {{ document_data.incident.recording_device }}{% endif %}.
+        </p>
+        {% endif %}
+
+        <!-- DAMAGES FACTS -->
+        {% if document_data.damages.physical_injury or document_data.damages.emotional_distress or document_data.damages.property_damage %}
+        <div class="subsection-header">Damages Suffered</div>
+
+        {% if document_data.damages.physical_injury %}
+        <p class="numbered-para">
+            As a direct and proximate result of Defendants' actions, Plaintiff suffered physical injuries,
+            specifically: {{ document_data.damages.physical_injury_description|default:"physical injuries requiring medical attention" }}.
+            {% if document_data.damages.medical_expenses %}
+            Plaintiff incurred medical expenses in the amount of ${{ document_data.damages.medical_expenses|floatformat:2 }}.
             {% endif %}
+        </p>
+        {% endif %}
+
+        {% if document_data.damages.emotional_distress %}
+        <p class="numbered-para">
+            Plaintiff suffered severe emotional distress, including {{ document_data.damages.emotional_distress_description|default:"anxiety, fear, humiliation, and mental anguish" }}.
+        </p>
+        {% endif %}
+
+        {% if document_data.damages.property_damage %}
+        <p class="numbered-para">
+            Plaintiff's property was damaged, specifically: {{ document_data.damages.property_damage_description|default:"personal property was damaged or destroyed" }}.
+        </p>
+        {% endif %}
+
+        {% if document_data.damages.lost_wages %}
+        <p class="numbered-para">
+            Plaintiff suffered lost wages{% if document_data.damages.lost_wages_amount %} in the amount of ${{ document_data.damages.lost_wages_amount|floatformat:2 }}{% endif %}.
+        </p>
+        {% endif %}
+        {% endif %}
+
+        <!-- CAUSES OF ACTION -->
+        <div class="section-header">CAUSES OF ACTION</div>
+
+        {% with cause_count=0 %}
+
+        {% if document_data.rights_violated.first_amendment %}
+        <div class="cause-header">FIRST CAUSE OF ACTION<br>Violation of First Amendment Rights<br>(42 U.S.C. &sect; 1983)</div>
+        <p class="numbered-para">
+            Plaintiff incorporates by reference all preceding paragraphs as if fully set forth herein.
+        </p>
+        <p class="numbered-para">
+            The First Amendment to the United States Constitution protects the rights of free speech,
+            free press, peaceful assembly, and petition for redress of grievances.
+        </p>
+        <p class="numbered-para">
+            Defendant{% if document_data.defendants|length > 1 %}s{% endif %}, acting under color of state law, violated Plaintiff's
+            First Amendment rights by:
+        </p>
+        <ul style="margin-left: 1in;">
+            {% if document_data.rights_violated.first_amendment_speech %}<li>Suppressing Plaintiff's right to free speech</li>{% endif %}
+            {% if document_data.rights_violated.first_amendment_press %}<li>Interfering with Plaintiff's right to record or document</li>{% endif %}
+            {% if document_data.rights_violated.first_amendment_assembly %}<li>Restricting Plaintiff's right to peaceful assembly</li>{% endif %}
+            {% if document_data.rights_violated.first_amendment_petition %}<li>Interfering with Plaintiff's right to petition for redress</li>{% endif %}
+        </ul>
+        {% if document_data.rights_violated.first_amendment_details %}
+        <div class="amendment-details">
+            <strong>Details:</strong> {{ document_data.rights_violated.first_amendment_details }}
         </div>
         {% endif %}
+        <p class="numbered-para">
+            As a direct and proximate result of Defendant{% if document_data.defendants|length > 1 %}s'{% else %}'s{% endif %} violations,
+            Plaintiff has suffered damages including but not limited to physical injury, emotional distress,
+            and violation of constitutional rights.
+        </p>
+        {% endif %}
+
+        {% if document_data.rights_violated.fourth_amendment %}
+        <div class="cause-header">{% if document_data.rights_violated.first_amendment %}SECOND{% else %}FIRST{% endif %} CAUSE OF ACTION<br>Violation of Fourth Amendment Rights<br>(42 U.S.C. &sect; 1983)</div>
+        <p class="numbered-para">
+            Plaintiff incorporates by reference all preceding paragraphs as if fully set forth herein.
+        </p>
+        <p class="numbered-para">
+            The Fourth Amendment to the United States Constitution protects against unreasonable
+            searches and seizures and requires that no warrants shall issue but upon probable cause.
+        </p>
+        <p class="numbered-para">
+            Defendant{% if document_data.defendants|length > 1 %}s{% endif %}, acting under color of state law, violated Plaintiff's
+            Fourth Amendment rights by:
+        </p>
+        <ul style="margin-left: 1in;">
+            {% if document_data.rights_violated.fourth_amendment_search %}<li>Conducting an unreasonable search</li>{% endif %}
+            {% if document_data.rights_violated.fourth_amendment_seizure %}<li>Conducting an unreasonable seizure of person or property</li>{% endif %}
+            {% if document_data.rights_violated.fourth_amendment_arrest %}<li>Arresting Plaintiff without probable cause</li>{% endif %}
+            {% if document_data.rights_violated.fourth_amendment_force %}<li>Using excessive force</li>{% endif %}
+        </ul>
+        {% if document_data.rights_violated.fourth_amendment_details %}
+        <div class="amendment-details">
+            <strong>Details:</strong> {{ document_data.rights_violated.fourth_amendment_details }}
+        </div>
+        {% endif %}
+        <p class="numbered-para">
+            As a direct and proximate result of Defendant{% if document_data.defendants|length > 1 %}s'{% else %}'s{% endif %} violations,
+            Plaintiff has suffered damages including but not limited to physical injury, emotional distress,
+            and violation of constitutional rights.
+        </p>
+        {% endif %}
+
+        {% if document_data.rights_violated.fifth_amendment %}
+        <div class="cause-header">{% if document_data.rights_violated.first_amendment and document_data.rights_violated.fourth_amendment %}THIRD{% elif document_data.rights_violated.first_amendment or document_data.rights_violated.fourth_amendment %}SECOND{% else %}FIRST{% endif %} CAUSE OF ACTION<br>Violation of Fifth Amendment Rights<br>(42 U.S.C. &sect; 1983)</div>
+        <p class="numbered-para">
+            Plaintiff incorporates by reference all preceding paragraphs as if fully set forth herein.
+        </p>
+        <p class="numbered-para">
+            The Fifth Amendment to the United States Constitution protects against self-incrimination
+            and guarantees due process of law.
+        </p>
+        <p class="numbered-para">
+            Defendant{% if document_data.defendants|length > 1 %}s{% endif %}, acting under color of state law, violated Plaintiff's
+            Fifth Amendment rights by:
+        </p>
+        <ul style="margin-left: 1in;">
+            {% if document_data.rights_violated.fifth_amendment_self_incrimination %}<li>Compelling self-incrimination</li>{% endif %}
+            {% if document_data.rights_violated.fifth_amendment_due_process %}<li>Denying due process of law</li>{% endif %}
+        </ul>
+        {% if document_data.rights_violated.fifth_amendment_details %}
+        <div class="amendment-details">
+            <strong>Details:</strong> {{ document_data.rights_violated.fifth_amendment_details }}
+        </div>
+        {% endif %}
+        <p class="numbered-para">
+            As a direct and proximate result of Defendant{% if document_data.defendants|length > 1 %}s'{% else %}'s{% endif %} violations,
+            Plaintiff has suffered damages including but not limited to physical injury, emotional distress,
+            and violation of constitutional rights.
+        </p>
+        {% endif %}
+
+        {% if document_data.rights_violated.fourteenth_amendment %}
+        <div class="cause-header">{% if document_data.rights_violated.first_amendment and document_data.rights_violated.fourth_amendment and document_data.rights_violated.fifth_amendment %}FOURTH{% elif document_data.rights_violated.first_amendment and document_data.rights_violated.fourth_amendment or document_data.rights_violated.first_amendment and document_data.rights_violated.fifth_amendment or document_data.rights_violated.fourth_amendment and document_data.rights_violated.fifth_amendment %}THIRD{% elif document_data.rights_violated.first_amendment or document_data.rights_violated.fourth_amendment or document_data.rights_violated.fifth_amendment %}SECOND{% else %}FIRST{% endif %} CAUSE OF ACTION<br>Violation of Fourteenth Amendment Rights<br>(42 U.S.C. &sect; 1983)</div>
+        <p class="numbered-para">
+            Plaintiff incorporates by reference all preceding paragraphs as if fully set forth herein.
+        </p>
+        <p class="numbered-para">
+            The Fourteenth Amendment to the United States Constitution guarantees due process
+            and equal protection of the laws.
+        </p>
+        <p class="numbered-para">
+            Defendant{% if document_data.defendants|length > 1 %}s{% endif %}, acting under color of state law, violated Plaintiff's
+            Fourteenth Amendment rights by:
+        </p>
+        <ul style="margin-left: 1in;">
+            {% if document_data.rights_violated.fourteenth_amendment_due_process %}<li>Denying substantive and/or procedural due process</li>{% endif %}
+            {% if document_data.rights_violated.fourteenth_amendment_equal_protection %}<li>Denying equal protection of the laws</li>{% endif %}
+        </ul>
+        {% if document_data.rights_violated.fourteenth_amendment_details %}
+        <div class="amendment-details">
+            <strong>Details:</strong> {{ document_data.rights_violated.fourteenth_amendment_details }}
+        </div>
+        {% endif %}
+        <p class="numbered-para">
+            As a direct and proximate result of Defendant{% if document_data.defendants|length > 1 %}s'{% else %}'s{% endif %} violations,
+            Plaintiff has suffered damages including but not limited to physical injury, emotional distress,
+            and violation of constitutional rights.
+        </p>
+        {% endif %}
+
         {% endwith %}
 
-        <!-- Rights Violated -->
-        {% with section_data=sections_data.rights_violated %}
-        {% if section_data %}
-        <div class="raw-data-section {% if section_data.section.status == 'completed' %}completed{% endif %}">
-            <h4><i class="bi bi-file-earmark-ruled me-2"></i>Rights Violated</h4>
-            {% if section_data.data %}
-            <ul>
-                {% if section_data.data.first_amendment %}<li>First Amendment</li>{% endif %}
-                {% if section_data.data.fourth_amendment %}<li>Fourth Amendment</li>{% endif %}
-                {% if section_data.data.fifth_amendment %}<li>Fifth Amendment</li>{% endif %}
-                {% if section_data.data.fourteenth_amendment %}<li>Fourteenth Amendment</li>{% endif %}
-            </ul>
-            {% else %}
-            <p class="text-muted"><em>No rights selected yet.</em></p>
-            {% endif %}
+        <!-- PRAYER FOR RELIEF -->
+        <div class="section-header">PRAYER FOR RELIEF</div>
+        <p class="no-indent">
+            WHEREFORE, Plaintiff respectfully requests that this Court enter judgment in Plaintiff's
+            favor and against Defendant{% if document_data.defendants|length > 1 %}s{% endif %}, and award the following relief:
+        </p>
+        <div class="prayer-item">
+            A. A declaration that Defendant{% if document_data.defendants|length > 1 %}s'{% else %}'s{% endif %} actions violated
+            Plaintiff's constitutional rights;
+        </div>
+        {% if document_data.relief.compensatory_damages %}
+        <div class="prayer-item">
+            B. Compensatory damages in an amount to be determined at trial{% if document_data.relief.compensatory_amount %}, but not less than ${{ document_data.relief.compensatory_amount|floatformat:2 }}{% endif %};
         </div>
         {% endif %}
-        {% endwith %}
+        {% if document_data.relief.punitive_damages %}
+        <div class="prayer-item">
+            C. Punitive damages in an amount sufficient to punish Defendant{% if document_data.defendants|length > 1 %}s{% endif %}
+            and deter similar conduct{% if document_data.relief.punitive_amount %}, in an amount not less than ${{ document_data.relief.punitive_amount|floatformat:2 }}{% endif %};
+        </div>
+        {% endif %}
+        {% if document_data.relief.injunctive_relief %}
+        <div class="prayer-item">
+            D. Injunctive relief{% if document_data.relief.injunctive_description %}: {{ document_data.relief.injunctive_description }}{% endif %};
+        </div>
+        {% endif %}
+        {% if document_data.relief.declaratory_relief %}
+        <div class="prayer-item">
+            E. Declaratory relief{% if document_data.relief.declaratory_description %}: {{ document_data.relief.declaratory_description }}{% endif %};
+        </div>
+        {% endif %}
+        {% if document_data.relief.attorney_fees %}
+        <div class="prayer-item">
+            F. Reasonable attorney's fees and costs pursuant to 42 U.S.C. &sect; 1988;
+        </div>
+        {% endif %}
+        <div class="prayer-item">
+            G. Such other and further relief as this Court deems just and proper.
+        </div>
 
-        <!-- Relief Sought -->
-        {% with section_data=sections_data.relief_sought %}
-        {% if section_data %}
-        <div class="raw-data-section {% if section_data.section.status == 'completed' %}completed{% endif %}">
-            <h4><i class="bi bi-trophy me-2"></i>Relief Sought</h4>
-            {% if section_data.data %}
-            <ul>
-                {% if section_data.data.compensatory_damages %}<li>Compensatory Damages</li>{% endif %}
-                {% if section_data.data.punitive_damages %}<li>Punitive Damages</li>{% endif %}
-                {% if section_data.data.injunctive_relief %}<li>Injunctive Relief</li>{% endif %}
-                {% if section_data.data.declaratory_relief %}<li>Declaratory Relief</li>{% endif %}
-                {% if section_data.data.attorney_fees %}<li>Attorney's Fees</li>{% endif %}
-            </ul>
-            {% if section_data.data.jury_trial_demanded %}
-            <p><strong>Jury Trial:</strong> Demanded</p>
-            {% endif %}
-            {% else %}
-            <p class="text-muted"><em>No relief specified yet.</em></p>
-            {% endif %}
-        </div>
+        <!-- JURY DEMAND -->
+        {% if document_data.relief.jury_trial_demanded %}
+        <div class="section-header">DEMAND FOR JURY TRIAL</div>
+        <p class="no-indent">
+            Plaintiff hereby demands a trial by jury on all issues so triable.
+        </p>
         {% endif %}
-        {% endwith %}
+
+        <!-- SIGNATURE BLOCK -->
+        <div class="signature-block">
+            <p class="no-indent">Respectfully submitted,</p>
+
+            <div class="signature-line">
+                {% if document_data.plaintiff.is_pro_se %}
+                {{ document_data.plaintiff.first_name }} {{ document_data.plaintiff.last_name }}, Pro Se<br>
+                {{ document_data.plaintiff.street_address }}<br>
+                {{ document_data.plaintiff.city }}, {{ document_data.plaintiff.state }} {{ document_data.plaintiff.zip_code }}<br>
+                {% if document_data.plaintiff.phone %}Phone: {{ document_data.plaintiff.phone }}<br>{% endif %}
+                {% if document_data.plaintiff.email %}Email: {{ document_data.plaintiff.email }}{% endif %}
+                {% else %}
+                {{ document_data.plaintiff.attorney_name }}<br>
+                {% if document_data.plaintiff.attorney_bar_number %}Bar No.: {{ document_data.plaintiff.attorney_bar_number }}<br>{% endif %}
+                {% if document_data.plaintiff.attorney_firm_name %}{{ document_data.plaintiff.attorney_firm_name }}<br>{% endif %}
+                {{ document_data.plaintiff.attorney_street_address }}<br>
+                {{ document_data.plaintiff.attorney_city }}, {{ document_data.plaintiff.attorney_state }} {{ document_data.plaintiff.attorney_zip_code }}<br>
+                {% if document_data.plaintiff.attorney_phone %}Phone: {{ document_data.plaintiff.attorney_phone }}<br>{% endif %}
+                {% if document_data.plaintiff.attorney_email %}Email: {{ document_data.plaintiff.attorney_email }}{% endif %}<br>
+                <em>Attorney for Plaintiff</em>
+                {% endif %}
+            </div>
+
+            <p class="no-indent" style="margin-top: 2rem;">
+                Dated: ____________________
+            </p>
+        </div>
+
     </div>
     {% endif %}
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Nothing needed for now - purely display
+// Nothing needed - purely display
 </script>
 {% endblock %}

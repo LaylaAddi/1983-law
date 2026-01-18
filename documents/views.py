@@ -610,70 +610,35 @@ def fill_test_data(request, document_id):
 
 @login_required
 def document_preview(request, document_id):
-    """Preview the complete document as a professionally written legal complaint."""
+    """Preview the complete document as a professionally formatted legal complaint.
+
+    This displays saved database data formatted as a legal document - no AI generation.
+    """
     document = get_object_or_404(Document, id=document_id, user=request.user)
 
-    # Check if user wants to force regeneration
-    regenerate = request.GET.get('regenerate', 'false').lower() == 'true'
-
-    # Collect all document data for the generator
+    # Collect all document data from the database
     document_data = _collect_document_data(document)
 
-    generated_document = None
-    generation_error = None
-    used_cache = False
-
-    # Check for cached version first (unless regenerating)
-    if not regenerate and document.generated_complaint and document.generated_at:
-        generated_document = document.generated_complaint
-        used_cache = True
-    elif document_data.get('has_minimum_data'):
-        # Generate new document
-        try:
-            from .services.document_generator import DocumentGenerator
-            generator = DocumentGenerator()
-            result = generator.generate_complaint(document_data)
-            if result.get('success'):
-                generated_document = result.get('document')
-                # Cache the generated document
-                document.generated_complaint = generated_document
-                document.generated_at = timezone.now()
-                document.save(update_fields=['generated_complaint', 'generated_at'])
-            else:
-                generation_error = result.get('error', 'Unknown generation error')
-        except Exception as e:
-            # Log error but continue to show data view
-            generation_error = str(e)
-            import traceback
-            traceback.print_exc()
-
-    # Also load raw section data for reference/editing
+    # Load section data for display
     sections_data = {}
     for section in document.sections.all():
         config = SECTION_CONFIG.get(section.section_type, {})
         Model = config.get('model')
-        Form = config.get('form')
         is_multiple = config.get('multiple', False)
 
-        if Model and Form:
+        if Model:
             if is_multiple:
-                items = Model.objects.filter(section=section)
-                form = Form()
-                data = list(items)
+                data = list(Model.objects.filter(section=section))
             else:
                 try:
-                    instance = Model.objects.get(section=section)
-                    form = Form(instance=instance)
-                    data = instance
+                    data = Model.objects.get(section=section)
                 except Model.DoesNotExist:
-                    form = Form()
                     data = None
 
             sections_data[section.section_type] = {
                 'section': section,
                 'config': config,
                 'data': data,
-                'form': form,
                 'is_multiple': is_multiple,
             }
 
@@ -681,11 +646,7 @@ def document_preview(request, document_id):
         'document': document,
         'sections_data': sections_data,
         'section_config': SECTION_CONFIG,
-        'generated_document': generated_document,
         'document_data': document_data,
-        'generation_error': generation_error,
-        'used_cache': used_cache,
-        'generated_at': document.generated_at,
     }
 
     return render(request, 'documents/document_preview.html', context)
