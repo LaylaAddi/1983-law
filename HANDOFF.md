@@ -853,6 +853,24 @@ python manage.py migrate
 ```
 This ensures migrations run automatically on every deploy.
 
+### Migration Best Practices (IMPORTANT)
+**Migrations should be committed to git, NOT auto-generated in production.**
+
+The `build.sh` script previously ran `makemigrations` on every deploy, which caused ghost migrations and database inconsistencies. This has been fixed - `build.sh` now only runs `migrate`.
+
+**If you get migration conflicts:**
+1. Never run `makemigrations` on production
+2. Create migrations locally, test them, commit them
+3. If ghost migrations exist in the database, use `--fake` to skip them:
+   ```bash
+   python manage.py migrate documents 0019_some_migration --fake
+   python manage.py migrate
+   ```
+
+**Files involved:**
+- `build.sh` - Only runs `migrate`, NOT `makemigrations`
+- `documents/migrations/` - All migrations committed to git
+
 ### Key Files for Deployment
 | File | Purpose |
 |------|---------|
@@ -1218,9 +1236,8 @@ docker-compose up -d
 # View logs
 docker-compose logs -f web
 
-# Run migrations
-docker-compose exec web python manage.py makemigrations
-docker-compose exec web python manage.py migrate
+# Run migrations (migrations should already be committed to git)
+docker-compose run web python manage.py migrate
 
 # Django shell
 docker-compose exec web python manage.py shell
