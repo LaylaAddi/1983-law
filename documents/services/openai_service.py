@@ -549,16 +549,22 @@ Return a JSON object with this format:
                 }
 
             # Parse the response to extract just the address
-            parse_prompt = f"""Extract ONLY the street address from this text. Return a JSON object:
+            parse_prompt = f"""Extract the complete mailing address from this text. Return a JSON object:
 
 Text: {address_text}
 
 Return format:
 {{
-    "address": "Full street address including city, state, and ZIP",
+    "address": "Street Address, City, State ZIP (example: 123 Main Street, Tampa, FL 33602)",
     "confidence": "high" or "medium" or "low",
     "source_note": "Brief note about the source"
 }}
+
+IMPORTANT: The address MUST include:
+- Street number and name
+- City name
+- State abbreviation (2 letters)
+- ZIP code
 
 If no clear address is found, return:
 {{
