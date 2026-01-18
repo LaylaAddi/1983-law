@@ -22,6 +22,7 @@ urlpatterns = [
 
     # Edit individual defendant
     path('<int:document_id>/defendant/<int:defendant_id>/edit/', views.edit_defendant, name='edit_defendant'),
+    path('<int:document_id>/defendant/<int:defendant_id>/accept/', views.accept_defendant_agency, name='accept_defendant_agency'),
 
     # Edit individual witness
     path('<int:document_id>/witness/<int:witness_id>/edit/', views.edit_witness, name='edit_witness'),

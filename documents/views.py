@@ -514,6 +514,24 @@ def edit_defendant(request, document_id, defendant_id):
 
 
 @login_required
+@require_POST
+def accept_defendant_agency(request, document_id, defendant_id):
+    """Accept/confirm an AI-suggested agency as correct."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    defendant = get_object_or_404(Defendant, id=defendant_id, section__document=document)
+
+    # Mark the agency as verified (no longer AI-inferred)
+    defendant.agency_inferred = False
+    defendant.save()
+
+    # Invalidate cached complaint since data changed
+    document.invalidate_generated_complaint()
+
+    messages.success(request, f'Agency for {defendant.name} confirmed.')
+    return redirect('documents:section_edit', document_id=document.id, section_type='defendants')
+
+
+@login_required
 def edit_witness(request, document_id, witness_id):
     """Edit a specific witness with enhanced fields."""
     from .forms import WitnessForm
