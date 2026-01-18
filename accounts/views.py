@@ -63,8 +63,18 @@ class RegisterView(CreateView):
             return redirect('home')
         return super().dispatch(request, *args, **kwargs)
 
+    def get_client_ip(self):
+        """Get client IP address from request."""
+        x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0].strip()
+        else:
+            ip = self.request.META.get('REMOTE_ADDR')
+        return ip
+
     def form_valid(self, form):
-        user = form.save()
+        ip_address = self.get_client_ip()
+        user = form.save(ip_address=ip_address)
         login(self.request, user)
         messages.success(self.request, 'Account created! Please complete your profile to continue.')
         return redirect(self.success_url)

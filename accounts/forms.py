@@ -81,6 +81,18 @@ class UserRegistrationForm(UserCreationForm):
         model = User
         fields = ('email', 'password1', 'password2')
 
+    def save(self, commit=True, ip_address=None):
+        user = super().save(commit=False)
+        user.agreed_to_terms = self.cleaned_data.get('agree_terms', False)
+        user.agreed_to_privacy = self.cleaned_data.get('agree_privacy', False)
+        if user.agreed_to_terms or user.agreed_to_privacy:
+            from django.utils import timezone
+            user.terms_agreed_at = timezone.now()
+            user.terms_agreed_ip = ip_address
+        if commit:
+            user.save()
+        return user
+
 
 class CustomPasswordResetForm(PasswordResetForm):
     """Password reset form with Bootstrap styling."""

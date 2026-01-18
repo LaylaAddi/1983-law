@@ -52,6 +52,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_test_user = models.BooleanField(default=False, help_text='Enable test features like auto-fill sample data')
+
+    # Terms agreement tracking
+    agreed_to_terms = models.BooleanField(default=False, help_text='User agreed to Terms of Service')
+    agreed_to_privacy = models.BooleanField(default=False, help_text='User agreed to Privacy Policy')
+    terms_agreed_at = models.DateTimeField(null=True, blank=True, help_text='When user agreed to terms')
+    terms_agreed_ip = models.GenericIPAddressField(null=True, blank=True, help_text='IP address when terms were agreed')
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

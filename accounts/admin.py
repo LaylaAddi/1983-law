@@ -12,17 +12,22 @@ User = get_user_model()
 class UserAdmin(BaseUserAdmin):
     """Admin configuration for custom User model."""
 
-    list_display = ('email', 'first_name', 'last_name', 'is_staff', 'is_test_user', 'is_active', 'created_at')
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'is_test_user')
+    list_display = ('email', 'first_name', 'last_name', 'agreed_to_terms', 'terms_agreed_at', 'is_staff', 'is_active', 'created_at')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'is_test_user', 'agreed_to_terms', 'agreed_to_privacy')
     search_fields = ('email', 'first_name', 'last_name')
     ordering = ('-created_at',)
 
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         ('Personal Info', {'fields': ('first_name', 'last_name')}),
+        ('Terms Agreement', {
+            'fields': ('agreed_to_terms', 'agreed_to_privacy', 'terms_agreed_at', 'terms_agreed_ip'),
+            'description': 'User consent to Terms of Service and Privacy Policy'
+        }),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'is_test_user', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login',)}),
     )
+    readonly_fields = ('terms_agreed_at', 'terms_agreed_ip')
 
     add_fieldsets = (
         (None, {
