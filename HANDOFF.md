@@ -1164,4 +1164,21 @@ STRIPE_WEBHOOK_SECRET=whsec_...# Stripe webhook secret (optional for local)
 # Optional (Branding)
 APP_NAME=1983law.com           # Shown in DRAFT watermark and footer
 HEADER_APP_NAME=1983 Law       # Shown in navbar and page titles
+
+# Security (Optional)
+ADMIN_URL=manage-x7k9m2/       # Custom admin URL path (default: manage-x7k9m2/)
+                                # Rotate periodically for security
+                                # Must end with /
 ```
+
+### Admin URL Security
+The Django admin is NOT at `/admin/` by default. It uses a randomized path to prevent brute force attacks.
+
+**Default:** `/manage-x7k9m2/`
+
+**To rotate the admin URL:**
+1. Generate a new random path (e.g., `backend-abc123/`)
+2. Set `ADMIN_URL=backend-abc123/` in Render environment variables
+3. Redeploy
+
+**Note:** All admin links in the app use Django's `{% url 'admin:index' %}` so they automatically update when the path changes.
