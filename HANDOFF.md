@@ -470,58 +470,56 @@ docker-compose exec web python manage.py createsuperuser
 
 ---
 
-## Legal Document Generator
+## Legal Document Preview (Template-Based)
 
 ### Overview
-AI-powered document generation that creates a professionally written Section 1983 federal complaint.
+The document preview displays saved data formatted as a professional Section 1983 federal complaint using Django templates - no AI generation required at preview time.
 
 ### How It Works
 1. User fills out document sections (plaintiff info, narrative, rights violated, etc.)
 2. User visits Preview page (`/documents/{id}/preview/`)
-3. System generates complete legal complaint with:
+3. Django template formats saved database data as a legal complaint:
    - Proper caption (court name, parties, case number placeholder)
    - Jurisdiction and venue statement
    - Parties section identifying all plaintiffs and defendants
-   - Statement of facts written in professional legal prose
-   - Causes of action with legal arguments
-   - Prayer for relief
+   - Statement of facts using saved narrative and damages
+   - Causes of action for each selected amendment
+   - Prayer for relief based on relief_sought selections
    - Jury demand (if requested)
    - Signature block (pro se or attorney)
 
 ### Key Features
-- **Professional Legal Prose** - AI writes each section in formal legal style
+- **Instant Loading** - No AI API calls, just database reads and template rendering
 - **Third Person** - "Plaintiff" not "I"
 - **Numbered Paragraphs** - Following federal court conventions
 - **Print-Ready** - Document formatted for court filing
 - **Proper Caption Format** - Includes:
-  - Individual defendants with title (e.g., "OFFICER JOHN DOE")
+  - Individual defendants with title and agency
   - "individually and in official capacity" language
-  - Agency name (e.g., "TAMPA POLICE DEPARTMENT")
-  - "et al." when more than 2 defendants
-- **Missing Agency Warning** - Individual defendants without agency shown in red with warning
-- **Cached Generation** - Generated document is cached for instant loading:
-  - First visit generates and caches the document
-  - Subsequent visits load instantly from cache
-  - Shows "Generated X ago" timestamp
-  - "Regenerate" button available for fresh generation
-  - Cache auto-invalidated when any section is saved
+  - Proper formatting for government entities
+- **Amendment-Specific Causes of Action** - Each cause of action includes:
+  - List of specific violations (e.g., "Conducting an unreasonable search")
+  - Details from rights_violated explanations (shown in italic detail box)
+  - Proper legal language for that amendment
+- **Dynamic Paragraph Numbering** - Adjusts based on number of defendants and facts
 
 ### Files
-- `documents/services/document_generator.py` - Main generation service
 - `documents/views.py` - `document_preview` view and `_collect_document_data` helper
-- `templates/documents/document_preview.html` - Legal document display template
-- `documents/models.py` - Document.generated_complaint and generated_at fields (cache)
-- `documents/migrations/0015_document_complaint_cache.py` - Migration for cache fields
+- `templates/documents/document_preview.html` - Legal document display template (Django template logic)
 
-### Requirements for Generation
+### Requirements for Display
 Document must have:
 - Plaintiff name (first and last)
 - Incident narrative (from story or detailed_narrative)
 - At least one constitutional right selected as violated
 
+If requirements not met, shows "More Information Needed" with links to complete sections.
+
 ### URL
-- `/documents/{id}/preview/` - View generated legal document
-- `/documents/{id}/preview/?generate=false` - View raw data only
+- `/documents/{id}/preview/` - View formatted legal document
+
+### Note on Caching Fields
+The Document model still has `generated_complaint` and `generated_at` fields from a previous AI-caching implementation. These are no longer used for preview (template-based now) but remain for potential future use in PDF generation.
 
 ---
 
