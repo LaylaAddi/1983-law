@@ -337,6 +337,9 @@ def section_edit(request, document_id, section_type):
                 obj.section = section
                 obj.save()
 
+                # Invalidate cached complaint since data changed
+                document.invalidate_generated_complaint()
+
                 # Auto-update section status based on completeness
                 if section.status not in ['completed', 'not_applicable']:
                     if check_section_complete(section, obj):
@@ -422,6 +425,9 @@ def add_multiple_item(request, document_id, section_type):
             obj.section = section
             obj.save()
 
+            # Invalidate cached complaint since data changed
+            document.invalidate_generated_complaint()
+
             # Auto-update section status based on completeness
             if section.status not in ['completed', 'not_applicable']:
                 if check_multiple_section_complete(section):
@@ -461,6 +467,9 @@ def delete_multiple_item(request, document_id, section_type, item_id):
     item = get_object_or_404(Model, id=item_id, section=section)
     item.delete()
 
+    # Invalidate cached complaint since data changed
+    document.invalidate_generated_complaint()
+
     messages.success(request, 'Item deleted.')
     return redirect('documents:section_edit',
                    document_id=document.id,
@@ -488,6 +497,8 @@ def edit_defendant(request, document_id, defendant_id):
         form = DefendantForm(request.POST, instance=defendant)
         if form.is_valid():
             form.save()
+            # Invalidate cached complaint since data changed
+            document.invalidate_generated_complaint()
             messages.success(request, 'Defendant updated successfully.')
             return redirect('documents:section_edit', document_id=document.id, section_type='defendants')
     else:
@@ -515,6 +526,8 @@ def edit_witness(request, document_id, witness_id):
         form = WitnessForm(request.POST, instance=witness)
         if form.is_valid():
             form.save()
+            # Invalidate cached complaint since data changed
+            document.invalidate_generated_complaint()
             messages.success(request, 'Witness updated successfully.')
             return redirect('documents:section_edit', document_id=document.id, section_type='witnesses')
     else:
@@ -600,21 +613,32 @@ def document_preview(request, document_id):
     """Preview the complete document as a professionally written legal complaint."""
     document = get_object_or_404(Document, id=document_id, user=request.user)
 
-    # Check if we should generate the legal document
-    generate = request.GET.get('generate', 'true').lower() == 'true'
+    # Check if user wants to force regeneration
+    regenerate = request.GET.get('regenerate', 'false').lower() == 'true'
 
     # Collect all document data for the generator
     document_data = _collect_document_data(document)
 
     generated_document = None
     generation_error = None
-    if generate and document_data.get('has_minimum_data'):
+    used_cache = False
+
+    # Check for cached version first (unless regenerating)
+    if not regenerate and document.generated_complaint and document.generated_at:
+        generated_document = document.generated_complaint
+        used_cache = True
+    elif document_data.get('has_minimum_data'):
+        # Generate new document
         try:
             from .services.document_generator import DocumentGenerator
             generator = DocumentGenerator()
             result = generator.generate_complaint(document_data)
             if result.get('success'):
                 generated_document = result.get('document')
+                # Cache the generated document
+                document.generated_complaint = generated_document
+                document.generated_at = timezone.now()
+                document.save(update_fields=['generated_complaint', 'generated_at'])
             else:
                 generation_error = result.get('error', 'Unknown generation error')
         except Exception as e:
@@ -660,6 +684,8 @@ def document_preview(request, document_id):
         'generated_document': generated_document,
         'document_data': document_data,
         'generation_error': generation_error,
+        'used_cache': used_cache,
+        'generated_at': document.generated_at,
     }
 
     return render(request, 'documents/document_preview.html', context)
@@ -931,6 +957,9 @@ def section_save_ajax(request, document_id, section_type):
             obj.section = section
             obj.save()
 
+            # Invalidate cached complaint since data changed
+            document.invalidate_generated_complaint()
+
             if section.status == 'not_started':
                 section.status = 'in_progress'
                 section.save()
@@ -958,6 +987,9 @@ def section_save_ajax(request, document_id, section_type):
             obj = form.save(commit=False)
             obj.section = section
             obj.save()
+
+            # Invalidate cached complaint since data changed
+            document.invalidate_generated_complaint()
 
             if section.status == 'not_started':
                 section.status = 'in_progress'
@@ -1739,6 +1771,9 @@ def apply_story_fields(request, document_id):
 
             except Exception as e:
                 errors.append(f"{section_type}: {str(e)}")
+
+        # Invalidate cached complaint since data changed
+        document.invalidate_generated_complaint()
 
         return JsonResponse({
             'success': True,

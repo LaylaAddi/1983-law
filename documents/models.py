@@ -65,6 +65,16 @@ class Document(models.Model):
         help_text='When parsing started (to detect stale jobs)'
     )
 
+    # Cached generated complaint (to avoid regenerating on every preview)
+    generated_complaint = models.TextField(
+        blank=True,
+        help_text='Cached AI-generated legal complaint document'
+    )
+    generated_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='When the complaint was last generated'
+    )
+
     class Meta:
         ordering = ['-updated_at']
 
@@ -91,6 +101,13 @@ class Document(models.Model):
     def has_story(self):
         """Check if user has told their story (required before filling sections)."""
         return bool(self.story_text and self.story_text.strip())
+
+    def invalidate_generated_complaint(self):
+        """Clear cached complaint when document data changes."""
+        if self.generated_complaint or self.generated_at:
+            self.generated_complaint = ''
+            self.generated_at = None
+            self.save(update_fields=['generated_complaint', 'generated_at'])
 
     # Payment and access control methods
 
