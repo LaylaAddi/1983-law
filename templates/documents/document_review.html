@@ -1,0 +1,738 @@
+{% extends 'base.html' %}
+
+{% block title %}Review & Edit: {{ document.title }} - {{ header_app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Review page layout */
+    .review-container {
+        display: flex;
+        gap: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .document-panel {
+        flex: 1;
+        max-width: 850px;
+    }
+
+    .edit-panel {
+        width: 400px;
+        position: sticky;
+        top: 80px;
+        height: fit-content;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+    }
+
+    /* Legal document styling */
+    .legal-document {
+        font-family: 'Times New Roman', Times, serif;
+        font-size: 14px;
+        line-height: 1.8;
+        background: white;
+        padding: 40px 50px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        border-radius: 4px;
+    }
+
+    .legal-document .caption {
+        text-align: center;
+        margin-bottom: 2rem;
+        line-height: 1.6;
+    }
+
+    .legal-document .caption-court {
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+    }
+
+    .legal-document .caption-box {
+        border: 1px solid #000;
+        padding: 1rem 2rem;
+        display: inline-block;
+        text-align: left;
+    }
+
+    .legal-document .caption-vs {
+        text-align: center;
+        margin: 0.5rem 0;
+        font-weight: bold;
+    }
+
+    .legal-document .section-header {
+        text-align: center;
+        font-weight: bold;
+        text-decoration: underline;
+        margin: 1.5rem 0 1rem 0;
+    }
+
+    .legal-document p {
+        text-indent: 0.5in;
+        margin-bottom: 0.5rem;
+        text-align: justify;
+    }
+
+    .legal-document .no-indent {
+        text-indent: 0;
+    }
+
+    /* Editable section styling */
+    .editable-section {
+        position: relative;
+        padding: 0.5rem;
+        margin: -0.5rem;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .editable-section:hover {
+        background: rgba(13, 110, 253, 0.05);
+    }
+
+    .editable-section .edit-btn {
+        position: absolute;
+        top: 0;
+        right: 0;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        z-index: 10;
+    }
+
+    .editable-section:hover .edit-btn {
+        opacity: 1;
+    }
+
+    /* Edit panel styling */
+    .edit-panel-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .edit-panel-header {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 8px 8px 0 0;
+    }
+
+    .edit-panel-body {
+        padding: 1rem;
+    }
+
+    .edit-panel .form-label {
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+
+    .edit-panel .form-control,
+    .edit-panel .form-select {
+        font-size: 0.875rem;
+    }
+
+    /* Section indicator */
+    .section-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+
+    .section-indicator.active {
+        background: #0d6efd;
+    }
+
+    .section-indicator.inactive {
+        background: #dee2e6;
+    }
+
+    /* Review controls */
+    .review-controls {
+        position: sticky;
+        top: 0;
+        background: #f8f9fa;
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        z-index: 100;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Highlight currently editing */
+    .editable-section.editing {
+        background: rgba(13, 110, 253, 0.1);
+        outline: 2px solid #0d6efd;
+    }
+
+    /* Item list in edit panel */
+    .item-list {
+        max-height: 200px;
+        overflow-y: auto;
+        margin-bottom: 1rem;
+    }
+
+    .item-list-item {
+        padding: 0.5rem;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* Print styles */
+    @media print {
+        .review-controls, .edit-panel, .edit-btn {
+            display: none !important;
+        }
+        .document-panel {
+            max-width: none;
+        }
+        .legal-document {
+            box-shadow: none;
+            padding: 0;
+        }
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 992px) {
+        .review-container {
+            flex-direction: column;
+        }
+        .edit-panel {
+            width: 100%;
+            position: static;
+            order: -1;
+            margin-bottom: 1rem;
+        }
+        .editable-section .edit-btn {
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Status Banner -->
+<div class="container-fluid no-print">
+    {% include 'documents/partials/status_banner.html' %}
+</div>
+
+<!-- Review Controls -->
+<div class="review-controls no-print">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Sections
+                </a>
+                <h5 class="mb-0 ms-2">Review & Edit</h5>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'documents:document_preview' document.id %}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-file-text me-1"></i>Preview PDF
+                </a>
+                <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i>Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <div class="review-container">
+        <!-- Document Panel -->
+        <div class="document-panel">
+            <div class="legal-document">
+
+                <!-- CAPTION -->
+                <div class="editable-section" data-section="incident_overview" data-field="court">
+                    <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('incident_overview')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <div class="caption">
+                        <div class="caption-court">
+                            {% if document_data.court %}
+                            {{ document_data.court }}
+                            {% else %}
+                            <span class="text-muted">[Click to add Federal District Court]</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="caption-box">
+                            <div class="editable-section" data-section="plaintiff_info">
+                                <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('plaintiff_info')">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                {% if document_data.plaintiff.first_name %}
+                                {{ document_data.plaintiff.first_name|upper }} {{ document_data.plaintiff.middle_name|upper }} {{ document_data.plaintiff.last_name|upper }},<br>
+                                {% else %}
+                                <span class="text-muted">[PLAINTIFF NAME]</span>,<br>
+                                {% endif %}
+                                <span style="margin-left: 2rem;">Plaintiff,</span>
+                            </div>
+                            <div class="caption-vs">v.</div>
+                            <div class="editable-section" data-section="defendants">
+                                <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('defendants')">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                {% for defendant in document_data.defendants %}
+                                {{ defendant.name|upper }}{% if not forloop.last %};{% else %},{% endif %}<br>
+                                {% empty %}
+                                <span class="text-muted">[DEFENDANTS]</span>,<br>
+                                {% endfor %}
+                                <span style="margin-left: 2rem;">Defendant{% if document_data.defendants|length > 1 %}s{% endif %}.</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1rem; font-weight: bold;">
+                            CIVIL ACTION NO. _______________
+                        </div>
+
+                        <div style="margin-top: 1rem; font-weight: bold; text-transform: uppercase;">
+                            Complaint for Violation of Civil Rights<br>
+                            Under 42 U.S.C. &sect; 1983
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PARTIES -->
+                <div class="section-header">PARTIES</div>
+
+                <div class="editable-section" data-section="plaintiff_info">
+                    <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('plaintiff_info')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <p class="no-indent">
+                        <strong>1.</strong> Plaintiff
+                        {% if document_data.plaintiff.first_name %}
+                        {{ document_data.plaintiff.first_name }} {{ document_data.plaintiff.middle_name }} {{ document_data.plaintiff.last_name }}
+                        is an individual residing at {{ document_data.plaintiff.street_address|default:"[ADDRESS]" }},
+                        {{ document_data.plaintiff.city|default:"[CITY]" }}, {{ document_data.plaintiff.state|default:"[STATE]" }} {{ document_data.plaintiff.zip_code|default:"[ZIP]" }}.
+                        {% else %}
+                        <span class="text-muted">[Plaintiff information not yet provided]</span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="editable-section" data-section="defendants">
+                    <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('defendants')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    {% for defendant in document_data.defendants %}
+                    <p class="no-indent">
+                        <strong>{{ forloop.counter|add:1 }}.</strong> Defendant {{ defendant.name }}
+                        {% if defendant.defendant_type == 'individual' %}
+                        is an individual who, at all times relevant hereto,
+                        {% if defendant.title_rank %}held the position of {{ defendant.title_rank }}{% else %}was employed{% endif %}
+                        {% if defendant.agency_name %}by {{ defendant.agency_name }}{% endif %}.
+                        {% if defendant.address %}Defendant may be served at {{ defendant.address }}.{% endif %}
+                        {% else %}
+                        is a government entity responsible for the actions of its employees.
+                        {% if defendant.address %}{{ defendant.name }} may be served at {{ defendant.address }}.{% endif %}
+                        {% endif %}
+                    </p>
+                    {% empty %}
+                    <p class="no-indent text-muted">[No defendants added yet - click to add]</p>
+                    {% endfor %}
+                </div>
+
+                <!-- JURISDICTION AND VENUE -->
+                <div class="section-header">JURISDICTION AND VENUE</div>
+                <p class="no-indent">
+                    <strong>{{ document_data.defendants|length|add:2 }}.</strong>
+                    This Court has jurisdiction pursuant to 28 U.S.C. &sect;&sect; 1331 and 1343.
+                </p>
+                <p class="no-indent">
+                    <strong>{{ document_data.defendants|length|add:3 }}.</strong>
+                    Venue is proper in this district pursuant to 28 U.S.C. &sect; 1391(b)
+                    {% if document_data.incident.city %}
+                    because the events occurred in {{ document_data.incident.city }}, {{ document_data.incident.state }}.
+                    {% else %}
+                    because the events giving rise to this action occurred in this district.
+                    {% endif %}
+                </p>
+
+                <!-- STATEMENT OF FACTS -->
+                <div class="section-header">STATEMENT OF FACTS</div>
+
+                <div class="editable-section" data-section="incident_overview">
+                    <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('incident_overview')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <p class="no-indent">
+                        <strong>{{ document_data.defendants|length|add:4 }}.</strong>
+                        On or about
+                        {% if document_data.incident.incident_date %}{{ document_data.incident.incident_date }}{% else %}<span class="text-muted">[DATE]</span>{% endif %}
+                        {% if document_data.incident.incident_time %}, at approximately {{ document_data.incident.incident_time }}{% endif %},
+                        Plaintiff was located at
+                        {% if document_data.incident.incident_location %}{{ document_data.incident.incident_location }}{% else %}<span class="text-muted">[LOCATION]</span>{% endif %},
+                        {% if document_data.incident.city %}{{ document_data.incident.city }}, {{ document_data.incident.state }}{% else %}<span class="text-muted">[CITY, STATE]</span>{% endif %}.
+                    </p>
+                </div>
+
+                <div class="editable-section" data-section="incident_narrative">
+                    <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('incident_narrative')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    {% if document_data.narrative.detailed_narrative %}
+                    <p class="no-indent">
+                        <strong>{{ document_data.defendants|length|add:5 }}.</strong>
+                        {{ document_data.narrative.detailed_narrative }}
+                    </p>
+                    {% else %}
+                    <p class="no-indent text-muted">[Incident narrative not yet provided - click to add]</p>
+                    {% endif %}
+                </div>
+
+                <!-- DAMAGES -->
+                <div class="editable-section" data-section="damages">
+                    <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('damages')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    {% if document_data.damages.physical_injury or document_data.damages.emotional_distress %}
+                    <p class="no-indent">
+                        <strong>{{ document_data.defendants|length|add:6 }}.</strong>
+                        As a result of Defendants' actions, Plaintiff suffered
+                        {% if document_data.damages.physical_injury %}physical injuries{{ document_data.damages.physical_injury_description|yesno:", specifically: ,"|safe }}{{ document_data.damages.physical_injury_description }}{% endif %}
+                        {% if document_data.damages.physical_injury and document_data.damages.emotional_distress %} and {% endif %}
+                        {% if document_data.damages.emotional_distress %}emotional distress{% if document_data.damages.emotional_distress_description %}, including {{ document_data.damages.emotional_distress_description }}{% endif %}{% endif %}.
+                    </p>
+                    {% else %}
+                    <p class="no-indent text-muted">[Damages not yet specified - click to add]</p>
+                    {% endif %}
+                </div>
+
+                <!-- CAUSES OF ACTION -->
+                <div class="section-header">CAUSES OF ACTION</div>
+
+                <div class="editable-section" data-section="rights_violated">
+                    <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('rights_violated')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+
+                    {% if document_data.rights_violated.fourth_amendment %}
+                    <p class="no-indent"><strong>FOURTH AMENDMENT VIOLATION</strong></p>
+                    <p class="no-indent">
+                        Defendants violated Plaintiff's Fourth Amendment rights by:
+                        {% if document_data.rights_violated.fourth_amendment_search %}unreasonable search; {% endif %}
+                        {% if document_data.rights_violated.fourth_amendment_seizure %}unreasonable seizure; {% endif %}
+                        {% if document_data.rights_violated.fourth_amendment_arrest %}arrest without probable cause; {% endif %}
+                        {% if document_data.rights_violated.fourth_amendment_force %}use of excessive force.{% endif %}
+                    </p>
+                    {% if document_data.rights_violated.fourth_amendment_details %}
+                    <p class="no-indent"><em>{{ document_data.rights_violated.fourth_amendment_details }}</em></p>
+                    {% endif %}
+                    {% endif %}
+
+                    {% if document_data.rights_violated.first_amendment %}
+                    <p class="no-indent"><strong>FIRST AMENDMENT VIOLATION</strong></p>
+                    <p class="no-indent">
+                        Defendants violated Plaintiff's First Amendment rights by:
+                        {% if document_data.rights_violated.first_amendment_speech %}suppressing free speech; {% endif %}
+                        {% if document_data.rights_violated.first_amendment_press %}interfering with right to record; {% endif %}
+                        {% if document_data.rights_violated.first_amendment_assembly %}restricting peaceful assembly; {% endif %}
+                        {% if document_data.rights_violated.first_amendment_petition %}interfering with right to petition.{% endif %}
+                    </p>
+                    {% endif %}
+
+                    {% if document_data.rights_violated.fourteenth_amendment %}
+                    <p class="no-indent"><strong>FOURTEENTH AMENDMENT VIOLATION</strong></p>
+                    <p class="no-indent">
+                        Defendants violated Plaintiff's Fourteenth Amendment rights by:
+                        {% if document_data.rights_violated.fourteenth_amendment_due_process %}denying due process; {% endif %}
+                        {% if document_data.rights_violated.fourteenth_amendment_equal_protection %}denying equal protection.{% endif %}
+                    </p>
+                    {% endif %}
+
+                    {% if not document_data.rights_violated.first_amendment and not document_data.rights_violated.fourth_amendment and not document_data.rights_violated.fourteenth_amendment %}
+                    <p class="no-indent text-muted">[No constitutional violations selected - click to add]</p>
+                    {% endif %}
+                </div>
+
+                <!-- PRAYER FOR RELIEF -->
+                <div class="section-header">PRAYER FOR RELIEF</div>
+
+                <div class="editable-section" data-section="relief_sought">
+                    <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('relief_sought')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <p class="no-indent">WHEREFORE, Plaintiff requests:</p>
+                    <p class="no-indent" style="margin-left: 0.5in;">
+                        A. A declaration that Defendants' actions violated Plaintiff's constitutional rights;
+                    </p>
+                    {% if document_data.relief.compensatory_damages %}
+                    <p class="no-indent" style="margin-left: 0.5in;">
+                        B. Compensatory damages{% if document_data.relief.compensatory_amount %} of ${{ document_data.relief.compensatory_amount|floatformat:2 }}{% endif %};
+                    </p>
+                    {% endif %}
+                    {% if document_data.relief.punitive_damages %}
+                    <p class="no-indent" style="margin-left: 0.5in;">
+                        C. Punitive damages{% if document_data.relief.punitive_amount %} of ${{ document_data.relief.punitive_amount|floatformat:2 }}{% endif %};
+                    </p>
+                    {% endif %}
+                    {% if document_data.relief.attorney_fees %}
+                    <p class="no-indent" style="margin-left: 0.5in;">
+                        D. Attorney's fees pursuant to 42 U.S.C. &sect; 1988;
+                    </p>
+                    {% endif %}
+                    <p class="no-indent" style="margin-left: 0.5in;">
+                        E. Such other relief as the Court deems just.
+                    </p>
+                    {% if document_data.relief.jury_trial_demanded %}
+                    <p class="no-indent" style="margin-top: 1rem;"><strong>JURY DEMAND:</strong> Plaintiff demands trial by jury.</p>
+                    {% endif %}
+                </div>
+
+                <!-- SIGNATURE -->
+                <div class="editable-section" data-section="plaintiff_info" style="margin-top: 2rem;">
+                    <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('plaintiff_info')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <p class="no-indent">Respectfully submitted,</p>
+                    <p class="no-indent" style="margin-top: 2rem; border-top: 1px solid #000; width: 250px; padding-top: 0.25rem;">
+                        {% if document_data.plaintiff.is_pro_se %}
+                        {{ document_data.plaintiff.first_name }} {{ document_data.plaintiff.last_name }}, Pro Se<br>
+                        {{ document_data.plaintiff.street_address }}<br>
+                        {{ document_data.plaintiff.city }}, {{ document_data.plaintiff.state }} {{ document_data.plaintiff.zip_code }}
+                        {% else %}
+                        Attorney for Plaintiff
+                        {% endif %}
+                    </p>
+                    <p class="no-indent">Dated: ____________________</p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Edit Panel -->
+        <div class="edit-panel no-print">
+            <div class="edit-panel-card">
+                <div class="edit-panel-header">
+                    <h6 class="mb-0" id="editPanelTitle">
+                        <i class="bi bi-pencil-square me-2"></i>Click a section to edit
+                    </h6>
+                </div>
+                <div class="edit-panel-body" id="editPanelBody">
+                    <p class="text-muted small">
+                        Hover over any section in the document and click the <i class="bi bi-pencil"></i> button to edit it.
+                    </p>
+                    <p class="text-muted small mb-0">
+                        Changes are saved automatically when you click "Save".
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Edit Form Templates (hidden, loaded via JS) -->
+{% for section_type, section_data in sections_data.items %}
+<template id="form-{{ section_type }}">
+    <form id="editForm-{{ section_type }}" class="edit-form" data-section="{{ section_type }}">
+        {% csrf_token %}
+        {% if section_data.is_multiple %}
+        <div class="mb-3">
+            <label class="form-label">Current {{ section_data.config.title }}</label>
+            <div class="item-list">
+                {% for item in section_data.items %}
+                <div class="item-list-item">
+                    <span>{{ item }}</span>
+                    <a href="{% url 'documents:section_edit' document.id section_type %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                </div>
+                {% empty %}
+                <div class="text-muted small">No items yet</div>
+                {% endfor %}
+            </div>
+            <a href="{% url 'documents:section_edit' document.id section_type %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-plus me-1"></i>Manage {{ section_data.config.title }}
+            </a>
+        </div>
+        {% else %}
+        {% for field in section_data.form %}
+        <div class="mb-2">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <div class="invalid-feedback d-block">{{ field.errors.0 }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-check me-1"></i>Save
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="cancelEdit()">
+                Cancel
+            </button>
+        </div>
+        {% endif %}
+    </form>
+</template>
+{% endfor %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentSection = null;
+
+function editSection(sectionType) {
+    // Remove editing class from previous section
+    document.querySelectorAll('.editable-section.editing').forEach(el => {
+        el.classList.remove('editing');
+    });
+
+    // Add editing class to clicked section
+    document.querySelectorAll(`[data-section="${sectionType}"]`).forEach(el => {
+        el.classList.add('editing');
+    });
+
+    currentSection = sectionType;
+
+    // Update panel title
+    const titles = {
+        'plaintiff_info': 'Plaintiff Information',
+        'incident_overview': 'Incident Overview',
+        'defendants': 'Government Defendants',
+        'incident_narrative': 'Incident Narrative',
+        'rights_violated': 'Rights Violated',
+        'damages': 'Damages',
+        'relief_sought': 'Relief Sought',
+        'witnesses': 'Witnesses',
+        'evidence': 'Evidence',
+        'prior_complaints': 'Prior Complaints'
+    };
+
+    document.getElementById('editPanelTitle').innerHTML =
+        `<i class="bi bi-pencil-square me-2"></i>Edit: ${titles[sectionType] || sectionType}`;
+
+    // Load form from template
+    const template = document.getElementById(`form-${sectionType}`);
+    if (template) {
+        const clone = template.content.cloneNode(true);
+        const panelBody = document.getElementById('editPanelBody');
+        panelBody.innerHTML = '';
+        panelBody.appendChild(clone);
+
+        // Add form submit handler
+        const form = panelBody.querySelector('form');
+        if (form) {
+            // Add Bootstrap classes to form elements
+            form.querySelectorAll('input[type="text"], input[type="number"], input[type="email"], input[type="date"], input[type="time"], textarea').forEach(el => {
+                el.classList.add('form-control', 'form-control-sm');
+            });
+            form.querySelectorAll('select').forEach(el => {
+                el.classList.add('form-select', 'form-select-sm');
+            });
+            form.querySelectorAll('input[type="checkbox"]').forEach(el => {
+                el.classList.add('form-check-input');
+                // Wrap checkbox in form-check div
+                const wrapper = document.createElement('div');
+                wrapper.className = 'form-check';
+                el.parentNode.insertBefore(wrapper, el);
+                wrapper.appendChild(el);
+            });
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveSection(sectionType, form);
+            });
+        }
+
+        // Scroll panel into view on mobile
+        if (window.innerWidth < 992) {
+            panelBody.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+}
+
+function saveSection(sectionType, form) {
+    const formData = new FormData(form);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving...';
+
+    fetch(`/documents/{{ document.id }}/section/${sectionType}/save/`, {
+        method: 'POST',
+        body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Saved!';
+            submitBtn.classList.remove('btn-primary');
+            submitBtn.classList.add('btn-success');
+
+            // Reload page to show updated data
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } else {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+
+            // Show errors
+            if (data.errors) {
+                for (const [field, errors] of Object.entries(data.errors)) {
+                    const input = form.querySelector(`[name="${field}"]`);
+                    if (input) {
+                        input.classList.add('is-invalid');
+                        let feedback = input.nextElementSibling;
+                        if (!feedback || !feedback.classList.contains('invalid-feedback')) {
+                            feedback = document.createElement('div');
+                            feedback.className = 'invalid-feedback';
+                            input.parentNode.insertBefore(feedback, input.nextSibling);
+                        }
+                        feedback.textContent = errors[0];
+                    }
+                }
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        alert('Error saving. Please try again.');
+    });
+}
+
+function cancelEdit() {
+    document.querySelectorAll('.editable-section.editing').forEach(el => {
+        el.classList.remove('editing');
+    });
+
+    document.getElementById('editPanelTitle').innerHTML =
+        '<i class="bi bi-pencil-square me-2"></i>Click a section to edit';
+
+    document.getElementById('editPanelBody').innerHTML = `
+        <p class="text-muted small">
+            Hover over any section in the document and click the <i class="bi bi-pencil"></i> button to edit it.
+        </p>
+        <p class="text-muted small mb-0">
+            Changes are saved automatically when you click "Save".
+        </p>
+    `;
+
+    currentSection = null;
+}
+
+// Keyboard shortcut: Escape to cancel
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && currentSection) {
+        cancelEdit();
+    }
+});
+</script>
+{% endblock %}

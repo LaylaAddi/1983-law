@@ -652,6 +652,63 @@ def document_preview(request, document_id):
     return render(request, 'documents/document_preview.html', context)
 
 
+@login_required
+def document_review(request, document_id):
+    """Review and edit the complete document with inline editing.
+
+    Shows the full legal complaint with edit buttons for each section.
+    No AI involvement - just displays and edits saved data.
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Collect all document data from the database
+    document_data = _collect_document_data(document)
+
+    # Load section data with forms for editing
+    sections_data = {}
+    for section in document.sections.all():
+        config = SECTION_CONFIG.get(section.section_type, {})
+        Model = config.get('model')
+        Form = config.get('form')
+        is_multiple = config.get('multiple', False)
+
+        if Model and Form:
+            if is_multiple:
+                items = list(Model.objects.filter(section=section))
+                form = Form()  # Empty form for adding new items
+                sections_data[section.section_type] = {
+                    'section': section,
+                    'config': config,
+                    'items': items,
+                    'form': form,
+                    'is_multiple': True,
+                }
+            else:
+                try:
+                    instance = Model.objects.get(section=section)
+                    form = Form(instance=instance)
+                except Model.DoesNotExist:
+                    instance = None
+                    form = Form()
+
+                sections_data[section.section_type] = {
+                    'section': section,
+                    'config': config,
+                    'data': instance,
+                    'form': form,
+                    'is_multiple': False,
+                }
+
+    context = {
+        'document': document,
+        'sections_data': sections_data,
+        'section_config': SECTION_CONFIG,
+        'document_data': document_data,
+    }
+
+    return render(request, 'documents/document_review.html', context)
+
+
 def _collect_document_data(document):
     """Collect all document data for the generator."""
     data = {

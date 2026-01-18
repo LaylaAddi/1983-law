@@ -11,6 +11,7 @@ urlpatterns = [
     path('<int:document_id>/delete/', views.document_delete, name='document_delete'),
     path('<int:document_id>/fill-test-data/', views.fill_test_data, name='fill_test_data'),
     path('<int:document_id>/preview/', views.document_preview, name='document_preview'),
+    path('<int:document_id>/review/', views.document_review, name='document_review'),
     path('<int:document_id>/download-pdf/', views.download_pdf, name='download_pdf'),
 
     # Section editing (interview style)
