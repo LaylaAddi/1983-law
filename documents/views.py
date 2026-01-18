@@ -704,6 +704,7 @@ def _collect_document_data(document):
                 'badge_number': d.badge_number,
                 'title_rank': d.title_rank,
                 'agency_name': d.agency_name,
+                'address': d.address,
                 'description': d.description,
             })
     except DocumentSection.DoesNotExist:
@@ -1290,10 +1291,9 @@ def _process_story_background(document_id, story_text):
                     # Auto-lookup federal district court
                     if obj.city and obj.state and not obj.federal_district_court:
                         try:
-                            court_service = CourtLookupService()
-                            court_result = court_service.lookup_court(obj.city, obj.state)
-                            if court_result.get('success') and court_result.get('court'):
-                                obj.federal_district_court = court_result['court']
+                            court_result = CourtLookupService.lookup_court_by_location(obj.city, obj.state)
+                            if court_result and court_result.get('court_name'):
+                                obj.federal_district_court = court_result['court_name']
                                 obj.district_lookup_confidence = court_result.get('confidence', 'medium')
                         except Exception:
                             pass

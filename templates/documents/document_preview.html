@@ -310,9 +310,11 @@
             {% if defendant.title_rank %}held the position of {{ defendant.title_rank }}{% else %}was employed{% endif %}
             {% if defendant.agency_name %}by {{ defendant.agency_name }}{% endif %}.
             {% if defendant.badge_number %}Defendant's badge number is {{ defendant.badge_number }}.{% endif %}
+            {% if defendant.address %}Defendant may be served at {{ defendant.address }}.{% endif %}
             Defendant {{ defendant.name }} is sued in both their individual and official capacities.
             {% else %}
             is a government entity that is responsible for the actions of its employees and agents.
+            {% if defendant.address %}{{ defendant.name }} may be served at {{ defendant.address }}.{% endif %}
             {% endif %}
         </p>
         {% endfor %}
