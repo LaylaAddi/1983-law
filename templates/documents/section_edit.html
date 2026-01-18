@@ -763,11 +763,39 @@
 
 {% block extra_js %}
 <script>
+// Track unsaved changes
+var formHasUnsavedChanges = false;
+
 // Initialize Bootstrap tooltips
 document.addEventListener('DOMContentLoaded', function() {
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Track form changes for unsaved warning
+    var forms = document.querySelectorAll('form');
+    forms.forEach(function(form) {
+        // Listen for input changes
+        form.addEventListener('input', function() {
+            formHasUnsavedChanges = true;
+        });
+        form.addEventListener('change', function() {
+            formHasUnsavedChanges = true;
+        });
+        // Clear flag on form submit
+        form.addEventListener('submit', function() {
+            formHasUnsavedChanges = false;
+        });
+    });
+
+    // Warn before leaving if unsaved changes
+    window.addEventListener('beforeunload', function(e) {
+        if (formHasUnsavedChanges) {
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
+        }
     });
 
     // Rotate chevron on collapse toggle

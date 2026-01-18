@@ -239,6 +239,39 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+// Track unsaved changes for story text
+var storyHasUnsavedChanges = false;
+var originalStoryText = '';
+
+document.addEventListener('DOMContentLoaded', function() {
+    var storyTextarea = document.getElementById('storyText');
+    if (storyTextarea) {
+        originalStoryText = storyTextarea.value;
+
+        storyTextarea.addEventListener('input', function() {
+            storyHasUnsavedChanges = (storyTextarea.value !== originalStoryText);
+        });
+    }
+
+    // Clear flag when analyze button is clicked (story will be processed)
+    var analyzeBtn = document.getElementById('analyzeStoryBtn');
+    if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', function() {
+            storyHasUnsavedChanges = false;
+        });
+    }
+});
+
+// Warn before leaving if unsaved changes
+window.addEventListener('beforeunload', function(e) {
+    if (storyHasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    }
+});
+</script>
 <script src="{% static 'js/tell-story.js' %}"></script>
 {% if test_stories %}
 <script>
