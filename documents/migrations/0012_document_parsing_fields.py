@@ -7,6 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('documents', '0011_promocode_referral_amount'),
+        ('documents', '0012_alter_documentcaselaw_unique_together_and_more'),
     ]
 
     operations = [
