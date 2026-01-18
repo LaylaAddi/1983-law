@@ -9,6 +9,8 @@
     // Will be set from template
     let ANALYZE_URL = '';
     let DOCUMENT_ID = '';
+    let progressInterval = null;
+    let terminalLineIndex = 0;
 
     // Human-readable names for rights
     const RIGHT_NAMES = {
@@ -145,12 +147,171 @@
     }
 
     function showLoading(panel) {
-        panel.querySelector('.rights-analysis-loading').style.display = 'flex';
+        const loadingDiv = panel.querySelector('.rights-analysis-loading');
+        loadingDiv.style.display = 'block';
         panel.querySelector('.rights-analysis-content').style.display = 'none';
         panel.querySelector('.rights-analysis-error').style.display = 'none';
+
+        // Build terminal-style progress HTML
+        loadingDiv.innerHTML = `
+            <div class="rights-terminal-container">
+                <div class="rights-terminal-header">
+                    <div class="rights-terminal-buttons">
+                        <span class="rights-terminal-btn close"></span>
+                        <span class="rights-terminal-btn minimize"></span>
+                        <span class="rights-terminal-btn maximize"></span>
+                    </div>
+                    <div class="rights-terminal-title">1983law — analyzing rights violations</div>
+                </div>
+                <div class="rights-terminal-body" id="rightsTerminalBody">
+                </div>
+                <div class="rights-terminal-progress-bar">
+                    <div class="rights-terminal-progress-fill" id="rightsProgressFill"></div>
+                </div>
+                <div class="rights-terminal-status">
+                    <span class="rights-terminal-status-text" id="rightsStatusText">Initializing analysis...</span>
+                    <span class="rights-terminal-percentage" id="rightsPercentage">0%</span>
+                </div>
+            </div>
+        `;
+
+        // Start terminal animation
+        terminalLineIndex = 0;
+        startTerminalAnimation();
+    }
+
+    function generateRightsCommands() {
+        return [
+            {
+                prompt: '~',
+                text: 'load-narrative --from=incident_narrative',
+                output: 'Loading incident narrative...'
+            },
+            {
+                prompt: '~/analysis',
+                text: 'grep -i "arrest|detained|search|seized" narrative.txt',
+                output: 'Scanning for Fourth Amendment indicators...'
+            },
+            {
+                prompt: '~/analysis',
+                text: 'check-first-amendment --speech --press --assembly',
+                output: 'Analyzing First Amendment issues...'
+            },
+            {
+                prompt: '~/analysis',
+                text: 'analyze-force --usc=42-1983 --graham-v-connor',
+                output: 'Evaluating use of force claims...'
+            },
+            {
+                prompt: '~/analysis',
+                text: 'check-due-process --fifth --fourteenth',
+                output: 'Reviewing due process violations...'
+            },
+            {
+                prompt: '~/rights',
+                text: 'match-violations --case-law --precedents',
+                output: 'Matching to established case law...'
+            },
+            {
+                prompt: '~/rights',
+                text: 'generate-suggestions --confidence-scores',
+                output: 'Generating violation suggestions...'
+            },
+            {
+                prompt: '~',
+                text: 'compile-results --format=json',
+                output: 'Compiling analysis results...'
+            }
+        ];
+    }
+
+    function addTerminalLine(html) {
+        const terminalBody = document.getElementById('rightsTerminalBody');
+        if (!terminalBody) return;
+
+        const line = document.createElement('div');
+        line.className = 'rights-terminal-line';
+        line.innerHTML = html;
+        terminalBody.appendChild(line);
+
+        // Auto-scroll to bottom
+        terminalBody.scrollTop = terminalBody.scrollHeight;
+    }
+
+    function startTerminalAnimation() {
+        const commands = generateRightsCommands();
+        const totalCommands = commands.length;
+        let commandIndex = 0;
+
+        // Clear any existing interval
+        if (progressInterval) {
+            clearInterval(progressInterval);
+        }
+
+        // Add initial comment
+        addTerminalLine('<span class="rights-terminal-comment"># Analyzing constitutional rights violations...</span>');
+
+        progressInterval = setInterval(function() {
+            if (commandIndex < totalCommands) {
+                const cmd = commands[commandIndex];
+                const percent = Math.round(((commandIndex + 1) / totalCommands) * 90);
+
+                // Add command line
+                addTerminalLine(`
+                    <span class="rights-terminal-prompt">❯</span>
+                    <span class="rights-terminal-path">${cmd.prompt}</span>
+                    <span class="rights-terminal-command"> ${escapeHtml(cmd.text)}</span>
+                `);
+
+                // Add output after small delay
+                setTimeout(function() {
+                    addTerminalLine('<span class="rights-terminal-output">→ ' + escapeHtml(cmd.output) + '</span>');
+                }, 200);
+
+                // Update progress
+                const progressFill = document.getElementById('rightsProgressFill');
+                const percentDisplay = document.getElementById('rightsPercentage');
+                const statusText = document.getElementById('rightsStatusText');
+
+                if (progressFill) progressFill.style.width = percent + '%';
+                if (percentDisplay) percentDisplay.textContent = percent + '%';
+                if (statusText) statusText.textContent = cmd.output;
+
+                commandIndex++;
+            } else {
+                // Done with commands, show waiting state
+                clearInterval(progressInterval);
+                progressInterval = null;
+
+                addTerminalLine('<span class="rights-terminal-info"><span class="rights-terminal-spinner"></span> Waiting for AI response...</span>');
+
+                const statusText = document.getElementById('rightsStatusText');
+                if (statusText) statusText.textContent = 'Waiting for analysis to complete...';
+            }
+        }, 600);
+    }
+
+    function stopProgressAnimation() {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
+
+        // Update terminal to show completion
+        const progressFill = document.getElementById('rightsProgressFill');
+        const percentDisplay = document.getElementById('rightsPercentage');
+        const statusText = document.getElementById('rightsStatusText');
+
+        if (progressFill) progressFill.style.width = '100%';
+        if (percentDisplay) percentDisplay.textContent = '100%';
+        if (statusText) statusText.textContent = 'Analysis complete';
+
+        // Add completion message to terminal
+        addTerminalLine('<span class="rights-terminal-success">✓ Analysis complete — review suggestions below</span>');
     }
 
     function showResults(panel, violations, summary) {
+        stopProgressAnimation();
         panel.querySelector('.rights-analysis-loading').style.display = 'none';
         panel.querySelector('.rights-analysis-error').style.display = 'none';
 
@@ -326,6 +487,7 @@
     }
 
     function showError(panel, message) {
+        stopProgressAnimation();
         panel.querySelector('.rights-analysis-loading').style.display = 'none';
         panel.querySelector('.rights-analysis-content').style.display = 'none';
 

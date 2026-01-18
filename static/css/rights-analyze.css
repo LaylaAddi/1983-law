@@ -242,3 +242,153 @@
 .rights-analysis-footer .btn {
     min-width: 120px;
 }
+
+/* ========================================
+   TERMINAL PROGRESS STYLES
+   ======================================== */
+
+.rights-terminal-container {
+    background: #1e1e1e;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
+}
+
+.rights-terminal-header {
+    background: #323232;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #404040;
+}
+
+.rights-terminal-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.rights-terminal-btn {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.rights-terminal-btn.close { background: #ff5f56; }
+.rights-terminal-btn.minimize { background: #ffbd2e; }
+.rights-terminal-btn.maximize { background: #27ca40; }
+
+.rights-terminal-title {
+    flex: 1;
+    text-align: center;
+    color: #888;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+.rights-terminal-body {
+    padding: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.rights-terminal-line {
+    margin-bottom: 4px;
+    line-height: 1.6;
+    font-size: 13px;
+    opacity: 0;
+    animation: rightsTerminalFadeIn 0.3s ease forwards;
+}
+
+@keyframes rightsTerminalFadeIn {
+    to { opacity: 1; }
+}
+
+.rights-terminal-prompt {
+    color: #c586c0;
+}
+
+.rights-terminal-path {
+    color: #569cd6;
+}
+
+.rights-terminal-command {
+    color: #dcdcdc;
+}
+
+.rights-terminal-output {
+    color: #6a9955;
+    padding-left: 8px;
+}
+
+.rights-terminal-comment {
+    color: #6a9955;
+    font-style: italic;
+}
+
+.rights-terminal-success {
+    color: #4ec9b0;
+}
+
+.rights-terminal-info {
+    color: #569cd6;
+}
+
+.rights-terminal-spinner {
+    display: inline-block;
+    color: #c586c0;
+}
+
+.rights-terminal-spinner::after {
+    content: '⠋';
+    animation: rightsTerminalSpin 0.8s steps(10) infinite;
+}
+
+@keyframes rightsTerminalSpin {
+    0% { content: '⠋'; }
+    10% { content: '⠙'; }
+    20% { content: '⠹'; }
+    30% { content: '⠸'; }
+    40% { content: '⠼'; }
+    50% { content: '⠴'; }
+    60% { content: '⠦'; }
+    70% { content: '⠧'; }
+    80% { content: '⠇'; }
+    90% { content: '⠏'; }
+}
+
+.rights-terminal-progress-bar {
+    background: #404040;
+    height: 4px;
+    border-radius: 2px;
+    margin: 12px 16px;
+    overflow: hidden;
+}
+
+.rights-terminal-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #c586c0, #569cd6);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 2px;
+}
+
+.rights-terminal-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px 12px;
+    border-top: 1px solid #404040;
+}
+
+.rights-terminal-status-text {
+    color: #888;
+    font-size: 11px;
+}
+
+.rights-terminal-percentage {
+    color: #c586c0;
+    font-size: 13px;
+    font-weight: 600;
+}
