@@ -174,17 +174,35 @@
                 {% endif %}
             </div>
             <div>
+                {% if document.payment_status != 'finalized' %}
                 <a href="{% url 'documents:document_review' document.id %}" class="btn btn-primary me-2">
                     <i class="bi bi-file-text me-1"></i>Review & Edit
                 </a>
-                {% if document.get_completion_percentage == 100 %}
-                    <button class="btn btn-success">
-                        <i class="bi bi-file-earmark-pdf me-1"></i>Generate PDF
-                    </button>
-                {% else %}
+                {% endif %}
+                {% if document.payment_status == 'finalized' %}
+                    <a href="{% url 'documents:document_preview' document.id %}?generate=true" class="btn btn-success">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+                    </a>
+                {% elif document.payment_status == 'paid' %}
+                    {% if document.get_completion_percentage == 100 %}
+                    <a href="{% url 'documents:finalize' document.id %}" class="btn btn-success">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Finalize & Generate PDF
+                    </a>
+                    {% else %}
                     <button class="btn btn-secondary" disabled title="Complete all sections first">
                         <i class="bi bi-file-earmark-pdf me-1"></i>Generate PDF
                     </button>
+                    {% endif %}
+                {% else %}
+                    {% if document.get_completion_percentage == 100 %}
+                    <a href="{% url 'documents:checkout' document.id %}" class="btn btn-success">
+                        <i class="bi bi-credit-card me-1"></i>Pay & Generate PDF
+                    </a>
+                    {% else %}
+                    <button class="btn btn-secondary" disabled title="Complete all sections first">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Generate PDF
+                    </button>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>

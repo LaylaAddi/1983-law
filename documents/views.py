@@ -275,6 +275,14 @@ def section_edit(request, document_id, section_type):
     """Edit a specific section of the document (interview style)."""
     document = get_object_or_404(Document, id=document_id, user=request.user)
 
+    # Block editing for finalized or expired documents
+    if not document.can_edit():
+        if document.payment_status == 'finalized':
+            messages.info(request, 'This document has been finalized and cannot be edited.')
+        elif document.payment_status == 'expired':
+            messages.warning(request, 'This document has expired. Please upgrade to continue editing.')
+        return redirect('documents:document_detail', document_id=document.id)
+
     # Block section access until user tells their story
     if not document.has_story():
         messages.info(request, 'Please tell your story first. This helps us understand your case and pre-fill relevant sections.')
@@ -1247,6 +1255,14 @@ def lookup_district_court(request):
 def tell_your_story(request, document_id):
     """Page for users to tell their story and have AI extract form fields."""
     document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Block editing for finalized or expired documents
+    if not document.can_edit():
+        if document.payment_status == 'finalized':
+            messages.info(request, 'This document has been finalized and cannot be edited.')
+        elif document.payment_status == 'expired':
+            messages.warning(request, 'This document has expired. Please upgrade to continue editing.')
+        return redirect('documents:document_detail', document_id=document.id)
 
     context = {
         'document': document,
