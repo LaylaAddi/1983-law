@@ -628,46 +628,8 @@ def fill_test_data(request, document_id):
 
 @login_required
 def document_preview(request, document_id):
-    """Preview the complete document as a professionally formatted legal complaint.
-
-    This displays saved database data formatted as a legal document - no AI generation.
-    """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-
-    # Collect all document data from the database
-    document_data = _collect_document_data(document)
-
-    # Load section data for display
-    sections_data = {}
-    for section in document.sections.all():
-        config = SECTION_CONFIG.get(section.section_type, {})
-        Model = config.get('model')
-        is_multiple = config.get('multiple', False)
-
-        if Model:
-            if is_multiple:
-                data = list(Model.objects.filter(section=section))
-            else:
-                try:
-                    data = Model.objects.get(section=section)
-                except Model.DoesNotExist:
-                    data = None
-
-            sections_data[section.section_type] = {
-                'section': section,
-                'config': config,
-                'data': data,
-                'is_multiple': is_multiple,
-            }
-
-    context = {
-        'document': document,
-        'sections_data': sections_data,
-        'section_config': SECTION_CONFIG,
-        'document_data': document_data,
-    }
-
-    return render(request, 'documents/document_preview.html', context)
+    """Redirect to document_review - preview and edit are now combined."""
+    return redirect('documents:document_review', document_id=document_id)
 
 
 @login_required
