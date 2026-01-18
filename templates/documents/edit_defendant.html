@@ -14,9 +14,16 @@
                 </div>
                 <div class="card-body">
                     {% if defendant.agency_inferred %}
-                    <div class="alert alert-warning">
-                        <i class="bi bi-robot me-1"></i>
-                        <strong>AI-Suggested Agency:</strong> The agency for this defendant was suggested by AI based on location. Please verify it is correct.
+                    <div class="alert alert-danger">
+                        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i>Address Verification Required</h5>
+                        <p class="mb-2">This defendant's information was suggested by AI. <strong>You must verify the address is correct</strong> before accepting.</p>
+                        <hr>
+                        <p class="mb-0 small">
+                            <i class="bi bi-lightbulb me-1"></i>
+                            <strong>Steps:</strong> 1) Use the "Lookup Address" button below to search for the correct address.
+                            2) Verify it matches official records for serving legal documents.
+                            3) Save changes, then return to confirm.
+                        </p>
                     </div>
                     {% endif %}
 

@@ -448,7 +448,7 @@
                                                 {% if section.section_type == 'defendants' and item.defendant_type == 'individual' and not item.agency_name %}
                                                 <br><small class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Missing agency - required for proper service</small>
                                                 {% elif section.section_type == 'defendants' and item.agency_inferred %}
-                                                <br><small class="text-warning"><i class="bi bi-robot me-1"></i>AI-suggested agency - please verify accuracy</small>
+                                                <br><small class="text-warning"><i class="bi bi-robot me-1"></i>AI-suggested - <strong>you must verify the address before accepting</strong></small>
                                                 {% endif %}
                                                 {% if section.section_type == 'defendants' and item.agency_name %}
                                                 <br><small class="text-muted"><i class="bi bi-building me-1"></i>{{ item.agency_name }}</small>
@@ -474,12 +474,72 @@
                                             <div class="d-flex gap-2">
                                                 {% if section.section_type == 'defendants' %}
                                                 {% if item.agency_inferred %}
-                                                <form method="post" action="{% url 'documents:accept_defendant_agency' document.id item.id %}" class="d-inline">
-                                                    {% csrf_token %}
-                                                    <button type="submit" class="btn btn-success btn-sm" title="Confirm this agency is correct">
-                                                        <i class="bi bi-check-lg me-1"></i>Accept
-                                                    </button>
-                                                </form>
+                                                <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#verifyModal{{ item.id }}" title="Verify address and accept">
+                                                    <i class="bi bi-search me-1"></i>Verify & Accept
+                                                </button>
+                                                <!-- Verification Modal -->
+                                                <div class="modal fade" id="verifyModal{{ item.id }}" tabindex="-1" aria-labelledby="verifyModalLabel{{ item.id }}" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header bg-warning">
+                                                                <h5 class="modal-title" id="verifyModalLabel{{ item.id }}">
+                                                                    <i class="bi bi-exclamation-triangle me-2"></i>Address Verification Required
+                                                                </h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="alert alert-warning mb-3">
+                                                                    <i class="bi bi-info-circle me-1"></i>
+                                                                    <strong>Important:</strong> For your lawsuit to be properly served, you must verify the correct official address for this defendant.
+                                                                </div>
+
+                                                                <div class="mb-3">
+                                                                    <strong>Defendant:</strong> {{ item.name }}
+                                                                    {% if item.agency_name %}<br><small class="text-muted">Agency: {{ item.agency_name }}</small>{% endif %}
+                                                                </div>
+
+                                                                <div class="mb-3 p-3 bg-light rounded">
+                                                                    <strong><i class="bi bi-geo-alt me-1"></i>Current Address:</strong>
+                                                                    <p class="mb-0 mt-1">{% if item.address %}{{ item.address }}{% else %}<em class="text-danger">No address entered</em>{% endif %}</p>
+                                                                </div>
+
+                                                                <div class="alert alert-info">
+                                                                    <i class="bi bi-lightbulb me-1"></i>
+                                                                    <strong>How to verify:</strong>
+                                                                    <ol class="mb-0 mt-2">
+                                                                        <li>Click <strong>Edit</strong> to open the defendant form</li>
+                                                                        <li>Use the <strong>Lookup Address</strong> button to search</li>
+                                                                        <li>Confirm the address matches official records</li>
+                                                                    </ol>
+                                                                </div>
+
+                                                                <form method="post" action="{% url 'documents:accept_defendant_agency' document.id item.id %}" id="verifyForm{{ item.id }}">
+                                                                    {% csrf_token %}
+                                                                    <div class="form-check mt-3 p-3 border rounded bg-light">
+                                                                        <input class="form-check-input" type="checkbox" id="verifyCheck{{ item.id }}" onchange="toggleAcceptBtn{{ item.id }}(this)">
+                                                                        <label class="form-check-label" for="verifyCheck{{ item.id }}">
+                                                                            <strong>I confirm that I have verified the address is correct for serving legal documents to this defendant.</strong>
+                                                                        </label>
+                                                                    </div>
+                                                                </form>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <a href="{% url 'documents:edit_defendant' document.id item.id %}" class="btn btn-primary">
+                                                                    <i class="bi bi-pencil me-1"></i>Edit Defendant
+                                                                </a>
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <button type="submit" form="verifyForm{{ item.id }}" class="btn btn-success" id="acceptBtn{{ item.id }}" disabled>
+                                                                    <i class="bi bi-check-lg me-1"></i>Accept & Confirm
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <script>
+                                                function toggleAcceptBtn{{ item.id }}(checkbox) {
+                                                    document.getElementById('acceptBtn{{ item.id }}').disabled = !checkbox.checked;
+                                                }
+                                                </script>
                                                 {% endif %}
                                                 <a href="{% url 'documents:edit_defendant' document.id item.id %}"
                                                    class="btn btn-primary btn-sm">

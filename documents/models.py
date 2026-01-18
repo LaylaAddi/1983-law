@@ -399,6 +399,7 @@ class Defendant(models.Model):
     agency_name = models.CharField(max_length=255, blank=True, help_text='For individual officers, their employing agency')
     agency_inferred = models.BooleanField(default=False, help_text='True if agency was AI-inferred and needs review')
     address = models.TextField(blank=True, help_text='Official address for service')
+    address_verified = models.BooleanField(default=False, help_text='User confirmed they verified the address is correct')
     description = models.TextField(blank=True, help_text='Physical description or identifying information')
 
     def __str__(self):

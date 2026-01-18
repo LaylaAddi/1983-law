@@ -528,8 +528,9 @@ def accept_defendant_agency(request, document_id, defendant_id):
     document = get_object_or_404(Document, id=document_id, user=request.user)
     defendant = get_object_or_404(Defendant, id=defendant_id, section__document=document)
 
-    # Mark the agency as verified (no longer AI-inferred)
+    # Mark the agency as verified (no longer AI-inferred) and address as verified
     defendant.agency_inferred = False
+    defendant.address_verified = True
     defendant.save()
 
     # Invalidate cached complaint since data changed

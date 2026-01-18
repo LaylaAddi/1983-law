@@ -313,10 +313,31 @@ In the Government Defendants section, users can click "Suggest Agency" to get AI
 - Payload: `{city, state, defendant_name, title, description}`
 - Returns: List of agency suggestions with confidence levels AND addresses
 
-**Defendant model field:**
+**Defendant model fields:**
 - `agency_inferred` (BooleanField, default=False)
-- Set to True when agency comes from AI (story parsing or suggestion)
-- Cleared to False when user manually saves/edits the defendant
+  - Set to True when agency comes from AI (story parsing or suggestion)
+  - Cleared to False when user manually saves/edits the defendant OR accepts via verification modal
+- `address_verified` (BooleanField, default=False)
+  - Set to True when user confirms they verified the address is correct
+  - Required before accepting an AI-suggested defendant
+
+**Address Verification Requirement (IMPORTANT):**
+When AI suggests defendants, users MUST verify the service address before accepting:
+
+1. **Warning Display:** AI-suggested defendants show "you must verify the address before accepting"
+2. **"Verify & Accept" Button:** Opens a verification modal (replaces simple "Accept" button)
+3. **Verification Modal includes:**
+   - Warning about proper service requirements
+   - Current address displayed prominently
+   - Instructions to use "Lookup Address" to search
+   - **REQUIRED checkbox:** "I confirm that I have verified the address is correct for serving legal documents to this defendant."
+   - Accept button is DISABLED until checkbox is checked
+4. **On Accept:** Both `agency_inferred=False` and `address_verified=True` are set
+
+**Edit Defendant Page:**
+- Shows red alert banner: "Address Verification Required" for AI-suggested defendants
+- Step-by-step instructions to verify address
+- "Lookup Address" button to search for official address
 
 **Document Detail Warning:**
 When defendants have `agency_inferred=True`, the Government Defendants section card shows:
@@ -338,14 +359,15 @@ When defendants have `agency_inferred=True`, the Government Defendants section c
 
 **Files involved:**
 - `documents/services/openai_service.py` - `suggest_agency()` and `lookup_agency_address()` methods
-- `documents/views.py` - `suggest_agency`, `edit_defendant`, and `lookup_address` view endpoints
-- `documents/urls.py` - Routes for suggest-agency, edit-defendant, and lookup-address
-- `templates/documents/section_edit.html` - Suggest Agency button, Edit button for existing defendants
-- `templates/documents/edit_defendant.html` - Edit defendant form with Lookup Address button
+- `documents/views.py` - `suggest_agency`, `edit_defendant`, `lookup_address`, and `accept_defendant_agency` view endpoints
+- `documents/urls.py` - Routes for suggest-agency, edit-defendant, lookup-address, and accept-defendant-agency
+- `templates/documents/section_edit.html` - Verification modal with checkbox for AI-suggested defendants
+- `templates/documents/edit_defendant.html` - Edit defendant form with Lookup Address button and verification warning
 - `templates/documents/document_detail.html` - Warning for defendants needing review
 - `documents/forms.py` - DefendantForm clears agency_inferred on save
-- `documents/models.py` - Defendant.agency_inferred field
-- `documents/migrations/0013_defendant_agency_inferred.py` - Migration for new field
+- `documents/models.py` - Defendant.agency_inferred and address_verified fields
+- `documents/migrations/0013_defendant_agency_inferred.py` - Migration for agency_inferred field
+- `documents/migrations/0017_defendant_address_verified.py` - Migration for address_verified field
 
 ### Witness Enhancement Feature (NEW)
 The Witnesses section now includes enhanced fields for tracking evidence captured by witnesses and their prior interactions with defendants.
