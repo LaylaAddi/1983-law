@@ -182,29 +182,48 @@ def _get_site_settings():
     return SiteSettings.get_settings()
 
 
+def _get_legal_document(doc_type):
+    """Helper to get legal document from database."""
+    from .models import LegalDocument
+    return LegalDocument.get_document(doc_type)
+
+
+def _render_legal_page(request, doc_type, fallback_template):
+    """
+    Render a legal page.
+    First checks for database content, falls back to template if not found.
+    """
+    settings = _get_site_settings()
+    document = _get_legal_document(doc_type)
+
+    if document:
+        # Use database content
+        return render(request, 'legal/document_base.html', {
+            'settings': settings,
+            'document': document,
+        })
+    else:
+        # Fall back to hardcoded template
+        return render(request, fallback_template, {
+            'settings': settings,
+        })
+
+
 def terms_of_service(request):
     """Terms of Service page."""
-    return render(request, 'legal/terms.html', {
-        'settings': _get_site_settings(),
-    })
+    return _render_legal_page(request, 'terms', 'legal/terms.html')
 
 
 def privacy_policy(request):
     """Privacy Policy page."""
-    return render(request, 'legal/privacy.html', {
-        'settings': _get_site_settings(),
-    })
+    return _render_legal_page(request, 'privacy', 'legal/privacy.html')
 
 
 def legal_disclaimer(request):
     """Legal Disclaimer page."""
-    return render(request, 'legal/disclaimer.html', {
-        'settings': _get_site_settings(),
-    })
+    return _render_legal_page(request, 'disclaimer', 'legal/disclaimer.html')
 
 
 def cookie_policy(request):
     """Cookie Policy page."""
-    return render(request, 'legal/cookies.html', {
-        'settings': _get_site_settings(),
-    })
+    return _render_legal_page(request, 'cookies', 'legal/cookies.html')

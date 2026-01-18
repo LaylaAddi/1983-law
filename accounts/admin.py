@@ -1,7 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth import get_user_model
-from .models import SiteSettings
+from django import forms
+from ckeditor.widgets import CKEditorWidget
+from .models import SiteSettings, LegalDocument
 
 User = get_user_model()
 
@@ -59,3 +61,41 @@ class SiteSettingsAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Don't allow deleting the settings
         return False
+
+
+class LegalDocumentAdminForm(forms.ModelForm):
+    """Custom form for LegalDocument with CKEditor widget."""
+    content = forms.CharField(widget=CKEditorWidget(config_name='legal'))
+
+    class Meta:
+        model = LegalDocument
+        fields = '__all__'
+
+
+@admin.register(LegalDocument)
+class LegalDocumentAdmin(admin.ModelAdmin):
+    """Admin for editable legal documents with rich text editor."""
+
+    form = LegalDocumentAdminForm
+    list_display = ('document_type', 'title', 'effective_date', 'is_active', 'updated_at')
+    list_filter = ('document_type', 'is_active')
+    search_fields = ('title', 'content')
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        (None, {
+            'fields': ('document_type', 'title', 'is_active')
+        }),
+        ('Content', {
+            'fields': ('content',),
+            'classes': ('wide',),
+        }),
+        ('Dates', {
+            'fields': ('effective_date', 'created_at', 'updated_at'),
+        }),
+    )
+
+    class Media:
+        css = {
+            'all': ('css/admin-legal.css',)
+        }

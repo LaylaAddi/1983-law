@@ -279,3 +279,60 @@ class SiteSettings(models.Model):
         """Get or create the singleton settings instance."""
         settings, created = cls.objects.get_or_create(pk=1)
         return settings
+
+
+class LegalDocument(models.Model):
+    """
+    Editable legal documents (Terms, Privacy Policy, etc.)
+    Content is stored in database and rendered with rich text formatting.
+    """
+
+    DOCUMENT_TYPES = [
+        ('terms', 'Terms of Service'),
+        ('privacy', 'Privacy Policy'),
+        ('disclaimer', 'Legal Disclaimer'),
+        ('cookies', 'Cookie Policy'),
+    ]
+
+    document_type = models.CharField(
+        max_length=20,
+        choices=DOCUMENT_TYPES,
+        unique=True,
+        help_text='Type of legal document'
+    )
+    title = models.CharField(
+        max_length=255,
+        help_text='Document title displayed at top of page'
+    )
+    content = models.TextField(
+        help_text='Full document content (HTML allowed)'
+    )
+    effective_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text='When this version became effective'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text='Whether this document is currently active'
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Legal Document'
+        verbose_name_plural = 'Legal Documents'
+        ordering = ['document_type']
+
+    def __str__(self):
+        return self.get_document_type_display()
+
+    @classmethod
+    def get_document(cls, doc_type):
+        """Get the active document of the specified type."""
+        try:
+            return cls.objects.get(document_type=doc_type, is_active=True)
+        except cls.DoesNotExist:
+            return None

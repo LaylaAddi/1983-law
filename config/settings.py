@@ -19,6 +19,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Third-party apps
+    'ckeditor',
     # Local apps
     'accounts',
     'documents',
@@ -158,3 +160,38 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 # App Branding
 APP_NAME = os.getenv('APP_NAME', '1983law.com')  # Used in footer and watermark
 HEADER_APP_NAME = os.getenv('HEADER_APP_NAME', '1983 Law')  # Used in header/navbar
+
+# CKEditor Configuration
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'full',
+        'height': 400,
+        'width': '100%',
+        'removePlugins': 'elementspath',
+        'resize_enabled': True,
+    },
+    'legal': {
+        'toolbar': [
+            ['Bold', 'Italic', 'Underline', 'Strike'],
+            ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent'],
+            ['JustifyLeft', 'JustifyCenter', 'JustifyRight'],
+            ['Link', 'Unlink'],
+            ['RemoveFormat', 'Source'],
+            '/',
+            ['Format', 'Styles'],
+            ['Table', 'HorizontalRule'],
+            ['Undo', 'Redo'],
+        ],
+        'height': 500,
+        'width': '100%',
+        'removePlugins': 'elementspath',
+        'resize_enabled': True,
+        'format_tags': 'p;h2;h3;h4;h5;h6',
+        'stylesSet': [
+            {'name': 'Alert Warning', 'element': 'div', 'attributes': {'class': 'alert alert-warning'}},
+            {'name': 'Alert Info', 'element': 'div', 'attributes': {'class': 'alert alert-info'}},
+            {'name': 'Alert Danger', 'element': 'div', 'attributes': {'class': 'alert alert-danger'}},
+            {'name': 'Card', 'element': 'div', 'attributes': {'class': 'card mb-4'}},
+        ],
+    },
+}
