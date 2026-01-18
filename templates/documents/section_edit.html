@@ -301,6 +301,26 @@
 
                 <p class="text-muted mb-4">{{ config.description }}</p>
 
+                {% if section.section_type == 'witnesses' or section.section_type == 'evidence' or section.section_type == 'prior_complaints' %}
+                    {% if section.status != 'not_applicable' and not items %}
+                    <div class="alert alert-light border mb-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-info-circle text-muted me-2"></i>
+                                <span class="text-muted">If this section doesn't apply to your case, you can mark it as not applicable.</span>
+                            </div>
+                            <form method="post" action="{% url 'documents:update_section_status' document.id section.section_type %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="not_applicable">
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-dash-circle me-1"></i>Mark as N/A
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endif %}
+
                 {% if section.section_type == 'plaintiff_info' and is_profile_based %}
                 <!-- Profile Data Display (Read-only) -->
                 <div class="card bg-light mb-4">

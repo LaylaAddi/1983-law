@@ -47,6 +47,22 @@
                 Look for the <span class="badge bg-warning text-dark">Needs Work</span> badges below.
             </div>
         {% endif %}
+
+        {% if document.get_completion_percentage < 100 %}
+            <div class="alert alert-info mt-3 mb-0">
+                <div class="d-flex">
+                    <i class="bi bi-info-circle me-2 mt-1"></i>
+                    <div>
+                        <strong>To generate your PDF:</strong> All sections must be completed or marked as N/A.
+                        <ul class="mb-0 mt-2 small">
+                            <li><strong>Complete</strong> sections that apply to your case</li>
+                            <li><strong>Mark as "Not Applicable"</strong> sections that don't apply (e.g., no witnesses, no prior complaints)</li>
+                            <li>To mark a section as N/A: Open it → scroll to "Section Status" on the right → select "Not Applicable" → Save</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
     </div>
 </div>
 
