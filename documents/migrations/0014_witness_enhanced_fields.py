@@ -7,6 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('documents', '0013_defendant_agency_inferred'),
+        ('documents', '0014_merge_20260117_1635'),
     ]
 
     operations = [
