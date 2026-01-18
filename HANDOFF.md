@@ -564,7 +564,10 @@ DRAFT (free) → EXPIRED or PAID → FINALIZED
 Views check `document.can_edit()` before allowing edits:
 - `section_edit` - Redirects with message if document is finalized or expired
 - `tell_your_story` - Redirects with message if document is finalized or expired
+- `document_review` - Redirects finalized documents to `document_preview` (read-only)
+- `document_preview` - Renders preview for finalized documents, redirects others to review
 - `document_detail.html` - Hides Review & Edit button for finalized documents
+- `document_preview.html` - Hides Review & Edit button for finalized documents
 
 ### Generate PDF Button (Payment-Aware)
 The Generate PDF button on document detail page adapts based on payment status:
@@ -895,6 +898,16 @@ Users were seeing "Network error. Please try again." when clicking "Analyze My S
 4. Results stored in database, returned when ready
 
 This completely eliminates timeout issues regardless of how long OpenAI takes.
+
+### Redirect Loop for Finalized Documents (RESOLVED)
+Clicking "Download PDF" on a finalized document was causing a blank page.
+
+**Root cause:** `document_preview` was unconditionally redirecting to `document_review`, while `document_review` redirected finalized documents back to `document_preview`, creating an infinite redirect loop.
+
+**Solution:** Updated `document_preview` to actually render the preview template for finalized documents instead of always redirecting. Now:
+- Non-finalized documents: `document_preview` → redirect to `document_review`
+- Finalized documents: `document_preview` → render preview template (read-only)
+- Finalized documents visiting `document_review`: redirect to `document_preview`
 
 ### Relief Sought Not Saving (Needs Investigation)
 The relief_sought section may not be saving properly when user clicks "Continue to Document".
