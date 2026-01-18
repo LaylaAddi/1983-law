@@ -400,11 +400,32 @@ Be specific to THIS case. Reference the actual violations, damages, and evidence
         else:
             existing_list = "None yet"
 
+        # First, use web search to find the correct law enforcement agency for this location
+        agency_info = self.find_law_enforcement_agency(city, state)
+        agency_context = ""
+        if agency_info.get('success'):
+            agencies = agency_info.get('agencies', [])
+            county = agency_info.get('county_name', '')
+            has_local_police = agency_info.get('has_local_police', True)
+
+            if agencies:
+                agency_context = f"""
+VERIFIED LAW ENFORCEMENT INFORMATION (from web search):
+- County: {county}
+- Has local police department: {'Yes' if has_local_police else 'NO - use County Sheriff'}
+- Agencies with jurisdiction:
+"""
+                for a in agencies:
+                    agency_context += f"  * {a.get('name')} ({a.get('type')}) - {'PRIMARY' if a.get('is_primary') else 'alternative'}\n"
+                    if a.get('address'):
+                        agency_context += f"    Address: {a.get('address')}\n"
+
         prompt = f"""Based on the following story about a civil rights violation, identify ALL defendants that should be named in a Section 1983 complaint.
 
 LOCATION:
 - City: {city or 'Unknown'}
 - State: {state or 'Unknown'}
+{agency_context}
 
 PLAINTIFF'S STORY:
 {story_text or 'No story provided - use form context below'}
@@ -427,11 +448,12 @@ For EACH person mentioned in the story who may have violated rights:
 - Determine their employing agency based on context
 - Provide the official agency headquarters address
 
-CRITICAL RULES:
+CRITICAL RULES FOR AGENCIES:
+- IMPORTANT: Use the VERIFIED LAW ENFORCEMENT INFORMATION above if provided - it contains the ACTUAL agencies with jurisdiction
+- Small towns often do NOT have their own police department - use County Sheriff instead
+- Do NOT invent "[City] Police Department" if web search shows no local police exists
 - Do NOT suggest any defendant already in the "ALREADY ADDED DEFENDANTS" list
 - Security guards at government buildings = employed by the city (e.g., "City of Oklahoma City")
-- Police officers = employed by the police department (e.g., "Oklahoma City Police Department")
-- If someone works at "City Hall" their employer is "City of [City Name]"
 - Include BOTH the individual AND their employing agency as separate defendants
 
 Return a JSON object with this format:
@@ -480,15 +502,139 @@ Return a JSON object with this format:
             import json
             result = json.loads(response.choices[0].message.content)
 
-            # Add verification warning if not already in notes
+            # Build comprehensive verification warning
             notes = result.get('notes', '')
-            if 'verify' not in notes.lower():
-                notes = (notes + ' ' if notes else '') + 'Please verify all information before filing legal documents.'
+
+            # Add agency verification context
+            verification_parts = []
+            if agency_info.get('success'):
+                if not agency_info.get('has_local_police', True):
+                    verification_parts.append(
+                        f"NOTE: {city} does not appear to have its own police department. "
+                        f"Law enforcement is likely provided by {agency_info.get('county_name', 'the county')} Sheriff's Office."
+                    )
+                verification_parts.append(agency_info.get('verification_warning', ''))
+
+            verification_parts.append(
+                "IMPORTANT: You MUST verify the correct law enforcement agency before filing. "
+                "Small communities are often served by County Sheriff, not a local police department. "
+                "Search online or call the agency to confirm jurisdiction and address."
+            )
+
+            verification_warning = ' '.join(filter(None, verification_parts))
 
             return {
                 'success': True,
                 'suggestions': result.get('suggestions', []),
                 'notes': notes,
+                'verification_warning': verification_warning,
+                'has_local_police': agency_info.get('has_local_police', True) if agency_info.get('success') else None,
+                'county_name': agency_info.get('county_name', '') if agency_info.get('success') else '',
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+            }
+
+    def find_law_enforcement_agency(self, city: str, state: str) -> dict:
+        """
+        Find the correct law enforcement agency for a location using web search.
+        Handles small towns that don't have their own police department.
+
+        Args:
+            city: City/town name
+            state: State name or abbreviation
+
+        Returns:
+            dict with 'success', 'agencies' (list of possible agencies with addresses)
+        """
+        if not city or not state:
+            return {
+                'success': False,
+                'error': 'City and state are required',
+            }
+
+        query = f"What law enforcement agency has jurisdiction in {city}, {state}? Is there a {city} Police Department or is it served by county sheriff? What county is {city} in?"
+
+        try:
+            # Use OpenAI with web search tool
+            response = self.client.responses.create(
+                model="gpt-4o-mini",
+                tools=[{"type": "web_search_preview"}],
+                input=query
+            )
+
+            # Extract the text response
+            search_result = ""
+            for item in response.output:
+                if hasattr(item, 'content'):
+                    for content in item.content:
+                        if hasattr(content, 'text'):
+                            search_result = content.text
+                            break
+
+            if not search_result:
+                return {
+                    'success': False,
+                    'error': 'No search results found',
+                }
+
+            # Parse the search results to extract agency information
+            parse_prompt = f"""Based on this search result about law enforcement in {city}, {state}, identify ALL possible law enforcement agencies that may have jurisdiction.
+
+SEARCH RESULT:
+{search_result}
+
+IMPORTANT RULES:
+1. Small towns often do NOT have their own police department
+2. If no local police exists, the COUNTY SHERIFF has jurisdiction
+3. State Highway Patrol may also have jurisdiction on state roads
+4. List agencies in order of likelihood (most likely first)
+
+Return a JSON object:
+{{
+    "has_local_police": true/false,
+    "county_name": "Name of the county this location is in",
+    "agencies": [
+        {{
+            "name": "Official agency name (e.g., 'Kemper County Sheriff's Office')",
+            "type": "sheriff|police|state_patrol|other",
+            "address": "Full address if found, or null",
+            "is_primary": true/false (true if this is the most likely agency),
+            "confidence": "high|medium|low",
+            "notes": "Why this agency may have jurisdiction"
+        }}
+    ],
+    "verification_warning": "A warning message about verifying the correct agency"
+}}
+
+If the city has its own police department, include it first.
+ALWAYS include the county sheriff as an option for small towns.
+Include state patrol if relevant."""
+
+            parse_response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a legal research assistant helping identify law enforcement agencies. Be thorough and accurate. Always respond with valid JSON."},
+                    {"role": "user", "content": parse_prompt}
+                ],
+                temperature=0.1,
+                max_tokens=1500,
+                response_format={"type": "json_object"}
+            )
+
+            import json
+            result = json.loads(parse_response.choices[0].message.content)
+
+            return {
+                'success': True,
+                'has_local_police': result.get('has_local_police', False),
+                'county_name': result.get('county_name', ''),
+                'agencies': result.get('agencies', []),
+                'verification_warning': result.get('verification_warning',
+                    'IMPORTANT: Please verify the correct law enforcement agency. Small communities may be served by County Sheriff rather than a local police department.'),
             }
 
         except Exception as e:
