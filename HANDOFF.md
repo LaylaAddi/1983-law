@@ -860,16 +860,28 @@ Finalized documents can be downloaded as professionally formatted PDF files usin
 
 ### How It Works
 1. User finalizes their document (after payment)
-2. "Download PDF" button appears on the preview page
-3. Server generates PDF from the legal document template
-4. PDF downloads to user's machine
+2. "Download PDF" button appears on the preview page and status banner
+3. Button shows spinning hourglass + "Generating PDF..." while processing
+4. Server generates PDF from the legal document template
+5. PDF downloads to user's machine
+6. Button resets after 5 seconds
+
+### PDF Formatting (Page Breaks)
+CSS page-break controls prevent awkward formatting:
+- **Section headers**: `page-break-after: avoid` - headers won't be orphaned at bottom of pages
+- **Signature block**: `page-break-inside: avoid` - keeps signature together on one page
+- **Paragraphs**: `orphans: 3; widows: 3` - minimum 3 lines at page breaks
+- **Causes of action**: `page-break-inside: avoid` - tries to keep each cause together
+- **Prayer for relief**: `page-break-inside: avoid` - keeps prayer section together
 
 ### Requirements
 - Document must be in `finalized` status
 - Document must have minimum required data (plaintiff name, narrative, rights violated)
 
 ### Files
-- `templates/documents/document_pdf.html` - Print-optimized PDF template
+- `templates/documents/document_pdf.html` - Print-optimized PDF template with page-break CSS
+- `templates/documents/document_preview.html` - Download button with loading indicator
+- `templates/documents/partials/status_banner.html` - Status banner download button
 - `documents/views.py` - `download_pdf` view function
 
 ### URL
