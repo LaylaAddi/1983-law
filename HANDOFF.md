@@ -849,6 +849,103 @@ Set these in Render Dashboard → Environment:
 
 ---
 
+## Legal Pages & Compliance
+
+### Overview
+The app includes comprehensive legal pages (Terms of Service, Privacy Policy, Legal Disclaimer, Cookie Policy) with:
+- Dynamic company info from database settings
+- Rich text editing via CKEditor in admin
+- Registration requires agreeing to Terms and Privacy Policy
+
+### Legal Page URLs
+| URL | Document |
+|-----|----------|
+| `/legal/terms/` | Terms of Service |
+| `/legal/privacy/` | Privacy Policy |
+| `/legal/disclaimer/` | Legal Disclaimer |
+| `/legal/cookies/` | Cookie Policy |
+
+### Site Settings (Admin Editable)
+Located at `/admin/accounts/sitesettings/`:
+
+| Setting | Default | Purpose |
+|---------|---------|---------|
+| company_name | 1983law.org | Legal company/org name |
+| company_type | (blank) | LLC, Non-Profit, etc. |
+| company_state | New York | State of incorporation |
+| company_address | (blank) | Physical address (CAN-SPAM) |
+| contact_email | contact@1983law.org | Privacy/legal inquiries |
+| website_url | https://www.1983law.org | Primary website |
+| minimum_age | 18 | Age requirement |
+| governing_law_state | New York | TOS governing law |
+| has_attorneys | False | Toggle if attorneys involved |
+| attorney_states | (blank) | States where licensed |
+| payment_processor | Stripe | Payment processor name |
+| refund_policy_days | 0 | Days for refunds (0=no refunds) |
+| uses_google_analytics | True | For Privacy Policy disclosure |
+| uses_openai | True | For Privacy Policy disclosure |
+| hosting_provider | Render | Hosting provider name |
+| terms_effective_date | (blank) | TOS effective date |
+| privacy_effective_date | (blank) | Privacy effective date |
+
+### Legal Documents (Full Content Editing)
+Located at `/admin/accounts/legaldocument/`:
+
+- Each document type (terms, privacy, disclaimer, cookies) can have fully customized content
+- Rich text editor (CKEditor) with:
+  - Bold, italic, underline, strikethrough
+  - Numbered and bullet lists
+  - Headers (H2-H6)
+  - Links and tables
+  - Pre-built styles: Alert boxes (warning, info, danger), Cards
+- If no database document exists, falls back to template version
+- Templates still use dynamic company info from SiteSettings
+
+### Registration Agreement
+Users must check two required checkboxes during registration:
+1. "I agree to the Terms of Service" (links to `/legal/terms/`)
+2. "I agree to the Privacy Policy" (links to `/legal/privacy/`)
+
+Both are required to create an account.
+
+### Footer Links
+All pages include footer links to:
+- Terms of Service
+- Privacy Policy
+- Legal Disclaimer
+- Cookie Policy
+
+### Database Models
+| Model | Location | Purpose |
+|-------|----------|---------|
+| SiteSettings | accounts/models.py | Singleton for company info (one instance) |
+| LegalDocument | accounts/models.py | Editable legal document content |
+
+### Key Files
+- `accounts/models.py` - SiteSettings and LegalDocument models
+- `accounts/views.py` - Legal page views with fallback logic
+- `accounts/legal_urls.py` - Legal URL routes
+- `accounts/admin.py` - Admin config with CKEditor
+- `accounts/forms.py` - Registration form with agreement checkboxes
+- `templates/legal/terms.html` - Default Terms template
+- `templates/legal/privacy.html` - Default Privacy template
+- `templates/legal/disclaimer.html` - Default Disclaimer template
+- `templates/legal/cookies.html` - Default Cookie Policy template
+- `templates/legal/document_base.html` - Database content renderer
+- `templates/accounts/register.html` - Registration with checkboxes
+- `templates/base.html` - Footer with legal links
+- `config/settings.py` - CKEditor configuration
+- `requirements.txt` - django-ckeditor>=6.5
+
+### Adding Attorney Information Later
+When attorneys become involved:
+1. Go to `/admin/accounts/sitesettings/`
+2. Check "Has attorneys"
+3. Enter states in "Attorney states" (comma-separated)
+4. Legal Disclaimer automatically shows attorney information
+
+---
+
 ## What's NOT Built Yet
 
 - E-filing integration
