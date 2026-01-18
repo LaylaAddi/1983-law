@@ -10,6 +10,7 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('documents', '0017_defendant_address_verified'),
+        ('documents', '0017_merge_20260118_0545'),
     ]
 
     operations = [
