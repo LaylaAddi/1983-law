@@ -202,9 +202,9 @@
                     <i class="bi bi-printer me-1"></i>Print
                 </button>
                 {% if document.payment_status == 'finalized' %}
-                <a href="{% url 'documents:download_pdf' document.id %}" class="btn btn-success pdf-download-btn">
+                <button type="button" class="btn btn-success pdf-download-btn" data-document-id="{{ document.id }}">
                     <i class="bi bi-file-earmark-pdf me-1"></i><span class="btn-text">Download PDF</span>
-                </a>
+                </button>
                 {% endif %}
             </div>
         </div>
@@ -611,29 +611,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-// PDF download loading indicator (handles all .pdf-download-btn buttons)
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.pdf-download-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const icon = this.querySelector('i');
-            const text = this.querySelector('.btn-text');
-            if (icon && text) {
-                icon.className = 'bi bi-hourglass-split me-1 spin-slow';
-                text.textContent = 'Generating PDF...';
-                this.classList.add('disabled');
-                setTimeout(() => {
-                    icon.className = 'bi bi-file-earmark-pdf me-1';
-                    text.textContent = 'Download PDF';
-                    this.classList.remove('disabled');
-                }, 5000);
-            }
-        });
-    });
-});
-</script>
-<style>
-.spin-slow { animation: spin 1.5s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-</style>
+<!-- PDF modal and JS included via status_banner.html partial -->
 {% endblock %}

@@ -856,15 +856,37 @@ The OpenAI API has these capabilities that could enhance the app:
 ## PDF Download Feature
 
 ### Overview
-Finalized documents can be downloaded as professionally formatted PDF files using WeasyPrint.
+Finalized documents can be downloaded as professionally formatted PDF files using WeasyPrint. PDF generation runs in the background with real-time progress updates.
 
-### How It Works
+### How It Works (Background Processing)
 1. User finalizes their document (after payment)
 2. "Download PDF" button appears on the preview page and status banner
-3. Button shows spinning hourglass + "Generating PDF..." while processing
-4. Server generates PDF from the legal document template
-5. PDF downloads to user's machine
-6. Button resets after 5 seconds
+3. User clicks button → Modal opens with progress indicator
+4. Server starts background PDF generation thread (returns immediately)
+5. Frontend polls status endpoint every 2 seconds
+6. Modal shows progress stages:
+   - "Collecting document data..."
+   - "Generating legal document..."
+   - "Creating PDF file..."
+   - "PDF ready! Starting download..."
+7. When complete, PDF auto-downloads and modal closes
+8. On error, modal shows error message with "Try Again" button
+
+### Why Background Processing?
+PDF generation can take 10-30 seconds depending on document size. Background processing with polling:
+- Prevents browser timeouts
+- Keeps users informed of progress
+- Allows retry on failure
+- Same pattern used for story analysis
+
+### Database Fields (Document model)
+| Field | Purpose |
+|-------|---------|
+| `pdf_status` | idle/processing/completed/failed |
+| `pdf_progress_stage` | Current stage for progress display |
+| `pdf_error` | Error message if generation failed |
+| `pdf_started_at` | Timestamp to detect stale jobs |
+| `pdf_file_path` | Temp file path to generated PDF |
 
 ### PDF Formatting (Page Breaks)
 CSS page-break controls prevent awkward formatting:
@@ -880,12 +902,17 @@ CSS page-break controls prevent awkward formatting:
 
 ### Files
 - `templates/documents/document_pdf.html` - Print-optimized PDF template with page-break CSS
-- `templates/documents/document_preview.html` - Download button with loading indicator
-- `templates/documents/partials/status_banner.html` - Status banner download button
-- `documents/views.py` - `download_pdf` view function
+- `templates/documents/document_preview.html` - Download button
+- `templates/documents/partials/status_banner.html` - Status banner with modal + JS for progress
+- `documents/views.py` - `start_pdf_generation`, `pdf_generation_status`, `download_pdf` views
+- `documents/migrations/0016_pdf_generation_status.py` - Migration for new fields
 
-### URL
-- `/documents/{id}/download-pdf/` - Download PDF endpoint
+### URLs
+| URL | Method | Purpose |
+|-----|--------|---------|
+| `/documents/{id}/generate-pdf/` | POST | Start background PDF generation |
+| `/documents/{id}/generate-pdf/status/` | GET | Poll for generation status |
+| `/documents/{id}/download-pdf/` | GET | Download the generated PDF file |
 
 ---
 

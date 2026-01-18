@@ -13,6 +13,8 @@ urlpatterns = [
     path('<int:document_id>/preview/', views.document_preview, name='document_preview'),
     path('<int:document_id>/review/', views.document_review, name='document_review'),
     path('<int:document_id>/download-pdf/', views.download_pdf, name='download_pdf'),
+    path('<int:document_id>/generate-pdf/', views.start_pdf_generation, name='start_pdf_generation'),
+    path('<int:document_id>/generate-pdf/status/', views.pdf_generation_status, name='pdf_generation_status'),
 
     # Section editing (interview style)
     path('<int:document_id>/section/<str:section_type>/', views.section_edit, name='section_edit'),

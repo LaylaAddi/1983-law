@@ -2385,56 +2385,300 @@ def validate_promo_code(request):
 @login_required
 def download_pdf(request, document_id):
     """Download the finalized document as a PDF."""
-    from django.http import HttpResponse
-    from django.template.loader import render_to_string
-    from weasyprint import HTML
+    import os
+    import re
 
     document = get_object_or_404(Document, id=document_id, user=request.user)
 
     # Only allow PDF download for finalized documents
     if document.payment_status != 'finalized':
-        from django.contrib import messages
         messages.error(request, 'Only finalized documents can be downloaded as PDF.')
         return redirect('documents:document_preview', document_id=document.id)
 
-    # Collect document data and generate the legal document
+    # Sanitize filename for response
+    safe_title = re.sub(r'[^\w\s-]', '', document.title)
+    safe_title = re.sub(r'\s+', '_', safe_title.strip())
+    filename = f"{safe_title}_Section_1983_Complaint.pdf"
+
+    # Check if we have a pre-generated PDF file
+    if document.pdf_file_path and os.path.exists(document.pdf_file_path):
+        # Serve the pre-generated file
+        with open(document.pdf_file_path, 'rb') as pdf_file:
+            pdf_bytes = pdf_file.read()
+
+        # Clean up the temp file after serving
+        try:
+            os.remove(document.pdf_file_path)
+            document.pdf_file_path = ''
+            document.save(update_fields=['pdf_file_path'])
+        except Exception:
+            pass
+
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    # Fallback: Generate PDF synchronously (for direct URL access)
+    from django.template.loader import render_to_string
+    from weasyprint import HTML
+    from .services.document_generator import DocumentGenerator
+
     document_data = _collect_document_data(document)
 
     if not document_data.get('has_minimum_data'):
-        from django.contrib import messages
         messages.error(request, 'Document is missing required data for PDF generation.')
         return redirect('documents:document_preview', document_id=document.id)
 
-    # Generate the legal document
-    from .services.document_generator import DocumentGenerator
     generator = DocumentGenerator()
     result = generator.generate_complaint(document_data)
 
     if not result.get('success'):
-        from django.contrib import messages
         messages.error(request, f'Error generating document: {result.get("error", "Unknown error")}')
         return redirect('documents:document_preview', document_id=document.id)
 
     generated_document = result.get('document')
 
-    # Render the PDF template
     html_string = render_to_string('documents/document_pdf.html', {
         'document': document,
         'generated_document': generated_document,
         'document_data': document_data,
     })
 
-    # Generate PDF
     html = HTML(string=html_string)
     pdf = html.write_pdf()
 
-    # Create response with PDF
     response = HttpResponse(pdf, content_type='application/pdf')
-    # Sanitize filename - remove special characters, replace spaces with underscores
-    import re
-    safe_title = re.sub(r'[^\w\s-]', '', document.title)  # Remove special chars
-    safe_title = re.sub(r'\s+', '_', safe_title.strip())  # Replace spaces with underscores
-    filename = f"{safe_title}_Section_1983_Complaint.pdf"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     return response
+
+
+def _generate_pdf_background(document_id):
+    """
+    Background function to generate PDF.
+    Runs in a separate thread to avoid blocking the request.
+    """
+    import django
+    django.setup()  # Ensure Django is set up in this thread
+
+    import tempfile
+    import re
+    from django.template.loader import render_to_string
+    from weasyprint import HTML
+    from .models import Document
+    from .services.document_generator import DocumentGenerator
+
+    try:
+        document = Document.objects.get(id=document_id)
+
+        # Stage 1: Collecting document data
+        document.pdf_progress_stage = 'collecting_data'
+        document.save(update_fields=['pdf_progress_stage'])
+
+        document_data = _collect_document_data(document)
+
+        if not document_data.get('has_minimum_data'):
+            document.pdf_status = 'failed'
+            document.pdf_error = 'Document is missing required data for PDF generation.'
+            document.pdf_progress_stage = ''
+            document.save(update_fields=['pdf_status', 'pdf_error', 'pdf_progress_stage'])
+            return
+
+        # Stage 2: Generating legal document
+        document.pdf_progress_stage = 'generating_document'
+        document.save(update_fields=['pdf_progress_stage'])
+
+        generator = DocumentGenerator()
+        result = generator.generate_complaint(document_data)
+
+        if not result.get('success'):
+            document.pdf_status = 'failed'
+            document.pdf_error = f'Error generating document: {result.get("error", "Unknown error")}'
+            document.pdf_progress_stage = ''
+            document.save(update_fields=['pdf_status', 'pdf_error', 'pdf_progress_stage'])
+            return
+
+        generated_document = result.get('document')
+
+        # Stage 3: Rendering HTML
+        document.pdf_progress_stage = 'rendering_html'
+        document.save(update_fields=['pdf_progress_stage'])
+
+        html_string = render_to_string('documents/document_pdf.html', {
+            'document': document,
+            'generated_document': generated_document,
+            'document_data': document_data,
+        })
+
+        # Stage 4: Creating PDF file
+        document.pdf_progress_stage = 'creating_pdf'
+        document.save(update_fields=['pdf_progress_stage'])
+
+        html = HTML(string=html_string)
+        pdf_bytes = html.write_pdf()
+
+        # Save to temp file
+        safe_title = re.sub(r'[^\w\s-]', '', document.title)
+        safe_title = re.sub(r'\s+', '_', safe_title.strip())
+        filename = f"{safe_title}_Section_1983_Complaint.pdf"
+
+        # Create temp file that persists
+        temp_file = tempfile.NamedTemporaryFile(
+            mode='wb',
+            suffix='.pdf',
+            prefix=f'doc_{document_id}_',
+            delete=False
+        )
+        temp_file.write(pdf_bytes)
+        temp_file.close()
+
+        # Mark as completed
+        document.pdf_status = 'completed'
+        document.pdf_progress_stage = 'ready'
+        document.pdf_error = ''
+        document.pdf_file_path = temp_file.name
+        document.save(update_fields=['pdf_status', 'pdf_progress_stage', 'pdf_error', 'pdf_file_path'])
+
+    except Exception as e:
+        # Handle unexpected errors
+        try:
+            document = Document.objects.get(id=document_id)
+            document.pdf_status = 'failed'
+            document.pdf_error = str(e)
+            document.pdf_progress_stage = ''
+            document.save(update_fields=['pdf_status', 'pdf_error', 'pdf_progress_stage'])
+        except Exception:
+            pass  # Can't save error status
+
+
+@login_required
+@require_POST
+def start_pdf_generation(request, document_id):
+    """AJAX endpoint to start PDF generation in background."""
+    try:
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        # Only allow PDF generation for finalized documents
+        if document.payment_status != 'finalized':
+            return JsonResponse({
+                'success': False,
+                'error': 'Only finalized documents can be downloaded as PDF.'
+            })
+
+        # Check if already processing (prevent duplicate requests)
+        if document.pdf_status == 'processing':
+            # Check if it's been processing for more than 2 minutes (stale)
+            if document.pdf_started_at:
+                elapsed = (timezone.now() - document.pdf_started_at).total_seconds()
+                if elapsed < 120:  # Less than 2 minutes, still processing
+                    return JsonResponse({
+                        'success': True,
+                        'status': 'processing',
+                        'stage': document.pdf_progress_stage,
+                        'message': 'PDF generation already in progress...'
+                    })
+
+        # Clean up any old temp file
+        if document.pdf_file_path:
+            import os
+            try:
+                if os.path.exists(document.pdf_file_path):
+                    os.remove(document.pdf_file_path)
+            except Exception:
+                pass
+
+        # Mark as processing and start background thread
+        document.pdf_status = 'processing'
+        document.pdf_started_at = timezone.now()
+        document.pdf_progress_stage = 'starting'
+        document.pdf_error = ''
+        document.pdf_file_path = ''
+        document.save(update_fields=[
+            'pdf_status', 'pdf_started_at', 'pdf_progress_stage',
+            'pdf_error', 'pdf_file_path'
+        ])
+
+        # Start background processing
+        thread = threading.Thread(
+            target=_generate_pdf_background,
+            args=(document_id,),
+            daemon=True
+        )
+        thread.start()
+
+        return JsonResponse({
+            'success': True,
+            'status': 'processing',
+            'stage': 'starting',
+            'message': 'PDF generation started...'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}'
+        })
+
+
+@login_required
+@require_GET
+def pdf_generation_status(request, document_id):
+    """AJAX endpoint to check PDF generation status (for polling)."""
+    try:
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        # Map internal stages to user-friendly messages
+        stage_messages = {
+            'starting': 'Starting PDF generation...',
+            'collecting_data': 'Collecting document data...',
+            'generating_document': 'Generating legal document...',
+            'rendering_html': 'Formatting document...',
+            'creating_pdf': 'Creating PDF file...',
+            'ready': 'PDF ready for download!'
+        }
+
+        if document.pdf_status == 'processing':
+            return JsonResponse({
+                'success': True,
+                'status': 'processing',
+                'stage': document.pdf_progress_stage,
+                'message': stage_messages.get(document.pdf_progress_stage, 'Processing...')
+            })
+        elif document.pdf_status == 'completed':
+            # Reset status for next time (but keep file path)
+            document.pdf_status = 'idle'
+            document.pdf_progress_stage = ''
+            document.save(update_fields=['pdf_status', 'pdf_progress_stage'])
+
+            return JsonResponse({
+                'success': True,
+                'status': 'completed',
+                'message': 'PDF ready for download!',
+                'download_url': reverse('documents:download_pdf', args=[document.id])
+            })
+        elif document.pdf_status == 'failed':
+            error = document.pdf_error or 'Unknown error occurred'
+
+            # Reset status for retry
+            document.pdf_status = 'idle'
+            document.pdf_progress_stage = ''
+            document.save(update_fields=['pdf_status', 'pdf_progress_stage'])
+
+            return JsonResponse({
+                'success': False,
+                'status': 'failed',
+                'error': error
+            })
+        else:
+            # Idle - no generation in progress
+            return JsonResponse({
+                'success': True,
+                'status': 'idle',
+                'message': 'Ready to generate PDF'
+            })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}'
+        })

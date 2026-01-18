@@ -65,6 +65,34 @@ class Document(models.Model):
         help_text='When parsing started (to detect stale jobs)'
     )
 
+    # PDF generation status (for background processing)
+    PDF_STATUS_CHOICES = [
+        ('idle', 'Idle'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    pdf_status = models.CharField(
+        max_length=20, choices=PDF_STATUS_CHOICES, default='idle',
+        help_text='Current status of PDF generation'
+    )
+    pdf_progress_stage = models.CharField(
+        max_length=50, blank=True, default='',
+        help_text='Current stage of PDF generation for progress display'
+    )
+    pdf_error = models.TextField(
+        blank=True, default='',
+        help_text='Error message if PDF generation failed'
+    )
+    pdf_started_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='When PDF generation started (to detect stale jobs)'
+    )
+    pdf_file_path = models.CharField(
+        max_length=500, blank=True, default='',
+        help_text='Path to generated PDF file'
+    )
+
     # Cached generated complaint (to avoid regenerating on every preview)
     generated_complaint = models.TextField(
         blank=True,

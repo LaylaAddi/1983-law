@@ -45,32 +45,216 @@
         <i class="bi bi-file-earmark-check me-2"></i>
         <strong>FINALIZED</strong> - This document is complete and locked
     </div>
-    <a href="{% url 'documents:download_pdf' document.id %}" class="btn btn-info btn-sm pdf-download-btn">
+    <button type="button" class="btn btn-info btn-sm pdf-download-btn" data-document-id="{{ document.id }}">
         <i class="bi bi-file-earmark-pdf me-1"></i><span class="btn-text">Download PDF</span>
-    </a>
+    </button>
 </div>
+
+<!-- PDF Generation Progress Modal -->
+<div class="modal fade" id="pdfProgressModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="pdfProgressModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" id="pdfProgressModalLabel">
+                    <i class="bi bi-file-earmark-pdf text-danger me-2"></i>Generating PDF
+                </h5>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div class="pdf-progress-spinner mb-3">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <p class="pdf-progress-message mb-2 fw-semibold" id="pdfProgressMessage">Starting PDF generation...</p>
+                <div class="pdf-progress-stages mt-4">
+                    <div class="d-flex justify-content-center align-items-center gap-2 flex-wrap">
+                        <span class="badge pdf-stage" data-stage="collecting_data" id="stage-collecting">
+                            <i class="bi bi-circle me-1"></i>Collecting Data
+                        </span>
+                        <i class="bi bi-chevron-right text-muted d-none d-sm-inline"></i>
+                        <span class="badge pdf-stage" data-stage="generating_document" id="stage-generating">
+                            <i class="bi bi-circle me-1"></i>Generating
+                        </span>
+                        <i class="bi bi-chevron-right text-muted d-none d-sm-inline"></i>
+                        <span class="badge pdf-stage" data-stage="creating_pdf" id="stage-creating">
+                            <i class="bi bi-circle me-1"></i>Creating PDF
+                        </span>
+                        <i class="bi bi-chevron-right text-muted d-none d-sm-inline"></i>
+                        <span class="badge pdf-stage" data-stage="ready" id="stage-ready">
+                            <i class="bi bi-circle me-1"></i>Ready
+                        </span>
+                    </div>
+                </div>
+                <p class="text-muted small mt-3 mb-0">This may take 10-30 seconds</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center d-none" id="pdfErrorFooter">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="pdfRetryBtn">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Try Again
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.pdf-download-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const icon = this.querySelector('i');
-            const text = this.querySelector('.btn-text');
-            if (icon && text) {
-                icon.className = 'bi bi-hourglass-split me-1 spin-slow';
-                text.textContent = 'Generating...';
-                this.classList.add('disabled');
-                setTimeout(() => {
-                    icon.className = 'bi bi-file-earmark-pdf me-1';
-                    text.textContent = 'Download PDF';
-                    this.classList.remove('disabled');
-                }, 5000);
+// PDF generation with background processing and polling
+(function() {
+    // Prevent duplicate initialization
+    if (window.pdfGenerationInitialized) return;
+    window.pdfGenerationInitialized = true;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+        let pollInterval = null;
+        let currentDocumentId = null;
+
+        function updateStageDisplay(currentStage) {
+            const stages = document.querySelectorAll('.pdf-stage');
+            let foundCurrent = false;
+
+            stages.forEach(stage => {
+                const stageId = stage.dataset.stage;
+                const icon = stage.querySelector('i');
+
+                // Map rendering_html to generating_document for display purposes
+                const normalizedStage = currentStage === 'rendering_html' ? 'generating_document' : currentStage;
+
+                if (stageId === normalizedStage || (stageId === 'creating_pdf' && currentStage === 'rendering_html')) {
+                    stage.className = 'badge pdf-stage bg-primary';
+                    icon.className = 'bi bi-arrow-right-circle-fill me-1';
+                    foundCurrent = true;
+                } else if (!foundCurrent) {
+                    stage.className = 'badge pdf-stage bg-success';
+                    icon.className = 'bi bi-check-circle-fill me-1';
+                } else {
+                    stage.className = 'badge pdf-stage bg-secondary';
+                    icon.className = 'bi bi-circle me-1';
+                }
+            });
+        }
+
+        function resetStageDisplay() {
+            const stages = document.querySelectorAll('.pdf-stage');
+            stages.forEach(stage => {
+                const icon = stage.querySelector('i');
+                stage.className = 'badge pdf-stage bg-secondary';
+                icon.className = 'bi bi-circle me-1';
+            });
+        }
+
+        function showError(message) {
+            document.getElementById('pdfProgressMessage').textContent = message;
+            document.querySelector('.pdf-progress-spinner').innerHTML = '<i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>';
+            document.getElementById('pdfErrorFooter').classList.remove('d-none');
+        }
+
+        function startPdfGeneration(documentId) {
+            currentDocumentId = documentId;
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('pdfProgressModal'));
+            modal.show();
+
+            // Reset display
+            document.querySelector('.pdf-progress-spinner').innerHTML = '<div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"><span class="visually-hidden">Loading...</span></div>';
+            document.getElementById('pdfProgressMessage').textContent = 'Starting PDF generation...';
+            document.getElementById('pdfErrorFooter').classList.add('d-none');
+            resetStageDisplay();
+
+            // Start generation
+            fetch(`/documents/${documentId}/generate-pdf/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.status === 'processing') {
+                    startPolling(documentId);
+                } else {
+                    showError(data.error || 'Failed to start PDF generation');
+                }
+            })
+            .catch(error => {
+                console.error('Error starting PDF generation:', error);
+                showError('Network error. Please try again.');
+            });
+        }
+
+        function startPolling(documentId) {
+            pollInterval = setInterval(() => {
+                fetch(`/documents/${documentId}/generate-pdf/status/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'processing') {
+                        document.getElementById('pdfProgressMessage').textContent = data.message || 'Processing...';
+                        updateStageDisplay(data.stage);
+                    } else if (data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+
+                        document.getElementById('pdfProgressMessage').textContent = 'PDF ready! Starting download...';
+                        updateStageDisplay('ready');
+                        document.querySelector('.pdf-progress-spinner').innerHTML = '<i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>';
+
+                        setTimeout(() => {
+                            window.location.href = data.download_url;
+                            setTimeout(() => {
+                                bootstrap.Modal.getInstance(document.getElementById('pdfProgressModal')).hide();
+                            }, 1000);
+                        }, 500);
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                        showError(data.error || 'PDF generation failed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error polling status:', error);
+                });
+            }, 2000);
+        }
+
+        // Handle download button clicks
+        document.querySelectorAll('.pdf-download-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const documentId = this.dataset.documentId;
+                if (documentId) {
+                    startPdfGeneration(documentId);
+                }
+            });
+        });
+
+        // Handle retry button
+        document.getElementById('pdfRetryBtn')?.addEventListener('click', function() {
+            if (currentDocumentId) {
+                document.getElementById('pdfErrorFooter').classList.add('d-none');
+                startPdfGeneration(currentDocumentId);
+            }
+        });
+
+        // Clean up on modal close
+        document.getElementById('pdfProgressModal')?.addEventListener('hidden.bs.modal', function() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
             }
         });
     });
-});
+})();
 </script>
 <style>
-.spin-slow { animation: spin 1.5s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.pdf-stage {
+    font-size: 0.75rem;
+    padding: 0.4em 0.6em;
+    transition: all 0.3s ease;
+}
+.pdf-stage.bg-secondary {
+    opacity: 0.6;
+}
 </style>
 {% endif %}
