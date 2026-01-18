@@ -256,12 +256,14 @@
                 </div>
                 <div class="caption-vs">v.</div>
                 <div>
-                    {% for defendant in document_data.defendants %}
-                    {{ defendant.name|upper }}{% if defendant.agency_name %},<br>
-                    <span style="margin-left: 1rem; font-size: 0.9em;">in {{ defendant.title_rank|default:"their" }} capacity</span>{% endif %}{% if not forloop.last %};{% else %},{% endif %}<br>
-                    {% empty %}
+                    {% if document_data.defendants %}
+                        {% with first_def=document_data.defendants.0 %}
+                        {{ first_def.name|upper }}{% if first_def.title_rank %}, in {{ first_def.title_rank }} capacity{% endif %}{% if document_data.defendants|length > 1 %},<br>
+                        <em>et al.</em>,{% else %},{% endif %}<br>
+                        {% endwith %}
+                    {% else %}
                     [DEFENDANTS TO BE NAMED],
-                    {% endfor %}
+                    {% endif %}
                     <span style="margin-left: 2rem;">Defendant{% if document_data.defendants|length > 1 %}s{% endif %}.</span>
                 </div>
             </div>

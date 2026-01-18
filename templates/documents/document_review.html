@@ -279,11 +279,14 @@
                                 <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('defendants')">
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                {% for defendant in document_data.defendants %}
-                                {{ defendant.name|upper }}{% if not forloop.last %};{% else %},{% endif %}<br>
-                                {% empty %}
+                                {% if document_data.defendants %}
+                                    {% with first_def=document_data.defendants.0 %}
+                                    {{ first_def.name|upper }}{% if document_data.defendants|length > 1 %},<br>
+                                    <em>et al.</em>,{% else %},{% endif %}<br>
+                                    {% endwith %}
+                                {% else %}
                                 <span class="text-muted">[DEFENDANTS]</span>,<br>
-                                {% endfor %}
+                                {% endif %}
                                 <span style="margin-left: 2rem;">Defendant{% if document_data.defendants|length > 1 %}s{% endif %}.</span>
                             </div>
                         </div>
