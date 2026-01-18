@@ -147,11 +147,14 @@ IMPORTANT RULES:
 - For dates/times, extract if mentioned in any format
 - If the story contains "Not applicable or unknown:", DO NOT ask questions about those topics
 
-AGENCY INFERENCE RULES:
-- If a city and state are mentioned but no specific agency, INFER the most likely agency name
-- For police officers in a city, infer "[City] Police Department" (e.g., "Tampa Police Department")
-- For sheriff's deputies, infer "[County] County Sheriff's Office"
-- For state troopers, infer "[State] Highway Patrol" or "[State] State Police"
+AGENCY INFERENCE RULES - CRITICAL:
+- IMPORTANT: Many small towns, villages, and unincorporated communities do NOT have their own police department
+- For unincorporated areas or small towns (population under 5,000): Use COUNTY SHERIFF'S OFFICE, NOT "[City] Police Department"
+- Example: "Zama, Mississippi" is an unincorporated community → use "Attala County Sheriff's Office" NOT "Zama Police Department"
+- For larger cities (population over 10,000): May infer "[City] Police Department"
+- For sheriff's deputies: Use "[County] County Sheriff's Office"
+- For state troopers: Use "[State] Highway Patrol" or "[State] State Police"
+- When uncertain if a place has local police, mark agency_inferred=true and use "Unknown - verify jurisdiction"
 - Set "agency_inferred" to true when you infer the agency, false when explicitly stated
 
 USER'S STORY:
@@ -250,6 +253,9 @@ Respond with ONLY the JSON object."""
             import json
             result = json.loads(response.choices[0].message.content)
 
+            # Post-process: Verify inferred agencies using smart lookup
+            result = self._verify_inferred_agencies(result)
+
             return {
                 'success': True,
                 'sections': result,
@@ -260,6 +266,65 @@ Respond with ONLY the JSON object."""
                 'success': False,
                 'error': str(e),
             }
+
+    def _verify_inferred_agencies(self, parsed_result: dict) -> dict:
+        """
+        Post-process parsed story to verify/correct inferred agency names.
+        Uses find_law_enforcement_agency to check if suggested agency actually exists.
+        """
+        try:
+            # Get city and state from incident overview
+            incident = parsed_result.get('incident_overview', {})
+            city = incident.get('city', '')
+            state = incident.get('state', '')
+
+            if not city or not state:
+                return parsed_result
+
+            # Check if any defendants have inferred agencies
+            defendants = parsed_result.get('defendants', [])
+            has_inferred = any(d.get('agency_inferred', False) for d in defendants)
+
+            if not has_inferred:
+                return parsed_result
+
+            # Use smart lookup to find correct agency
+            agency_info = self.find_law_enforcement_agency(city, state)
+
+            if not agency_info.get('success'):
+                return parsed_result
+
+            # If location doesn't have local police, update inferred agencies
+            if not agency_info.get('has_local_police', True):
+                primary_agency = None
+                for agency in agency_info.get('agencies', []):
+                    if agency.get('is_primary'):
+                        primary_agency = agency.get('name')
+                        break
+
+                if primary_agency:
+                    # Update defendants with inferred agencies
+                    for defendant in defendants:
+                        if defendant.get('agency_inferred', False):
+                            old_agency = defendant.get('agency', '')
+                            # Don't replace if it's already a sheriff's office
+                            if 'sheriff' not in old_agency.lower():
+                                defendant['agency'] = primary_agency
+                                defendant['agency_verification_note'] = (
+                                    f"Updated from '{old_agency}' - {city} does not have its own police department. "
+                                    f"Located in {agency_info.get('county_name', 'unknown')} County."
+                                )
+
+            # Add verification warning to result
+            parsed_result['agency_verification_warning'] = agency_info.get('verification_warning', '')
+            parsed_result['location_has_local_police'] = agency_info.get('has_local_police', True)
+            parsed_result['county_name'] = agency_info.get('county_name', '')
+
+        except Exception:
+            # If verification fails, just return original result
+            pass
+
+        return parsed_result
 
     def suggest_relief(self, extracted_data: dict) -> dict:
         """
