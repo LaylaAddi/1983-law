@@ -636,7 +636,23 @@ def fill_test_data(request, document_id):
 
 @login_required
 def document_preview(request, document_id):
-    """Redirect to document_review - preview and edit are now combined."""
+    """Show preview for finalized documents, redirect others to document_review."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Finalized documents show the preview/PDF view (read-only)
+    if document.payment_status == 'finalized':
+        document_data = _collect_document_data(document)
+
+        # Check if user wants to generate/download PDF
+        generate_pdf = request.GET.get('generate') == 'true'
+
+        return render(request, 'documents/document_preview.html', {
+            'document': document,
+            'document_data': document_data,
+            'generate_pdf': generate_pdf,
+        })
+
+    # Non-finalized documents go to review for editing
     return redirect('documents:document_review', document_id=document_id)
 
 

@@ -191,9 +191,11 @@
                 <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i>Back
                 </a>
+                {% if document.payment_status != 'finalized' %}
                 <a href="{% url 'documents:document_review' document.id %}" class="btn btn-outline-primary">
                     <i class="bi bi-pencil-square me-1"></i>Review & Edit
                 </a>
+                {% endif %}
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-secondary" onclick="window.print()">
