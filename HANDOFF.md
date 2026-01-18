@@ -74,6 +74,12 @@ The app is functional with the following features complete:
    - "Use Recommended" button for Relief Sought
    - Test user mode for demo data
 
+8. **Navigation & UX Improvements**
+   - **Back to Document buttons** on all section edit pages and Tell Your Story page
+   - **Unsaved changes warning** - Browser warns if user tries to navigate away with unsaved edits
+   - **Story status indicator** - Document detail page shows "Story Saved" with "Update Story" button when story exists, otherwise "Quick Start with AI" with "Tell Your Story" button
+   - **"Et al." in case caption** - When multiple defendants, shows first defendant + "et al." (full list in PARTIES section)
+
 ---
 
 ## Auto-Apply Features (NEW)
@@ -223,7 +229,7 @@ Relief types analyzed:
 - Jury Trial (usually recommended)
 
 ### Progress Indicator During Analysis (Terminal Style)
-When user clicks "Analyze My Story", shows a modern terminal/CLI-themed progress display:
+When user clicks "Analyze My Story" OR "Analyze My Case" (Rights Violated section), shows a modern terminal/CLI-themed progress display:
 - macOS-style terminal window with close/minimize/maximize buttons
 - Dark background (#1e1e1e) with monospace font
 - Dynamic bash-like commands that incorporate the user's story content
@@ -233,6 +239,13 @@ When user clicks "Analyze My Story", shows a modern terminal/CLI-themed progress
 - Spinner animation while waiting for AI response
 - Green checkmark and "Analysis complete" when done
 - Commands scroll like a real terminal output
+
+**Rights Analysis Terminal** (`rights-analyze.js` + `rights-analyze.css`)
+- Same terminal styling but purple theme (#c586c0)
+- Commands specific to constitutional analysis:
+  - `load-narrative --from=incident_narrative`
+  - `check-first-amendment --speech --press --assembly`
+  - `analyze-force --usc=42-1983 --graham-v-connor`
 
 ### Story Persistence on Revisit
 When users revisit the Tell Your Story page after completing analysis:
@@ -546,6 +559,22 @@ DRAFT (free) → EXPIRED or PAID → FINALIZED
 | expired | No | No | Pay to unlock | No |
 | paid | Yes | $5 budget | 45 days | No |
 | finalized | No | No | Never | Yes |
+
+### Edit Lock for Finalized/Expired Documents
+Views check `document.can_edit()` before allowing edits:
+- `section_edit` - Redirects with message if document is finalized or expired
+- `tell_your_story` - Redirects with message if document is finalized or expired
+- `document_detail.html` - Hides Review & Edit button for finalized documents
+
+### Generate PDF Button (Payment-Aware)
+The Generate PDF button on document detail page adapts based on payment status:
+| Status | Button Text | Action |
+|--------|-------------|--------|
+| draft/expired (100% complete) | "Pay & Generate PDF" | Goes to checkout |
+| draft/expired (incomplete) | "Generate PDF" (disabled) | Shows "Complete all sections first" |
+| paid (100% complete) | "Finalize & Generate PDF" | Goes to finalize page |
+| paid (incomplete) | "Generate PDF" (disabled) | Shows "Complete all sections first" |
+| finalized | "Download PDF" | Downloads PDF directly |
 
 ### Key Features
 1. **User-Level AI Tracking** - Free AI uses tracked across ALL user documents (prevents abuse)
