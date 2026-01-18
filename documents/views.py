@@ -649,6 +649,11 @@ def document_review(request, document_id):
     """
     document = get_object_or_404(Document, id=document_id, user=request.user)
 
+    # Finalized documents go to preview/PDF view (no editing allowed)
+    if document.payment_status == 'finalized':
+        messages.info(request, 'This document has been finalized. You can view or download the PDF.')
+        return redirect('documents:document_preview', document_id=document.id)
+
     # Collect all document data from the database
     document_data = _collect_document_data(document)
 
