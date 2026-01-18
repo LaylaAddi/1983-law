@@ -806,3 +806,101 @@ class PayoutRequest(models.Model):
         self.processed_by = admin_user
         self.processed_at = timezone.now()
         self.save()
+
+
+class AIPrompt(models.Model):
+    """
+    Database-stored AI prompts that can be edited in admin.
+    Allows non-developers to tweak AI behavior without code changes.
+    """
+
+    PROMPT_TYPES = [
+        ('parse_story', 'Parse Story - Analyzes user story and extracts structured data'),
+        ('analyze_rights', 'Analyze Rights - Identifies constitutional violations'),
+        ('suggest_agency', 'Suggest Agency - Finds defendants based on story'),
+        ('suggest_relief', 'Suggest Relief - Recommends legal relief options'),
+        ('find_law_enforcement', 'Find Law Enforcement - Identifies correct police/sheriff'),
+        ('lookup_address', 'Lookup Address - Finds agency addresses'),
+    ]
+
+    prompt_type = models.CharField(
+        max_length=50,
+        choices=PROMPT_TYPES,
+        unique=True,
+        help_text='Which AI function this prompt is used for'
+    )
+    title = models.CharField(
+        max_length=255,
+        help_text='Human-readable title displayed in admin'
+    )
+    description = models.TextField(
+        help_text='Detailed description of what this prompt does and when it is used'
+    )
+    system_message = models.TextField(
+        help_text='The system role message that sets AI behavior/persona'
+    )
+    user_prompt_template = models.TextField(
+        help_text='The main prompt template. Use {variable_name} for placeholders like {city}, {state}, {story_text}'
+    )
+    available_variables = models.TextField(
+        blank=True,
+        help_text='Comma-separated list of variables available for this prompt (e.g., city, state, story_text)'
+    )
+    model_name = models.CharField(
+        max_length=50,
+        default='gpt-4o-mini',
+        help_text='OpenAI model to use (e.g., gpt-4o-mini, gpt-4o)'
+    )
+    temperature = models.FloatField(
+        default=0.1,
+        help_text='AI temperature (0.0-1.0). Lower = more consistent, higher = more creative'
+    )
+    max_tokens = models.IntegerField(
+        default=2000,
+        help_text='Maximum tokens in the response'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text='If disabled, falls back to hardcoded prompt'
+    )
+    version = models.IntegerField(
+        default=1,
+        help_text='Version number for tracking changes'
+    )
+    last_edited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text='Admin user who last edited this prompt'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'AI Prompt'
+        verbose_name_plural = 'AI Prompts'
+        ordering = ['prompt_type']
+
+    def __str__(self):
+        return f"{self.title} ({self.prompt_type})"
+
+    @classmethod
+    def get_prompt(cls, prompt_type: str) -> 'AIPrompt':
+        """
+        Get an active prompt by type, or None if not found/disabled.
+        """
+        try:
+            return cls.objects.get(prompt_type=prompt_type, is_active=True)
+        except cls.DoesNotExist:
+            return None
+
+    def format_prompt(self, **kwargs) -> str:
+        """
+        Format the user prompt template with provided variables.
+        """
+        try:
+            return self.user_prompt_template.format(**kwargs)
+        except KeyError as e:
+            # If a variable is missing, return template as-is
+            return self.user_prompt_template

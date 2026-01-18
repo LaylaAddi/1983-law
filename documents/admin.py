@@ -1,9 +1,10 @@
 from django.contrib import admin
+from django import forms
 from .models import (
     Document, DocumentSection, PlaintiffInfo, IncidentOverview,
     Defendant, IncidentNarrative, RightsViolated, Witness,
     Evidence, Damages, PriorComplaints, ReliefSought,
-    PromoCode, PromoCodeUsage, PayoutRequest
+    PromoCode, PromoCodeUsage, PayoutRequest, AIPrompt
 )
 
 
@@ -146,3 +147,72 @@ class PayoutRequestAdmin(admin.ModelAdmin):
         # This is a simple bulk action - for proper completion, use the admin_referrals view
         updated = queryset.filter(status__in=['pending', 'processing']).update(status='completed')
         self.message_user(request, f'{updated} request(s) marked as completed.')
+
+
+class AIPromptAdminForm(forms.ModelForm):
+    """Custom form for AIPrompt with better text areas."""
+
+    system_message = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'rows': 6,
+            'class': 'vLargeTextField',
+            'style': 'font-family: monospace; width: 100%;'
+        })
+    )
+    user_prompt_template = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'rows': 25,
+            'class': 'vLargeTextField',
+            'style': 'font-family: monospace; width: 100%;'
+        })
+    )
+
+    class Meta:
+        model = AIPrompt
+        fields = '__all__'
+
+
+@admin.register(AIPrompt)
+class AIPromptAdmin(admin.ModelAdmin):
+    """Admin for editing AI prompts."""
+
+    form = AIPromptAdminForm
+    list_display = ['title', 'prompt_type', 'model_name', 'temperature', 'is_active', 'version', 'updated_at']
+    list_filter = ['is_active', 'prompt_type', 'model_name']
+    search_fields = ['title', 'description', 'user_prompt_template']
+    readonly_fields = ['created_at', 'updated_at', 'last_edited_by']
+
+    fieldsets = (
+        ('Identification', {
+            'fields': ('prompt_type', 'title', 'description'),
+            'description': 'Choose the prompt type and give it a clear title and description.'
+        }),
+        ('System Message', {
+            'fields': ('system_message',),
+            'description': 'Sets the AI\'s role and behavior. Example: "You are a legal assistant..."'
+        }),
+        ('Prompt Template', {
+            'fields': ('user_prompt_template', 'available_variables'),
+            'description': 'The main prompt. Use {variable_name} for placeholders. Example: {city}, {state}, {story_text}'
+        }),
+        ('AI Settings', {
+            'fields': ('model_name', 'temperature', 'max_tokens'),
+            'description': 'Temperature: 0.0 = consistent, 1.0 = creative. max_tokens limits response length.'
+        }),
+        ('Status', {
+            'fields': ('is_active', 'version'),
+            'description': 'Disable to fall back to hardcoded prompt. Increment version when making major changes.'
+        }),
+        ('Audit', {
+            'fields': ('last_edited_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        """Track who edited the prompt."""
+        obj.last_edited_by = request.user
+        if change:
+            # Auto-increment version on edit
+            obj.version += 1
+        super().save_model(request, obj, form, change)

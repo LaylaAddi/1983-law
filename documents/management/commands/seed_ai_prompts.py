@@ -1,0 +1,281 @@
+"""
+Management command to seed AI prompts from hardcoded values.
+Run this after initial migration to populate the AIPrompt table.
+"""
+from django.core.management.base import BaseCommand
+from documents.models import AIPrompt
+
+
+class Command(BaseCommand):
+    help = 'Seed AI prompts with initial values from hardcoded prompts'
+
+    def handle(self, *args, **options):
+        prompts = [
+            {
+                'prompt_type': 'find_law_enforcement',
+                'title': 'Find Law Enforcement Agency',
+                'description': '''Identifies the correct law enforcement agency for a given location.
+
+CRITICAL for small towns: Many small towns, villages, and unincorporated communities do NOT have their own police department. This prompt helps identify whether to use County Sheriff instead.
+
+Called when: User enters a city/state, or when verifying AI-suggested agencies.''',
+                'system_message': 'You are a legal research assistant with knowledge of US law enforcement jurisdictions. You know that small towns and unincorporated areas are served by county sheriffs, not local police. Be accurate about which locations have their own police departments.',
+                'user_prompt_template': '''Determine the law enforcement agencies that have jurisdiction in {city}, {state}.
+
+CRITICAL: Many small towns, villages, and unincorporated communities do NOT have their own police department.
+In these cases, law enforcement is provided by:
+1. The COUNTY SHERIFF'S OFFICE (primary for rural/unincorporated areas)
+2. State Highway Patrol (for state roads)
+3. A nearby larger city's police (rare, only with agreements)
+
+ANALYSIS REQUIRED:
+1. Is {city} a major city (population over 10,000) that would have its own police department?
+2. Or is it a small town, village, CDP, or unincorporated community?
+3. What county is {city}, {state} located in?
+
+IMPORTANT EXAMPLES:
+- "Zama, Mississippi" = unincorporated community in Attala County → Attala County Sheriff's Office (NO local police)
+- "New York City" = major city → NYPD (has local police)
+- "Smallville, Kansas" (fictional small town) → likely County Sheriff
+- Unincorporated areas ALWAYS use County Sheriff
+
+Return a JSON object:
+{{
+    "location_type": "major_city|small_town|village|unincorporated|cdp",
+    "has_local_police": true only if this is a city large enough to have its own police department,
+    "county_name": "Name of the county (e.g., 'Attala' not 'Attala County')",
+    "agencies": [
+        {{
+            "name": "Full official name (e.g., 'Attala County Sheriff's Office')",
+            "type": "sheriff|police|state_patrol",
+            "is_primary": true if this is the most likely agency with jurisdiction,
+            "confidence": "high|medium|low",
+            "notes": "Brief explanation"
+        }}
+    ],
+    "verification_warning": "User-facing warning about verifying the agency"
+}}
+
+Be conservative: If uncertain whether a place has local police, assume it does NOT and suggest County Sheriff as primary.''',
+                'available_variables': 'city, state',
+                'model_name': 'gpt-4o-mini',
+                'temperature': 0.1,
+                'max_tokens': 1500,
+            },
+            {
+                'prompt_type': 'parse_story',
+                'title': 'Parse User Story',
+                'description': '''Analyzes the user's story about their civil rights incident and extracts structured data.
+
+This is the MAIN prompt that processes "Tell Your Story" input. It extracts:
+- Incident details (date, time, location)
+- Officer/defendant information
+- Witness information
+- Evidence mentioned
+- Damages suffered
+- Rights that may have been violated
+
+Called when: User submits their story in the "Tell Your Story" step.''',
+                'system_message': 'You are a legal document assistant that extracts structured information from personal narratives. Be thorough - extract all information stated and reasonably inferred from context. Include evidence even if it was deleted or seized. Always respond with valid JSON.',
+                'user_prompt_template': '''Analyze this personal account of a civil rights incident and extract specific information that can be used to fill out a Section 1983 complaint form.
+
+IMPORTANT RULES:
+- Extract ALL information from the text, including details that can be inferred from context
+- Example: "city hall in Oklahoma City" means location="City Hall", city="Oklahoma City", state="OK", location_type="government building"
+- Example: "I was recording" means was_recording=true
+- For dates/times, extract if mentioned in any format
+- If the story contains "Not applicable or unknown:", DO NOT ask questions about those topics
+
+AGENCY INFERENCE RULES - CRITICAL:
+- IMPORTANT: Many small towns, villages, and unincorporated communities do NOT have their own police department
+- For unincorporated areas or small towns (population under 5,000): Use COUNTY SHERIFF'S OFFICE, NOT "[City] Police Department"
+- Example: "Zama, Mississippi" is an unincorporated community → use "Attala County Sheriff's Office" NOT "Zama Police Department"
+- For larger cities (population over 10,000): May infer "[City] Police Department"
+- For sheriff's deputies: Use "[County] County Sheriff's Office"
+- For state troopers: Use "[State] Highway Patrol" or "[State] State Police"
+- When uncertain if a place has local police, mark agency_inferred=true and use "Unknown - verify jurisdiction"
+- Set "agency_inferred" to true when you infer the agency, false when explicitly stated
+
+USER'S STORY:
+{story_text}
+
+Extract information for the following sections. Fill in as many fields as possible based on the story:
+
+{{
+    "incident_overview": {{
+        "incident_date": "YYYY-MM-DD format or partial date, null if not mentioned",
+        "incident_time": "HH:MM format or description like 'afternoon', null if not mentioned",
+        "incident_location": "address or location name like 'City Hall', 'Main Street', etc.",
+        "city": "city name - extract from context",
+        "state": "two-letter state code - infer from city if possible",
+        "location_type": "type of location: 'government building', 'public sidewalk', etc.",
+        "was_recording": "true if recording/filming mentioned, false if explicitly not, null if unknown",
+        "recording_device": "device used: 'cell phone', 'camera', etc. if mentioned"
+    }},
+    "incident_narrative": {{
+        "summary": "2-3 sentence summary of what happened, written in third person",
+        "detailed_narrative": "full chronological account, written in third person",
+        "what_were_you_doing": "what the plaintiff was doing before/during incident",
+        "initial_contact": "how the encounter with officials began",
+        "what_was_said": "dialogue or statements made by parties",
+        "physical_actions": "any physical actions taken by anyone",
+        "how_it_ended": "how the encounter concluded"
+    }},
+    "defendants": [
+        {{
+            "name": "officer/official name if mentioned, null otherwise",
+            "badge_number": "badge number if mentioned, null otherwise",
+            "title": "title like 'Officer', 'Sergeant', etc. if mentioned",
+            "agency": "department or agency name - use County Sheriff for small towns",
+            "agency_inferred": "true if agency was inferred from location",
+            "description": "description of this defendant's role/actions"
+        }}
+    ],
+    "witnesses": [...],
+    "evidence": [...],
+    "damages": {{...}},
+    "rights_violated": {{...}},
+    "questions_to_ask": []
+}}
+
+QUESTIONS TO ASK - Generate 3-8 follow-up questions for information NOT in the story.
+
+Respond with ONLY the JSON object.''',
+                'available_variables': 'story_text',
+                'model_name': 'gpt-4o-mini',
+                'temperature': 0.1,
+                'max_tokens': 3000,
+            },
+            {
+                'prompt_type': 'analyze_rights',
+                'title': 'Analyze Constitutional Rights Violations',
+                'description': '''Analyzes incident details to identify which constitutional rights were violated.
+
+Reviews the incident narrative and suggests applicable:
+- First Amendment violations (speech, press, assembly, petition)
+- Fourth Amendment violations (search, seizure, arrest, excessive force)
+- Fifth Amendment violations (self-incrimination, due process)
+- Fourteenth Amendment violations (due process, equal protection)
+
+Called when: User clicks "Analyze Rights" in the Rights Violated section.''',
+                'system_message': 'You are a civil rights legal analyst helping identify constitutional violations in Section 1983 cases. Be accurate, thorough, and write explanations that are conversational yet professional. Always respond with valid JSON.',
+                'user_prompt_template': '''Analyze this incident and identify which constitutional rights were likely violated. This is for a Section 1983 civil rights complaint against police officers or government officials.
+
+INCIDENT DETAILS:
+{context}
+
+Based on these facts, identify which rights were violated. For each violation found, provide:
+1. The specific right (use exact names from the list below)
+2. A conversational but professional explanation of HOW this right was violated (2-3 sentences)
+
+AVAILABLE RIGHTS TO CONSIDER:
+- first_amendment_speech: Right to free speech (includes recording police, expressing opinions)
+- first_amendment_press: Freedom of the press (journalism, news gathering)
+- first_amendment_assembly: Right to peaceful assembly (protests, gatherings)
+- first_amendment_petition: Right to petition government (filing complaints)
+- fourth_amendment_search: Protection from unreasonable searches
+- fourth_amendment_seizure: Protection from unreasonable seizure of property
+- fourth_amendment_arrest: Protection from unlawful arrest/detention
+- fourth_amendment_force: Protection from excessive force
+- fifth_amendment_self_incrimination: Right against self-incrimination
+- fifth_amendment_due_process: Right to due process (federal)
+- fourteenth_amendment_due_process: Right to due process (state actors)
+- fourteenth_amendment_equal_protection: Right to equal protection under the law
+
+Respond in this exact JSON format:
+{{
+    "violations": [
+        {{
+            "right": "first_amendment_speech",
+            "amendment": "first",
+            "explanation": "Your explanation here..."
+        }}
+    ],
+    "summary": "A brief 1-2 sentence overall summary of the civil rights issues in this case."
+}}
+
+Only include rights that are clearly supported by the facts.''',
+                'available_variables': 'context',
+                'model_name': 'gpt-4o-mini',
+                'temperature': 0.3,
+                'max_tokens': 2000,
+            },
+            {
+                'prompt_type': 'suggest_relief',
+                'title': 'Suggest Legal Relief',
+                'description': '''Recommends appropriate legal relief based on the case details.
+
+Analyzes rights violated, damages suffered, and evidence to suggest:
+- Compensatory damages
+- Punitive damages
+- Declaratory relief
+- Injunctive relief
+- Attorney fees
+- Jury trial recommendation
+
+Called when: User clicks "Suggest Relief" in the Relief Sought section.''',
+                'system_message': 'You are a legal assistant helping prepare Section 1983 civil rights complaints. Provide thoughtful relief recommendations based on the specific facts of each case. Always respond with valid JSON.',
+                'user_prompt_template': '''Based on this Section 1983 civil rights case information, recommend appropriate relief:
+
+{context}
+
+Analyze and provide recommendations for each type of relief. Return a JSON object:
+
+{{
+    "compensatory_damages": {{
+        "recommended": true/false,
+        "reason": "Brief explanation of why compensatory damages are appropriate based on the specific damages suffered"
+    }},
+    "punitive_damages": {{
+        "recommended": true/false,
+        "reason": "Brief explanation - recommend if conduct was willful, malicious, or showed reckless disregard for rights"
+    }},
+    "declaratory_relief": {{
+        "recommended": true/false,
+        "reason": "Brief explanation - recommend if a court declaration that rights were violated would be valuable",
+        "suggested_declaration": "What should be declared"
+    }},
+    "injunctive_relief": {{
+        "recommended": true/false,
+        "reason": "Brief explanation - recommend if policy changes or training are needed",
+        "suggested_injunction": "What changes should be ordered"
+    }},
+    "attorney_fees": {{
+        "recommended": true,
+        "reason": "42 U.S.C. § 1988 allows recovery of attorney fees in civil rights cases"
+    }},
+    "jury_trial": {{
+        "recommended": true/false,
+        "reason": "Brief explanation"
+    }}
+}}
+
+Be specific to THIS case.''',
+                'available_variables': 'context',
+                'model_name': 'gpt-4o-mini',
+                'temperature': 0.2,
+                'max_tokens': 1500,
+            },
+        ]
+
+        created_count = 0
+        updated_count = 0
+
+        for prompt_data in prompts:
+            prompt, created = AIPrompt.objects.update_or_create(
+                prompt_type=prompt_data['prompt_type'],
+                defaults=prompt_data
+            )
+            if created:
+                created_count += 1
+                self.stdout.write(self.style.SUCCESS(f'Created: {prompt.title}'))
+            else:
+                updated_count += 1
+                self.stdout.write(self.style.WARNING(f'Updated: {prompt.title}'))
+
+        self.stdout.write(self.style.SUCCESS(
+            f'\nDone! Created {created_count}, updated {updated_count} prompts.'
+        ))
+        self.stdout.write(
+            '\nYou can now edit these prompts in the admin at: /admin/documents/aiprompt/'
+        )
