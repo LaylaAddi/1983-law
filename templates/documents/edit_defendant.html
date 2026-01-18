@@ -96,11 +96,23 @@ function lookupAddress() {
     const btn = document.getElementById('lookupAddressBtn');
     const resultDiv = document.getElementById('addressResult');
     const agencyField = document.querySelector('[name="agency_name"]');
+    const nameField = document.querySelector('[name="name"]');
+    const typeField = document.querySelector('[name="defendant_type"]');
 
-    const agencyName = agencyField ? agencyField.value.trim() : '';
+    // For agency defendants, use 'name' field; for individuals, use 'agency_name'
+    let agencyName = '';
+    if (typeField && typeField.value === 'agency') {
+        agencyName = nameField ? nameField.value.trim() : '';
+    } else {
+        agencyName = agencyField ? agencyField.value.trim() : '';
+        // Fallback to name field if agency_name is empty
+        if (!agencyName && nameField) {
+            agencyName = nameField.value.trim();
+        }
+    }
 
     if (!agencyName) {
-        alert('Please enter an agency name first.');
+        alert('Please enter an agency name first. For individual officers, fill in the "Agency Name" field. For agency defendants, fill in the "Name" field.');
         return;
     }
 
