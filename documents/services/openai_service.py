@@ -540,7 +540,7 @@ Return a JSON object with this format:
 
     def find_law_enforcement_agency(self, city: str, state: str) -> dict:
         """
-        Find the correct law enforcement agency for a location using web search.
+        Find the correct law enforcement agency for a location.
         Handles small towns that don't have their own police department.
 
         Args:
@@ -556,69 +556,54 @@ Return a JSON object with this format:
                 'error': 'City and state are required',
             }
 
-        query = f"What law enforcement agency has jurisdiction in {city}, {state}? Is there a {city} Police Department or is it served by county sheriff? What county is {city} in?"
+        # Use chat completions with a detailed prompt about jurisdiction
+        prompt = f"""Determine the law enforcement agencies that have jurisdiction in {city}, {state}.
 
-        try:
-            # Use OpenAI with web search tool
-            response = self.client.responses.create(
-                model="gpt-4o-mini",
-                tools=[{"type": "web_search_preview"}],
-                input=query
-            )
+CRITICAL: Many small towns, villages, and unincorporated communities do NOT have their own police department.
+In these cases, law enforcement is provided by:
+1. The COUNTY SHERIFF'S OFFICE (primary for rural/unincorporated areas)
+2. State Highway Patrol (for state roads)
+3. A nearby larger city's police (rare, only with agreements)
 
-            # Extract the text response
-            search_result = ""
-            for item in response.output:
-                if hasattr(item, 'content'):
-                    for content in item.content:
-                        if hasattr(content, 'text'):
-                            search_result = content.text
-                            break
+ANALYSIS REQUIRED:
+1. Is {city} a major city (population over 10,000) that would have its own police department?
+2. Or is it a small town, village, CDP, or unincorporated community?
+3. What county is {city}, {state} located in?
 
-            if not search_result:
-                return {
-                    'success': False,
-                    'error': 'No search results found',
-                }
-
-            # Parse the search results to extract agency information
-            parse_prompt = f"""Based on this search result about law enforcement in {city}, {state}, identify ALL possible law enforcement agencies that may have jurisdiction.
-
-SEARCH RESULT:
-{search_result}
-
-IMPORTANT RULES:
-1. Small towns often do NOT have their own police department
-2. If no local police exists, the COUNTY SHERIFF has jurisdiction
-3. State Highway Patrol may also have jurisdiction on state roads
-4. List agencies in order of likelihood (most likely first)
+IMPORTANT EXAMPLES:
+- "Zama, Mississippi" = unincorporated community in Attala County → Attala County Sheriff's Office (NO local police)
+- "New York City" = major city → NYPD (has local police)
+- "Smallville, Kansas" (fictional small town) → likely County Sheriff
+- Unincorporated areas ALWAYS use County Sheriff
 
 Return a JSON object:
 {{
-    "has_local_police": true/false,
-    "county_name": "Name of the county this location is in",
+    "location_type": "major_city|small_town|village|unincorporated|cdp",
+    "has_local_police": true only if this is a city large enough to have its own police department,
+    "county_name": "Name of the county (e.g., 'Attala' not 'Attala County')",
     "agencies": [
         {{
-            "name": "Official agency name (e.g., 'Kemper County Sheriff's Office')",
-            "type": "sheriff|police|state_patrol|other",
-            "address": "Full address if found, or null",
-            "is_primary": true/false (true if this is the most likely agency),
+            "name": "Full official name (e.g., 'Attala County Sheriff's Office')",
+            "type": "sheriff|police|state_patrol",
+            "is_primary": true if this is the most likely agency with jurisdiction,
             "confidence": "high|medium|low",
-            "notes": "Why this agency may have jurisdiction"
+            "notes": "Brief explanation"
         }}
     ],
-    "verification_warning": "A warning message about verifying the correct agency"
+    "verification_warning": "User-facing warning about verifying the agency"
 }}
 
-If the city has its own police department, include it first.
-ALWAYS include the county sheriff as an option for small towns.
-Include state patrol if relevant."""
+Be conservative: If uncertain whether a place has local police, assume it does NOT and suggest County Sheriff as primary."""
 
-            parse_response = self.client.chat.completions.create(
+        try:
+            response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a legal research assistant helping identify law enforcement agencies. Be thorough and accurate. Always respond with valid JSON."},
-                    {"role": "user", "content": parse_prompt}
+                    {
+                        "role": "system",
+                        "content": "You are a legal research assistant with knowledge of US law enforcement jurisdictions. You know that small towns and unincorporated areas are served by county sheriffs, not local police. Be accurate about which locations have their own police departments."
+                    },
+                    {"role": "user", "content": prompt}
                 ],
                 temperature=0.1,
                 max_tokens=1500,
@@ -626,21 +611,26 @@ Include state patrol if relevant."""
             )
 
             import json
-            result = json.loads(parse_response.choices[0].message.content)
+            result = json.loads(response.choices[0].message.content)
 
             return {
                 'success': True,
                 'has_local_police': result.get('has_local_police', False),
                 'county_name': result.get('county_name', ''),
+                'location_type': result.get('location_type', 'unknown'),
                 'agencies': result.get('agencies', []),
                 'verification_warning': result.get('verification_warning',
                     'IMPORTANT: Please verify the correct law enforcement agency. Small communities may be served by County Sheriff rather than a local police department.'),
             }
 
         except Exception as e:
+            # If this fails, return a conservative response
             return {
-                'success': False,
-                'error': str(e),
+                'success': True,  # Still return success so we show warning
+                'has_local_police': False,  # Assume no local police to be safe
+                'county_name': '',
+                'agencies': [],
+                'verification_warning': f'Could not verify law enforcement agency for {city}, {state}. Please search online to find the correct agency - small towns are typically served by the County Sheriff, not a local police department.',
             }
 
     def lookup_agency_address(self, agency_name: str, city: str = '', state: str = '') -> dict:
