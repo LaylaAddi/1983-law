@@ -45,15 +45,17 @@
                     <form method="post">
                         {% csrf_token %}
 
-                        <div class="form-check mb-4">
-                            <input type="checkbox"
-                                   class="form-check-input"
-                                   name="confirm_finalize"
-                                   id="confirm-finalize"
-                                   required>
-                            <label class="form-check-label fw-bold" for="confirm-finalize">
-                                I have reviewed my document and confirm it is ready for filing
-                            </label>
+                        <div class="border border-primary border-2 rounded p-3 mb-4 bg-primary bg-opacity-10">
+                            <div class="form-check">
+                                <input type="checkbox"
+                                       class="form-check-input"
+                                       name="confirm_finalize"
+                                       id="confirm-finalize"
+                                       required>
+                                <label class="form-check-label fw-bold" for="confirm-finalize">
+                                    I have reviewed my document and confirm it is ready for filing
+                                </label>
+                            </div>
                         </div>
 
                         <div class="d-grid gap-2">
