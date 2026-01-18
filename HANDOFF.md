@@ -499,11 +499,19 @@ AI-powered document generation that creates a professionally written Section 198
   - Agency name (e.g., "TAMPA POLICE DEPARTMENT")
   - "et al." when more than 2 defendants
 - **Missing Agency Warning** - Individual defendants without agency shown in red with warning
+- **Cached Generation** - Generated document is cached for instant loading:
+  - First visit generates and caches the document
+  - Subsequent visits load instantly from cache
+  - Shows "Generated X ago" timestamp
+  - "Regenerate" button available for fresh generation
+  - Cache auto-invalidated when any section is saved
 
 ### Files
 - `documents/services/document_generator.py` - Main generation service
 - `documents/views.py` - `document_preview` view and `_collect_document_data` helper
 - `templates/documents/document_preview.html` - Legal document display template
+- `documents/models.py` - Document.generated_complaint and generated_at fields (cache)
+- `documents/migrations/0015_document_complaint_cache.py` - Migration for cache fields
 
 ### Requirements for Generation
 Document must have:
