@@ -173,3 +173,38 @@ def profile_complete(request):
         'form': form,
         'next_url': next_url,
     })
+
+
+# Legal Pages
+def _get_site_settings():
+    """Helper to get site settings for legal pages."""
+    from .models import SiteSettings
+    return SiteSettings.get_settings()
+
+
+def terms_of_service(request):
+    """Terms of Service page."""
+    return render(request, 'legal/terms.html', {
+        'settings': _get_site_settings(),
+    })
+
+
+def privacy_policy(request):
+    """Privacy Policy page."""
+    return render(request, 'legal/privacy.html', {
+        'settings': _get_site_settings(),
+    })
+
+
+def legal_disclaimer(request):
+    """Legal Disclaimer page."""
+    return render(request, 'legal/disclaimer.html', {
+        'settings': _get_site_settings(),
+    })
+
+
+def cookie_policy(request):
+    """Cookie Policy page."""
+    return render(request, 'legal/cookies.html', {
+        'settings': _get_site_settings(),
+    })

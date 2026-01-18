@@ -56,6 +56,26 @@ class UserRegistrationForm(UserCreationForm):
             'placeholder': 'Confirm your password',
         })
     )
+    agree_terms = forms.BooleanField(
+        required=True,
+        label='I agree to the Terms of Service',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input',
+        }),
+        error_messages={
+            'required': 'You must agree to the Terms of Service to create an account.'
+        }
+    )
+    agree_privacy = forms.BooleanField(
+        required=True,
+        label='I agree to the Privacy Policy',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input',
+        }),
+        error_messages={
+            'required': 'You must agree to the Privacy Policy to create an account.'
+        }
+    )
 
     class Meta:
         model = User

@@ -41,7 +41,7 @@
                     <div class="form-text">Must be at least 8 characters.</div>
                 </div>
 
-                <div class="mb-4">
+                <div class="mb-3">
                     <label for="{{ form.password2.id_for_label }}" class="form-label">Confirm Password <span class="text-danger">*</span></label>
                     {{ form.password2 }}
                     {% if form.password2.errors %}
@@ -49,6 +49,31 @@
                             {% for error in form.password2.errors %}{{ error }}{% endfor %}
                         </div>
                     {% endif %}
+                </div>
+
+                <div class="border rounded p-3 mb-4 bg-light">
+                    <div class="form-check mb-2">
+                        {{ form.agree_terms }}
+                        <label class="form-check-label" for="{{ form.agree_terms.id_for_label }}">
+                            I agree to the <a href="{% url 'legal:terms' %}" target="_blank">Terms of Service</a> <span class="text-danger">*</span>
+                        </label>
+                        {% if form.agree_terms.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.agree_terms.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="form-check">
+                        {{ form.agree_privacy }}
+                        <label class="form-check-label" for="{{ form.agree_privacy.id_for_label }}">
+                            I agree to the <a href="{% url 'legal:privacy' %}" target="_blank">Privacy Policy</a> <span class="text-danger">*</span>
+                        </label>
+                        {% if form.agree_privacy.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.agree_privacy.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-success w-100 py-2">

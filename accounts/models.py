@@ -160,3 +160,122 @@ class User(AbstractBaseUser, PermissionsMixin):
         ).aggregate(
             total=models.Sum('referral_amount')
         )['total'] or 0
+
+
+class SiteSettings(models.Model):
+    """
+    Singleton model for site-wide settings.
+    Only one instance should exist - use SiteSettings.get_settings() to access.
+    """
+
+    # Company/Organization Info
+    company_name = models.CharField(
+        max_length=255,
+        default='1983law.org',
+        help_text='Legal name of the company/organization'
+    )
+    company_type = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        help_text='e.g., LLC, Non-Profit, Corporation'
+    )
+    company_state = models.CharField(
+        max_length=50,
+        default='New York',
+        help_text='State of incorporation/registration'
+    )
+    company_address = models.TextField(
+        blank=True,
+        default='',
+        help_text='Physical business address (required for CAN-SPAM)'
+    )
+    contact_email = models.EmailField(
+        default='contact@1983law.org',
+        help_text='Contact email for legal/privacy inquiries'
+    )
+    website_url = models.URLField(
+        default='https://www.1983law.org',
+        help_text='Primary website URL'
+    )
+
+    # Legal Settings
+    minimum_age = models.PositiveIntegerField(
+        default=18,
+        help_text='Minimum age to use the service'
+    )
+    governing_law_state = models.CharField(
+        max_length=50,
+        default='New York',
+        help_text='State whose laws govern the Terms of Service'
+    )
+    has_attorneys = models.BooleanField(
+        default=False,
+        help_text='Are licensed attorneys involved in the service?'
+    )
+    attorney_states = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='States where attorneys are licensed (comma-separated)'
+    )
+
+    # Payment Settings
+    payment_processor = models.CharField(
+        max_length=100,
+        default='Stripe',
+        help_text='Payment processor used (e.g., Stripe, PayPal)'
+    )
+    refund_policy_days = models.PositiveIntegerField(
+        default=0,
+        help_text='Number of days for refund requests (0 = no refunds)'
+    )
+
+    # Third-Party Services
+    uses_google_analytics = models.BooleanField(
+        default=True,
+        help_text='Does the site use Google Analytics?'
+    )
+    uses_openai = models.BooleanField(
+        default=True,
+        help_text='Does the site use OpenAI/AI services?'
+    )
+    hosting_provider = models.CharField(
+        max_length=100,
+        default='Render',
+        help_text='Web hosting provider'
+    )
+
+    # Policy Dates
+    terms_effective_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Effective date of Terms of Service'
+    )
+    privacy_effective_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Effective date of Privacy Policy'
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Site Settings'
+        verbose_name_plural = 'Site Settings'
+
+    def __str__(self):
+        return f"Site Settings ({self.company_name})"
+
+    def save(self, *args, **kwargs):
+        """Ensure only one instance exists."""
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_settings(cls):
+        """Get or create the singleton settings instance."""
+        settings, created = cls.objects.get_or_create(pk=1)
+        return settings

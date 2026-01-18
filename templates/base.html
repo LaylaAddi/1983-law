@@ -111,8 +111,18 @@
 
     <!-- Footer -->
     <footer class="bg-dark text-light py-4 mt-5">
-        <div class="container text-center">
-            <p class="mb-0">&copy; {% now "Y" %} {{ app_name }}. All rights reserved.</p>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                    <p class="mb-0">&copy; {% now "Y" %} {{ app_name }}. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <a href="{% url 'legal:terms' %}" class="text-light text-decoration-none me-3">Terms of Service</a>
+                    <a href="{% url 'legal:privacy' %}" class="text-light text-decoration-none me-3">Privacy Policy</a>
+                    <a href="{% url 'legal:disclaimer' %}" class="text-light text-decoration-none me-3">Legal Disclaimer</a>
+                    <a href="{% url 'legal:cookies' %}" class="text-light text-decoration-none">Cookie Policy</a>
+                </div>
+            </div>
         </div>
     </footer>
 
