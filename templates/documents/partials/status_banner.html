@@ -45,8 +45,8 @@
         <i class="bi bi-file-earmark-check me-2"></i>
         <strong>FINALIZED</strong> - This document is complete and locked
     </div>
-    <a href="{% url 'documents:document_preview' document.id %}?generate=true" class="btn btn-info btn-sm">
-        <i class="bi bi-printer me-1"></i>Print / Save as PDF
+    <a href="{% url 'documents:download_pdf' document.id %}" class="btn btn-info btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
     </a>
 </div>
 {% endif %}

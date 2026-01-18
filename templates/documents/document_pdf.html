@@ -32,18 +32,22 @@
             font-weight: bold;
             text-decoration: underline;
             margin: 2rem 0 1rem 0;
+            page-break-after: avoid;  /* Keep heading with following content */
         }
 
         .cause-header {
             text-align: center;
             font-weight: bold;
             margin: 2rem 0 1rem 0;
+            page-break-after: avoid;  /* Keep heading with following content */
         }
 
         p {
             text-indent: 0.5in;
             margin-bottom: 0;
             text-align: justify;
+            orphans: 3;  /* Minimum lines at bottom of page */
+            widows: 3;   /* Minimum lines at top of page */
         }
 
         .no-indent {
@@ -54,6 +58,7 @@
             margin-top: 3rem;
             white-space: pre-line;
             line-height: 1.5;
+            page-break-inside: avoid;  /* Keep signature block together */
         }
 
         .prayer-item {
@@ -62,8 +67,21 @@
             margin-bottom: 0.5rem;
         }
 
+        .prayer-section {
+            page-break-inside: avoid;  /* Keep prayer for relief together if possible */
+        }
+
         .section {
             margin-bottom: 1rem;
+        }
+
+        .cause-section {
+            page-break-inside: avoid;  /* Try to keep each cause of action together */
+        }
+
+        /* Ensure caption stays on first page */
+        .caption {
+            page-break-after: avoid;
         }
     </style>
 </head>
@@ -95,13 +113,13 @@
         <!-- Causes of Action -->
         <div class="section-header">CAUSES OF ACTION</div>
         {% for cause in generated_document.causes_of_action %}
-        <div class="section">
+        <div class="section cause-section">
 {{ cause.content|linebreaks }}
         </div>
         {% endfor %}
 
         <!-- Prayer for Relief -->
-        <div class="section">
+        <div class="section prayer-section">
 {{ generated_document.prayer|linebreaks }}
         </div>
 
