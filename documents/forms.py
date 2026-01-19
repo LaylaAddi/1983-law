@@ -245,7 +245,7 @@ class IncidentOverviewForm(forms.ModelForm):
         # Order fields so court lookup appears right after state
         fields = [
             'incident_date', 'incident_time', 'incident_location',
-            'city', 'state', 'federal_district_court', 'use_manual_court',
+            'city', 'state', 'federal_district_court', 'use_manual_court', 'court_district_confirmed',
             'location_type', 'was_recording', 'recording_device'
         ]
         widgets = {
@@ -258,13 +258,16 @@ class IncidentOverviewForm(forms.ModelForm):
             'recording_device': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., iPhone 14, GoPro Hero 10'}),
             'federal_district_court': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Select city & state, then click Lookup', 'id': 'id_federal_district_court', 'readonly': 'readonly'}),
             'use_manual_court': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_use_manual_court'}),
+            'court_district_confirmed': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_court_district_confirmed'}),
         }
         labels = {
             'federal_district_court': 'Federal District Court',
             'use_manual_court': 'Enter court manually (override auto-lookup)',
+            'court_district_confirmed': 'I confirm this is the correct federal district court for my case',
         }
         help_texts = {
             'federal_district_court': 'Click "Lookup Court" after selecting city and state.',
+            'court_district_confirmed': 'You must confirm the court district before completing your document.',
         }
 
 

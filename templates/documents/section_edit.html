@@ -643,6 +643,13 @@
                     <!-- Single item section -->
                     <form method="post">
                         {% csrf_token %}
+                        {% if section.section_type == 'incident_overview' %}
+                            <div id="courtDistrictWarning" class="alert alert-warning mb-3" style="display: none;">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                <strong>Court District Required:</strong> You must look up and confirm the correct federal district court before completing your document.
+                                Enter your city and state, then click "Lookup Court".
+                            </div>
+                        {% endif %}
                         {% for field in form %}
                             <div class="mb-3">
                                 {% if field.field.widget.input_type == 'checkbox' %}
@@ -1096,6 +1103,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 lookupDistrictCourt();
             }
         });
+
+        // Court district warning and confirmation logic
+        var courtWarning = document.getElementById('courtDistrictWarning');
+        var courtConfirmCheckbox = document.getElementById('id_court_district_confirmed');
+
+        function updateCourtWarning() {
+            if (!courtWarning) return;
+
+            var courtFilled = courtField.value.trim() !== '';
+            var courtConfirmed = courtConfirmCheckbox && courtConfirmCheckbox.checked;
+
+            if (!courtFilled || !courtConfirmed) {
+                courtWarning.style.display = 'block';
+                if (!courtFilled) {
+                    courtWarning.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>' +
+                        '<strong>Court District Required:</strong> You must look up and confirm the correct federal district court before completing your document. ' +
+                        'Enter your city and state, then click "Lookup Court".';
+                } else if (!courtConfirmed) {
+                    courtWarning.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>' +
+                        '<strong>Confirmation Required:</strong> Please check the box below to confirm "' + courtField.value + '" is the correct federal district court for your case.';
+                }
+            } else {
+                courtWarning.style.display = 'none';
+            }
+        }
+
+        // Update warning on page load
+        updateCourtWarning();
+
+        // Update warning when court field changes
+        courtField.addEventListener('change', updateCourtWarning);
+        courtField.addEventListener('input', updateCourtWarning);
+
+        // Update warning when confirmation checkbox changes
+        if (courtConfirmCheckbox) {
+            courtConfirmCheckbox.addEventListener('change', updateCourtWarning);
+        }
     }
 });
 </script>

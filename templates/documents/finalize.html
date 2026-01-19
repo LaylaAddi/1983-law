@@ -30,13 +30,20 @@
                         {% endif %}
 
                         {% if defendants_missing_address %}
-                        <div class="mb-0">
+                        <div class="mb-2">
                             <strong><i class="bi bi-geo-alt me-1"></i>Defendants Missing Address:</strong>
                             <ul class="mb-0 mt-1">
                                 {% for name in defendants_missing_address %}
                                 <li>{{ name }}</li>
                                 {% endfor %}
                             </ul>
+                        </div>
+                        {% endif %}
+
+                        {% if court_district_issue %}
+                        <div class="mb-0">
+                            <strong><i class="bi bi-building me-1"></i>Court District Issue:</strong>
+                            <p class="mb-0 mt-1">{{ court_district_issue }}</p>
                         </div>
                         {% endif %}
                     </div>

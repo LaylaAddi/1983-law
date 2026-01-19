@@ -378,6 +378,7 @@ class IncidentOverview(models.Model):
     federal_district_court = models.CharField(max_length=255, blank=True, help_text='Federal district court for filing')
     district_lookup_confidence = models.CharField(max_length=20, blank=True, choices=CONFIDENCE_CHOICES)
     use_manual_court = models.BooleanField(default=False, help_text='Manually enter court instead of using lookup')
+    court_district_confirmed = models.BooleanField(default=False, help_text='User confirmed the court district is correct')
 
     def __str__(self):
         return f"Incident on {self.incident_date}"

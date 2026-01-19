@@ -259,6 +259,20 @@ def document_detail(request, document_id):
             Q(address__isnull=True) | Q(address='')
         )
 
+    # Check for court district issues
+    court_district_filled = False
+    court_district_confirmed = False
+    court_district_issue = False
+    incident_section = sections.filter(section_type='incident_overview').first()
+    if incident_section:
+        try:
+            incident_overview = incident_section.incident_overview
+            court_district_filled = bool(incident_overview.federal_district_court)
+            court_district_confirmed = incident_overview.court_district_confirmed
+            court_district_issue = not court_district_filled or not court_district_confirmed
+        except Exception:
+            court_district_issue = True
+
     # Add config info to each section
     sections_with_config = []
     for section in sections:
@@ -274,6 +288,9 @@ def document_detail(request, document_id):
         'sections': sections_with_config,
         'defendants_needing_review': defendants_needing_review,
         'defendants_missing_address': defendants_missing_address,
+        'court_district_filled': court_district_filled,
+        'court_district_confirmed': court_district_confirmed,
+        'court_district_issue': court_district_issue,
     })
 
 
@@ -1868,7 +1885,20 @@ def checkout(request, document_id):
             ).values_list('name', flat=True)
         )
 
-    if incomplete_sections.exists() or defendants_missing_address:
+    # Check for court district issues
+    court_district_issue = None
+    incident_section = sections.filter(section_type='incident_overview').first()
+    if incident_section:
+        try:
+            incident_overview = incident_section.incident_overview
+            if not incident_overview.federal_district_court:
+                court_district_issue = "Federal district court has not been looked up"
+            elif not incident_overview.court_district_confirmed:
+                court_district_issue = "Federal district court needs confirmation"
+        except Exception:
+            court_district_issue = "Incident overview incomplete"
+
+    if incomplete_sections.exists() or defendants_missing_address or court_district_issue:
         # Build error message
         error_parts = []
         if incomplete_sections.exists():
@@ -1876,6 +1906,8 @@ def checkout(request, document_id):
             error_parts.append(f"incomplete sections: {', '.join(section_names)}")
         if defendants_missing_address:
             error_parts.append(f"defendants missing address: {', '.join(defendants_missing_address)}")
+        if court_district_issue:
+            error_parts.append(court_district_issue)
 
         messages.error(
             request,
@@ -2091,8 +2123,21 @@ def finalize_document(request, document_id):
             ).values_list('name', flat=True)
         )
 
+    # Check for court district issues
+    court_district_issue = None
+    incident_section = sections.filter(section_type='incident_overview').first()
+    if incident_section:
+        try:
+            incident_overview = incident_section.incident_overview
+            if not incident_overview.federal_district_court:
+                court_district_issue = "Federal district court has not been looked up"
+            elif not incident_overview.court_district_confirmed:
+                court_district_issue = "Federal district court needs confirmation"
+        except Exception:
+            court_district_issue = "Incident overview incomplete"
+
     # Determine if document can be finalized
-    can_finalize = not incomplete_sections.exists() and not defendants_missing_address
+    can_finalize = not incomplete_sections.exists() and not defendants_missing_address and not court_district_issue
 
     if request.method == 'POST':
         # Block finalization if sections are incomplete
@@ -2102,6 +2147,7 @@ def finalize_document(request, document_id):
                 'document': document,
                 'incomplete_sections': incomplete_sections,
                 'defendants_missing_address': defendants_missing_address,
+                'court_district_issue': court_district_issue,
                 'can_finalize': can_finalize,
             })
 
@@ -2113,6 +2159,7 @@ def finalize_document(request, document_id):
                 'document': document,
                 'incomplete_sections': incomplete_sections,
                 'defendants_missing_address': defendants_missing_address,
+                'court_district_issue': court_district_issue,
                 'can_finalize': can_finalize,
             })
 
@@ -2128,6 +2175,7 @@ def finalize_document(request, document_id):
         'document': document,
         'incomplete_sections': incomplete_sections,
         'defendants_missing_address': defendants_missing_address,
+        'court_district_issue': court_district_issue,
         'can_finalize': can_finalize,
     })
 
