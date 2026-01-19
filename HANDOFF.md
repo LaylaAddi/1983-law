@@ -226,16 +226,34 @@ AI prompts can now be edited via admin without code changes.
 - **Version** - Auto-increments on edit
 - **Last Edited By** - Audit trail
 
-**Setup After Deploy:**
+**How to Edit Prompts:**
+
+| Method | When to Use | Steps |
+|--------|-------------|-------|
+| **Admin (Recommended)** | Routine edits | Go to admin → AI Prompts → Edit → Save. No deploy needed! |
+| **Seed Command** | Initial setup or reset to defaults | Run `python manage.py seed_ai_prompts` |
+
+**Workflow for Editing:**
+1. Edit prompt directly in admin at `/admin/documents/aiprompt/`
+2. Changes take effect immediately (no deploy needed)
+3. Update backup file in `documents/prompts/` to keep in sync (optional but recommended)
+
+**Initial Setup (new deployments only):**
 ```bash
 python manage.py migrate
 python manage.py seed_ai_prompts
 ```
 
+**Backup Files:**
+- `documents/prompts/` - Markdown copies of each prompt for reference/disaster recovery
+- Copy-paste from these files into admin if database is wiped
+- Update these files when you edit prompts in admin (for version control)
+
 **Files:**
 - `documents/models.py` - AIPrompt model
 - `documents/admin.py` - Admin interface with monospace text areas
-- `documents/management/commands/seed_ai_prompts.py` - Initial prompt seeding
+- `documents/management/commands/seed_ai_prompts.py` - Initial prompt seeding (run once)
+- `documents/prompts/*.md` - Backup copies for reference
 - `documents/migrations/0018_aiprompt.py` - Migration
 
 ### OpenAI Service Methods
