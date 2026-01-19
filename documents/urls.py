@@ -42,6 +42,9 @@ urlpatterns = [
     # AI agency suggestion endpoint
     path('<int:document_id>/suggest-agency/', views.suggest_agency, name='suggest_agency'),
 
+    # AI section content suggestion endpoint
+    path('<int:document_id>/suggest-section/<str:section_type>/', views.suggest_section_content, name='suggest_section_content'),
+
     # AI address lookup endpoint (web search)
     path('<int:document_id>/lookup-address/', views.lookup_address, name='lookup_address'),
 

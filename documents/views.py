@@ -1210,6 +1210,97 @@ def suggest_agency(request, document_id):
 
 
 @login_required
+@require_POST
+def suggest_section_content(request, document_id, section_type):
+    """AJAX endpoint to suggest content for a specific section based on story analysis."""
+
+    # Allowed section types for AI suggestions
+    allowed_sections = ['damages', 'witnesses', 'evidence', 'rights_violated']
+
+    if section_type not in allowed_sections:
+        return JsonResponse({
+            'success': False,
+            'error': f'AI suggestions not available for section type: {section_type}',
+        })
+
+    try:
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        # Get the story text
+        story_text = document.story_text or ''
+
+        if not story_text:
+            return JsonResponse({
+                'success': False,
+                'error': 'Please complete the "Tell Your Story" section first.',
+            })
+
+        # Get existing data for the section to avoid duplicates
+        existing_data = {'existing': 'None yet'}
+
+        try:
+            section = document.sections.get(section_type=section_type)
+
+            if section_type == 'damages':
+                damages = section.damages
+                existing_items = []
+                if damages.physical_injuries:
+                    existing_items.append(f"Physical: {damages.physical_injuries}")
+                if damages.emotional_distress:
+                    existing_items.append(f"Emotional: {damages.emotional_distress}")
+                if damages.economic_losses:
+                    existing_items.append(f"Economic: {damages.economic_losses}")
+                if existing_items:
+                    existing_data['existing'] = "; ".join(existing_items)
+
+            elif section_type == 'witnesses':
+                witnesses = list(section.witnesses.values_list('name', flat=True))
+                if witnesses:
+                    existing_data['existing'] = ", ".join(witnesses)
+
+            elif section_type == 'evidence':
+                evidence_items = list(section.evidence_items.values_list('description', flat=True))
+                if evidence_items:
+                    existing_data['existing'] = ", ".join(evidence_items)
+
+            elif section_type == 'rights_violated':
+                rights = section.rights_violated
+                existing_items = []
+                if rights.first_amendment:
+                    existing_items.append("1st Amendment")
+                if rights.fourth_amendment:
+                    existing_items.append("4th Amendment")
+                if rights.fifth_amendment:
+                    existing_items.append("5th Amendment")
+                if rights.eighth_amendment:
+                    existing_items.append("8th Amendment")
+                if rights.fourteenth_amendment:
+                    existing_items.append("14th Amendment")
+                if existing_items:
+                    existing_data['existing'] = ", ".join(existing_items)
+
+        except (DocumentSection.DoesNotExist, AttributeError):
+            pass
+
+        from .services.openai_service import OpenAIService
+        service = OpenAIService()
+        result = service.suggest_section_content(section_type, story_text, existing_data)
+
+        return JsonResponse(result)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid request format.',
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}',
+        })
+
+
+@login_required
 @require_http_methods(["POST"])
 def lookup_address(request, document_id):
     """AJAX endpoint to lookup agency address using web search."""
