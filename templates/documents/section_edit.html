@@ -453,8 +453,12 @@
                                                 {% if section.section_type == 'defendants' and item.agency_name %}
                                                 <br><small class="text-muted"><i class="bi bi-building me-1"></i>{{ item.agency_name }}</small>
                                                 {% endif %}
-                                                {% if section.section_type == 'defendants' and item.address %}
-                                                <br><small class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ item.address }}</small>
+                                                {% if section.section_type == 'defendants' %}
+                                                    {% if item.address %}
+                                                <br><small class="text-success"><i class="bi bi-geo-alt-fill me-1"></i>{{ item.address }}</small>
+                                                    {% else %}
+                                                <br><small class="text-danger"><i class="bi bi-geo-alt me-1"></i><strong>Address needed</strong> - Click "Edit" → "Lookup Address" to find the official address</small>
+                                                    {% endif %}
                                                 {% endif %}
                                                 {% if section.section_type == 'witnesses' %}
                                                     {% if item.relationship %}
@@ -1229,7 +1233,7 @@ function suggestAgency() {
                 </div>`;
             }
 
-            html += '<p class="small text-muted mb-3">Click "Add" to add each defendant to your case:</p>';
+            html += '<p class="small text-muted mb-3"><strong>How to add defendants:</strong> Click "Add" for each defendant. After adding, click "Edit" next to each defendant to verify and lookup their official address for serving legal documents.</p>';
 
             data.suggestions.forEach((suggestion, index) => {
                 const confidenceColor = suggestion.confidence === 'high' ? 'success' :
@@ -1238,6 +1242,7 @@ function suggestAgency() {
                 const typeIcon = isAgency ? 'bi-building' : 'bi-person';
                 const typeLabel = isAgency ? 'Government Agency' : 'Individual Officer';
                 const typeBadgeColor = isAgency ? 'primary' : 'info';
+                const hasAddress = suggestion.address && suggestion.address.trim();
 
                 html += `
                     <div class="mb-2 p-3 border rounded suggestion-item ${isAgency ? 'border-primary' : 'border-info'}" data-suggestion-index="${index}">
@@ -1247,7 +1252,7 @@ function suggestAgency() {
                                 <br><strong>${escapeHtml(suggestion.name)}</strong>
                                 ${!isAgency && suggestion.agency_name ? `<br><small class="text-muted"><i class="bi bi-building me-1"></i>Agency: ${escapeHtml(suggestion.agency_name)}</small>` : ''}
                                 ${suggestion.title_rank ? `<br><small class="text-muted"><i class="bi bi-person-badge me-1"></i>Title: ${escapeHtml(suggestion.title_rank)}</small>` : ''}
-                                ${suggestion.address ? `<br><small class="text-primary"><i class="bi bi-geo-alt me-1"></i>${escapeHtml(suggestion.address)}</small>` : ''}
+                                ${hasAddress ? `<br><small class="text-primary"><i class="bi bi-geo-alt me-1"></i>${escapeHtml(suggestion.address)}</small>` : `<br><small class="text-warning"><i class="bi bi-geo-alt me-1"></i>Address needed - use "Edit" → "Lookup Address" after adding</small>`}
                                 <br><small class="text-muted">${escapeHtml(suggestion.reason)}</small>
                             </div>
                             <div class="text-end">
