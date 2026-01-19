@@ -648,160 +648,38 @@ If no clear address is found, return:
 
         existing_data = existing_data or {}
 
-        prompts = {
-            'damages': {
-                'system': """You are a legal assistant helping identify damages for a Section 1983 civil rights complaint.
-Analyze the story and identify ALL potential damages the plaintiff may have suffered.
-
-Categories of damages to look for:
-- Physical injuries (pain, medical treatment needed)
-- Emotional distress (fear, anxiety, humiliation, PTSD)
-- Economic losses (lost wages, medical bills, property damage)
-- Constitutional injury (the violation itself is compensable)
-- Reputational harm
-
-Return JSON format:
-{
-    "suggestions": [
-        {
-            "damage_type": "physical|emotional|economic|constitutional|reputational",
-            "description": "Clear description of the damage",
-            "details": "Supporting details from the story"
-        }
-    ],
-    "notes": "Any additional context about potential damages"
-}""",
-                'user': f"""Analyze this story and identify all damages the plaintiff may have suffered:
-
-STORY:
-{story_text}
-
-EXISTING DAMAGES ALREADY RECORDED:
-{existing_data.get('existing', 'None yet')}
-
-Identify any damages mentioned or implied in the story that aren't already recorded. Even if no explicit injuries are mentioned, consider:
-- The emotional impact of the constitutional violation
-- Any inconvenience or disruption described
-- Potential for ongoing effects"""
-            },
-            'witnesses': {
-                'system': """You are a legal assistant helping identify potential witnesses for a Section 1983 civil rights complaint.
-Analyze the story and identify ALL potential witnesses mentioned or implied.
-
-Look for:
-- People explicitly named who saw the incident
-- Bystanders mentioned
-- Other officers/employees present
-- Anyone the plaintiff spoke to before/during/after
-- People who may have video or other evidence
-
-Return JSON format:
-{
-    "suggestions": [
-        {
-            "name": "Name if known, or description like 'Unknown bystander'",
-            "relationship": "How they relate to the incident",
-            "what_they_witnessed": "What they likely saw or know",
-            "contact_info": "Any contact info mentioned, or 'Unknown'"
-        }
-    ],
-    "notes": "Tips for finding additional witnesses"
-}""",
-                'user': f"""Analyze this story and identify all potential witnesses:
-
-STORY:
-{story_text}
-
-EXISTING WITNESSES ALREADY RECORDED:
-{existing_data.get('existing', 'None yet')}
-
-Identify anyone mentioned who could serve as a witness, including people who may not be explicitly named."""
-            },
-            'evidence': {
-                'system': """You are a legal assistant helping identify potential evidence for a Section 1983 civil rights complaint.
-Analyze the story and identify ALL potential evidence mentioned or that should be obtained.
-
-Types of evidence to look for:
-- Video/audio recordings (body cams, dashcams, cell phones, surveillance)
-- Documents (police reports, citations, medical records)
-- Physical evidence (damaged property, injuries)
-- Digital evidence (social media posts, texts, emails)
-- Witness statements
-
-Return JSON format:
-{
-    "suggestions": [
-        {
-            "evidence_type": "video|audio|document|physical|digital|witness_statement",
-            "description": "What the evidence is",
-            "how_to_obtain": "How to get this evidence",
-            "importance": "Why this evidence matters"
-        }
-    ],
-    "notes": "Tips for preserving or obtaining evidence"
-}""",
-                'user': f"""Analyze this story and identify all potential evidence:
-
-STORY:
-{story_text}
-
-EXISTING EVIDENCE ALREADY RECORDED:
-{existing_data.get('existing', 'None yet')}
-
-Consider: Was anyone recording? Would there be body camera footage? What documents would exist?"""
-            },
-            'rights_violated': {
-                'system': """You are a legal assistant helping identify constitutional rights violations for a Section 1983 complaint.
-Analyze the story and identify ALL potential constitutional violations.
-
-Common Section 1983 violations:
-- First Amendment: Free speech, recording police, religion, assembly, petition
-- Fourth Amendment: Unreasonable search/seizure, excessive force, false arrest
-- Fifth Amendment: Due process, self-incrimination
-- Eighth Amendment: Cruel and unusual punishment
-- Fourteenth Amendment: Equal protection, due process
-
-Return JSON format:
-{
-    "suggestions": [
-        {
-            "amendment": "1st|4th|5th|8th|14th",
-            "right": "Specific right violated",
-            "description": "How it was violated based on the story",
-            "strength": "strong|moderate|weak"
-        }
-    ],
-    "notes": "Analysis of the strongest claims"
-}""",
-                'user': f"""Analyze this story and identify all constitutional rights that may have been violated:
-
-STORY:
-{story_text}
-
-EXISTING RIGHTS VIOLATIONS ALREADY RECORDED:
-{existing_data.get('existing', 'None yet')}
-
-Focus on identifying clear constitutional violations that would support a Section 1983 claim."""
-            }
+        # Map section types to prompt types in the database
+        prompt_type_map = {
+            'damages': 'suggest_damages',
+            'witnesses': 'suggest_witnesses',
+            'evidence': 'suggest_evidence',
+            'rights_violated': 'suggest_rights_violated',
         }
 
-        if section_type not in prompts:
+        if section_type not in prompt_type_map:
             return {
                 'success': False,
                 'error': f'Unknown section type: {section_type}',
             }
 
-        prompt_config = prompts[section_type]
-
         try:
+            # Get prompt from database
+            prompt = self._get_prompt(prompt_type_map[section_type])
+
+            # Format the user prompt with variables
+            user_prompt = prompt['user_prompt_template'].format(
+                story_text=story_text,
+                existing=existing_data.get('existing', 'None yet')
+            )
+
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=prompt['model_name'],
                 messages=[
-                    {"role": "system", "content": prompt_config['system']},
-                    {"role": "user", "content": prompt_config['user']}
+                    {"role": "system", "content": prompt['system_message']},
+                    {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.3,
-                max_tokens=2000,
+                temperature=prompt['temperature'],
+                max_tokens=prompt['max_tokens'],
                 response_format={"type": "json_object"}
             )
 
