@@ -249,9 +249,15 @@ def document_detail(request, document_id):
 
     # Check for defendants with AI-inferred agencies that need review
     defendants_needing_review = []
+    defendants_missing_address = []
     defendants_section = sections.filter(section_type='defendants').first()
     if defendants_section:
         defendants_needing_review = defendants_section.defendants.filter(agency_inferred=True)
+        # Check for defendants missing address (required for serving legal documents)
+        from django.db.models import Q
+        defendants_missing_address = defendants_section.defendants.filter(
+            Q(address__isnull=True) | Q(address='')
+        )
 
     # Add config info to each section
     sections_with_config = []
@@ -267,6 +273,7 @@ def document_detail(request, document_id):
         'document': document,
         'sections': sections_with_config,
         'defendants_needing_review': defendants_needing_review,
+        'defendants_missing_address': defendants_missing_address,
     })
 
 

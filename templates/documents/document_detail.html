@@ -145,6 +145,13 @@
                         </div>
                     {% endif %}
 
+                    {% if item.section.section_type == 'defendants' and defendants_missing_address %}
+                        <div class="alert alert-danger py-2 small mb-3">
+                            <i class="bi bi-geo-alt me-1"></i>
+                            <strong>Address Required:</strong> {{ defendants_missing_address|length }} defendant{% if defendants_missing_address|length != 1 %}s{% endif %}
+                            {% if defendants_missing_address|length == 1 %}is{% else %}are{% endif %} missing an address. Click Edit → use "Lookup Address" for each defendant.
+                        </div>
+                    {% endif %}
                     {% if item.section.section_type == 'defendants' and defendants_needing_review %}
                         <div class="alert alert-info py-2 small mb-3">
                             <i class="bi bi-robot me-1"></i>
