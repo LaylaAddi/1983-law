@@ -2046,12 +2046,45 @@ def finalize_document(request, document_id):
         messages.error(request, 'You must complete payment before finalizing your document.')
         return redirect('documents:checkout', document_id=document.id)
 
+    # Check for incomplete sections
+    sections = document.sections.all()
+    incomplete_sections = sections.exclude(status__in=['completed', 'not_applicable'])
+
+    # Check for defendants missing addresses
+    from django.db.models import Q
+    defendants_section = sections.filter(section_type='defendants').first()
+    defendants_missing_address = []
+    if defendants_section:
+        defendants_missing_address = list(
+            defendants_section.defendants.filter(
+                Q(address__isnull=True) | Q(address='')
+            ).values_list('name', flat=True)
+        )
+
+    # Determine if document can be finalized
+    can_finalize = not incomplete_sections.exists() and not defendants_missing_address
+
     if request.method == 'POST':
+        # Block finalization if sections are incomplete
+        if not can_finalize:
+            messages.error(request, 'Please complete all sections and ensure all defendants have addresses before finalizing.')
+            return render(request, 'documents/finalize.html', {
+                'document': document,
+                'incomplete_sections': incomplete_sections,
+                'defendants_missing_address': defendants_missing_address,
+                'can_finalize': can_finalize,
+            })
+
         confirmed = request.POST.get('confirm_finalize') == 'on'
 
         if not confirmed:
             messages.error(request, 'Please confirm that you have reviewed your document.')
-            return render(request, 'documents/finalize.html', {'document': document})
+            return render(request, 'documents/finalize.html', {
+                'document': document,
+                'incomplete_sections': incomplete_sections,
+                'defendants_missing_address': defendants_missing_address,
+                'can_finalize': can_finalize,
+            })
 
         # Finalize the document
         document.payment_status = 'finalized'
@@ -2061,7 +2094,12 @@ def finalize_document(request, document_id):
         messages.success(request, 'Your document has been finalized! You can now download or print your PDF.')
         return redirect('documents:document_preview', document_id=document.id)
 
-    return render(request, 'documents/finalize.html', {'document': document})
+    return render(request, 'documents/finalize.html', {
+        'document': document,
+        'incomplete_sections': incomplete_sections,
+        'defendants_missing_address': defendants_missing_address,
+        'can_finalize': can_finalize,
+    })
 
 
 # ============================================================================

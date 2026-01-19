@@ -13,6 +13,40 @@
                 <div class="card-body">
                     <h5 class="card-title">{{ document.title }}</h5>
 
+                    {% if not can_finalize %}
+                    <div class="alert alert-danger">
+                        <h6 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-1"></i>Cannot Finalize Yet</h6>
+                        <p class="mb-2">Please resolve the following before finalizing:</p>
+
+                        {% if incomplete_sections %}
+                        <div class="mb-2">
+                            <strong><i class="bi bi-list-check me-1"></i>Incomplete Sections:</strong>
+                            <ul class="mb-0 mt-1">
+                                {% for section in incomplete_sections %}
+                                <li>{{ section.get_section_type_display }} - <span class="badge bg-{% if section.status == 'not_started' %}secondary{% elif section.status == 'in_progress' %}info{% else %}warning{% endif %}">{{ section.get_status_display }}</span></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        {% if defendants_missing_address %}
+                        <div class="mb-0">
+                            <strong><i class="bi bi-geo-alt me-1"></i>Defendants Missing Address:</strong>
+                            <ul class="mb-0 mt-1">
+                                {% for name in defendants_missing_address %}
+                                <li>{{ name }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2 mb-4">
+                        <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-primary">
+                            <i class="bi bi-arrow-left me-1"></i>Go Back and Complete Sections
+                        </a>
+                    </div>
+                    {% else %}
                     <div class="alert alert-warning">
                         <h6 class="alert-heading"><i class="bi bi-info-circle me-1"></i>Important: This Action is Final</h6>
                         <p class="mb-0">Once you finalize your document:</p>
@@ -33,7 +67,9 @@
                             <li>Relief sought reflects your desired outcome</li>
                         </ul>
                     </div>
+                    {% endif %}
 
+                    {% if can_finalize %}
                     <div class="d-grid gap-2 mb-4">
                         <a href="{% url 'documents:document_preview' document.id %}?generate=true"
                            class="btn btn-outline-primary"
@@ -67,6 +103,7 @@
                             </a>
                         </div>
                     </form>
+                    {% endif %}
                 </div>
             </div>
         </div>
