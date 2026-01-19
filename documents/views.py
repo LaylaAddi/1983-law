@@ -1853,6 +1853,36 @@ def checkout(request, document_id):
         messages.info(request, 'This document has already been paid for.')
         return redirect('documents:document_detail', document_id=document.id)
 
+    # Check document completion before allowing checkout
+    from django.db.models import Q
+    sections = document.sections.all()
+    incomplete_sections = sections.exclude(status__in=['completed', 'not_applicable'])
+
+    # Check for defendants missing addresses
+    defendants_section = sections.filter(section_type='defendants').first()
+    defendants_missing_address = []
+    if defendants_section:
+        defendants_missing_address = list(
+            defendants_section.defendants.filter(
+                Q(address__isnull=True) | Q(address='')
+            ).values_list('name', flat=True)
+        )
+
+    if incomplete_sections.exists() or defendants_missing_address:
+        # Build error message
+        error_parts = []
+        if incomplete_sections.exists():
+            section_names = [s.get_section_type_display() for s in incomplete_sections]
+            error_parts.append(f"incomplete sections: {', '.join(section_names)}")
+        if defendants_missing_address:
+            error_parts.append(f"defendants missing address: {', '.join(defendants_missing_address)}")
+
+        messages.error(
+            request,
+            f"Cannot proceed to checkout. Please complete all sections first. Issues: {'; '.join(error_parts)}"
+        )
+        return redirect('documents:document_detail', document_id=document.id)
+
     # Calculate prices
     base_price = Decimal(str(settings.DOCUMENT_PRICE))
     discount_percent = Decimal(str(settings.PROMO_DISCOUNT_PERCENT))
