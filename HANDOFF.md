@@ -63,11 +63,26 @@ The app is functional with the following features complete:
    - **Parse Story API** - Backend endpoint for AI parsing (`/documents/{id}/parse-story/`)
    - **Auto-apply incident_overview** - Extracted fields automatically saved to database
    - **Legal Document Generator** - AI writes court-ready federal complaint
-   - **Context-aware Rights Section** - Shows different messages based on section status:
-     - If completed/in_progress: Green alert "Rights analyzed based on your story" + "Re-analyze" button
-     - If not started: Blue alert "Not sure which rights?" + "Analyze My Case" button
+   - **Per-Section AI Suggestions** (NEW) - Each section has "Analyze Story & Suggest" button:
+     - **Damages**: Identifies physical, emotional, economic, constitutional damages
+     - **Witnesses**: Identifies people mentioned who could be witnesses
+     - **Evidence**: Suggests evidence to gather (body cams, documents, recordings)
+     - **Rights Violated**: Identifies constitutional violations with strength assessment
+   - **Context-aware Rights Section** - Shows different messages based on section status
 
-7. **Helper Features**
+7. **Document Completion Validation** (NEW)
+   - Checkout blocked until all sections complete or marked N/A
+   - Defendants must have addresses (for serving legal documents)
+   - Federal district court must be looked up AND confirmed
+   - Clear error messages showing what's missing
+
+8. **Court District Requirement** (NEW)
+   - Highlighted orange box around court district fields
+   - Mandatory confirmation checkbox: "I confirm this is the correct federal district court"
+   - Form cannot submit without court lookup and confirmation
+   - Single-district states (Nevada, Idaho, etc.) auto-return the only court
+
+9. **Helper Features**
    - Federal district court lookup by city/state (auto-lookup on story parse)
    - State dropdowns on all address forms
    - Contextual help tooltips
@@ -212,6 +227,10 @@ AI prompts can now be edited via admin without code changes.
 | `parse_story` | Parse User Story | Analyzes "Tell Your Story" input |
 | `analyze_rights` | Analyze Constitutional Rights | Identifies rights violations |
 | `suggest_relief` | Suggest Legal Relief | Recommends damages/injunctions |
+| `suggest_damages` | Suggest Damages from Story | Per-section AI: identifies damages |
+| `suggest_witnesses` | Suggest Witnesses from Story | Per-section AI: identifies witnesses |
+| `suggest_evidence` | Suggest Evidence from Story | Per-section AI: identifies evidence to gather |
+| `suggest_rights_violated` | Suggest Rights Violations | Per-section AI: identifies constitutional violations |
 
 **Each Prompt Has:**
 - **Title** - Human-readable name
