@@ -861,7 +861,7 @@ class AIPrompt(models.Model):
     )
     is_active = models.BooleanField(
         default=True,
-        help_text='If disabled, falls back to hardcoded prompt'
+        help_text='If disabled, this prompt will not be used'
     )
     version = models.IntegerField(
         default=1,
