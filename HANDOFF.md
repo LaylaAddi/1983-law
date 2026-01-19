@@ -95,8 +95,8 @@ The app is functional with the following features complete:
 - **Source:** AI story parsing
 - **When:** When user submits their story
 - **Fields auto-applied:**
-  - `incident_date`
-  - `incident_time`
+  - `incident_date` (**REQUIRED** - form validation enforces this)
+  - `incident_time` (**REQUIRED** - form validation enforces this)
   - `incident_location`
   - `city`
   - `state`
@@ -105,6 +105,7 @@ The app is functional with the following features complete:
   - `recording_device` (if mentioned)
   - `federal_district_court` (auto-lookup from city/state)
 - **Section status:** Auto-marked as in_progress or completed
+- **Note:** If date/time not in story, AI ALWAYS asks for them in follow-up questions
 
 ---
 
@@ -251,7 +252,7 @@ python manage.py seed_ai_prompts
 - evidence: type, description (includes deleted/seized recordings, potential body cam footage)
 - damages: physical_injuries, emotional_distress (including lost memories/photos), financial_losses, other_damages (destroyed data)
 - rights_violated: suggested_violations with amendment and reason
-- questions_to_ask: follow-up questions for ONLY missing info (skips info already in story)
+- questions_to_ask: follow-up questions for missing info (**ALWAYS asks for date/time if missing** - these are mandatory for legal filings)
 
 ### Relief Suggestions (Separate AI Prompt)
 After story parsing completes, a second AI call analyzes the extracted data and recommends relief:

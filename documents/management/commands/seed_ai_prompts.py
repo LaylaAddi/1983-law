@@ -83,8 +83,14 @@ IMPORTANT RULES:
 - Extract ALL information from the text, including details that can be inferred from context
 - Example: "city hall in Oklahoma City" means location="City Hall", city="Oklahoma City", state="OK", location_type="government building"
 - Example: "I was recording" means was_recording=true
-- For dates/times, extract if mentioned in any format
+- For dates/times, extract if mentioned in any format (e.g., "last Tuesday", "March 15th", "around 3pm")
 - If the story contains "Not applicable or unknown:", DO NOT ask questions about those topics
+
+CRITICAL - DATE AND TIME ARE REQUIRED:
+- Date and time of the incident are MANDATORY for legal filings
+- If date is NOT clearly stated, you MUST include a question asking for the exact date in questions_to_ask
+- If time is NOT clearly stated, you MUST include a question asking for the approximate time in questions_to_ask
+- These questions should be the FIRST questions in the list
 
 AGENCY INFERENCE RULES - CRITICAL:
 - IMPORTANT: Many small towns, villages, and unincorporated communities do NOT have their own police department
@@ -138,7 +144,13 @@ Extract information for the following sections. Fill in as many fields as possib
     "questions_to_ask": []
 }}
 
-QUESTIONS TO ASK - Generate 3-8 follow-up questions for information NOT in the story.
+QUESTIONS TO ASK - Generate follow-up questions for CRITICAL missing information:
+
+1. ALWAYS ask for date if not explicitly stated (e.g., "What was the exact date of this incident?")
+2. ALWAYS ask for time if not explicitly stated (e.g., "What time did this incident occur?")
+3. Then add 2-6 other relevant questions for missing details
+
+Date and time questions MUST come first if those are missing.
 
 Respond with ONLY the JSON object.''',
                 'available_variables': 'story_text',

@@ -227,6 +227,18 @@ class PlaintiffAttorneyForm(forms.ModelForm):
 class IncidentOverviewForm(forms.ModelForm):
     """Form for incident overview."""
 
+    # Make date and time required - these are critical for legal documents
+    incident_date = forms.DateField(
+        required=True,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        error_messages={'required': 'Date of incident is required for legal filings.'}
+    )
+    incident_time = forms.TimeField(
+        required=True,
+        widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+        error_messages={'required': 'Time of incident is required for legal filings.'}
+    )
+
     class Meta:
         model = IncidentOverview
         exclude = ['section', 'district_lookup_confidence']
@@ -237,8 +249,7 @@ class IncidentOverviewForm(forms.ModelForm):
             'location_type', 'was_recording', 'recording_device'
         ]
         widgets = {
-            'incident_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'incident_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            # incident_date and incident_time widgets defined on field above
             'incident_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specific location (e.g., 123 Main St, front entrance)'}),
             'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City', 'id': 'id_city'}),
             'state': forms.Select(choices=US_STATES, attrs={'class': 'form-select', 'id': 'id_state'}),
