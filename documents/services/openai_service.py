@@ -15,6 +15,37 @@ class OpenAIService:
         # Set timeout to 45 seconds per call - Gunicorn timeout is 120s
         self.client = OpenAI(api_key=api_key, timeout=45.0)
 
+    def _get_prompt(self, prompt_type: str) -> dict | None:
+        """
+        Fetch a prompt from the database AIPrompt model.
+
+        Args:
+            prompt_type: The type of prompt (e.g., 'parse_story', 'analyze_rights')
+
+        Returns:
+            dict with prompt config or None if not found/inactive
+        """
+        try:
+            from documents.models import AIPrompt
+            prompt = AIPrompt.objects.filter(
+                prompt_type=prompt_type,
+                is_active=True
+            ).first()
+
+            if prompt:
+                return {
+                    'system_message': prompt.system_message,
+                    'user_prompt_template': prompt.user_prompt_template,
+                    'model_name': prompt.model_name,
+                    'temperature': prompt.temperature,
+                    'max_tokens': prompt.max_tokens,
+                }
+        except Exception:
+            # If database not available or model doesn't exist, fall back to hardcoded
+            pass
+
+        return None
+
     def analyze_rights_violations(self, document_data: dict) -> dict:
         """
         Analyze document content to suggest which constitutional rights were violated.
@@ -52,7 +83,21 @@ class OpenAIService:
 
         context = "\n\n".join(context_parts)
 
-        prompt = f"""Analyze this incident and identify which constitutional rights were likely violated. This is for a Section 1983 civil rights complaint against police officers or government officials.
+        # Try to get prompt from database
+        db_prompt = self._get_prompt('analyze_rights')
+
+        if db_prompt:
+            # Use database prompt with variable substitution
+            system_message = db_prompt['system_message']
+            user_prompt = db_prompt['user_prompt_template'].format(context=context)
+            model_name = db_prompt['model_name']
+            temperature = db_prompt['temperature']
+            max_tokens = db_prompt['max_tokens']
+        else:
+            # Fallback to hardcoded prompt
+            system_message = "You are a civil rights legal analyst helping identify constitutional violations in Section 1983 cases. Be accurate, thorough, and write explanations that are conversational yet professional. Always respond with valid JSON."
+
+            user_prompt = f"""Analyze this incident and identify which constitutional rights were likely violated. This is for a Section 1983 civil rights complaint against police officers or government officials.
 
 INCIDENT DETAILS:
 {context}
@@ -89,21 +134,25 @@ Respond in this exact JSON format:
 
 Only include rights that are clearly supported by the facts. Be accurate - don't suggest violations that aren't evident from the incident description. If no clear violations are found, return an empty violations array with a summary explaining why."""
 
+            model_name = "gpt-4o-mini"
+            temperature = 0.3
+            max_tokens = 2000
+
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=model_name,
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a civil rights legal analyst helping identify constitutional violations in Section 1983 cases. Be accurate, thorough, and write explanations that are conversational yet professional. Always respond with valid JSON."
+                        "content": system_message
                     },
                     {
                         "role": "user",
-                        "content": prompt
+                        "content": user_prompt
                     }
                 ],
-                temperature=0.3,
-                max_tokens=2000,
+                temperature=temperature,
+                max_tokens=max_tokens,
                 response_format={"type": "json_object"}
             )
 
@@ -138,14 +187,34 @@ Only include rights that are clearly supported by the facts. Be accurate - don't
                 'error': 'No story text provided',
             }
 
-        prompt = f"""Analyze this personal account of a civil rights incident and extract specific information that can be used to fill out a Section 1983 complaint form.
+        # Try to get prompt from database
+        db_prompt = self._get_prompt('parse_story')
+
+        if db_prompt:
+            # Use database prompt with variable substitution
+            system_message = db_prompt['system_message']
+            user_prompt = db_prompt['user_prompt_template'].format(story_text=story_text)
+            model_name = db_prompt['model_name']
+            temperature = db_prompt['temperature']
+            max_tokens = db_prompt['max_tokens']
+        else:
+            # Fallback to hardcoded prompt (with date/time requirements)
+            system_message = "You are a legal document assistant that extracts structured information from personal narratives. Be thorough - extract all information stated and reasonably inferred from context. Include evidence even if it was deleted or seized. Always respond with valid JSON."
+
+            user_prompt = f"""Analyze this personal account of a civil rights incident and extract specific information that can be used to fill out a Section 1983 complaint form.
 
 IMPORTANT RULES:
 - Extract ALL information from the text, including details that can be inferred from context
 - Example: "city hall in Oklahoma City" means location="City Hall", city="Oklahoma City", state="OK", location_type="government building"
 - Example: "I was recording" means was_recording=true
-- For dates/times, extract if mentioned in any format
+- For dates/times, extract if mentioned in any format (e.g., "last Tuesday", "March 15th", "around 3pm")
 - If the story contains "Not applicable or unknown:", DO NOT ask questions about those topics
+
+CRITICAL - DATE AND TIME ARE REQUIRED:
+- Date and time of the incident are MANDATORY for legal filings
+- If date is NOT clearly stated, you MUST include a question asking for the exact date in questions_to_ask
+- If time is NOT clearly stated, you MUST include a question asking for the approximate time in questions_to_ask
+- These questions should be the FIRST questions in the list
 
 AGENCY INFERENCE RULES - CRITICAL:
 - IMPORTANT: Many small towns, villages, and unincorporated communities do NOT have their own police department
@@ -162,18 +231,18 @@ USER'S STORY:
 
 Extract information for the following sections. Fill in as many fields as possible based on the story:
 
-{{
-    "incident_overview": {{
+{{{{
+    "incident_overview": {{{{
         "incident_date": "YYYY-MM-DD format or partial date, null if not mentioned",
         "incident_time": "HH:MM format or description like 'afternoon', null if not mentioned",
         "incident_location": "address or location name like 'City Hall', 'Main Street', etc.",
-        "city": "city name - extract from context (e.g., 'Oklahoma City' from the story)",
-        "state": "two-letter state code - infer from city if possible (e.g., OK for Oklahoma City)",
-        "location_type": "type of location: 'government building', 'public sidewalk', 'police station', 'courthouse', 'public park', etc.",
+        "city": "city name - extract from context",
+        "state": "two-letter state code - infer from city if possible",
+        "location_type": "type of location: 'government building', 'public sidewalk', etc.",
         "was_recording": "true if recording/filming mentioned, false if explicitly not, null if unknown",
         "recording_device": "device used: 'cell phone', 'camera', etc. if mentioned"
-    }},
-    "incident_narrative": {{
+    }}}},
+    "incident_narrative": {{{{
         "summary": "2-3 sentence summary of what happened, written in third person",
         "detailed_narrative": "full chronological account, written in third person",
         "what_were_you_doing": "what the plaintiff was doing before/during incident",
@@ -181,72 +250,53 @@ Extract information for the following sections. Fill in as many fields as possib
         "what_was_said": "dialogue or statements made by parties",
         "physical_actions": "any physical actions taken by anyone",
         "how_it_ended": "how the encounter concluded"
-    }},
+    }}}},
     "defendants": [
-        {{
+        {{{{
             "name": "officer/official name if mentioned, null otherwise",
             "badge_number": "badge number if mentioned, null otherwise",
             "title": "title like 'Officer', 'Sergeant', etc. if mentioned",
-            "agency": "department or agency name - INFER from city/state if not explicitly stated",
-            "agency_inferred": "true if agency was inferred from location, false if explicitly stated in story",
+            "agency": "department or agency name - use County Sheriff for small towns",
+            "agency_inferred": "true if agency was inferred from location",
             "description": "description of this defendant's role/actions"
-        }}
+        }}}}
     ],
-    "witnesses": [
-        {{
-            "name": "witness name if mentioned, null otherwise",
-            "description": "description like 'a woman', 'my friend', etc.",
-            "what_they_saw": "what this witness observed"
-        }}
-    ],
-    "evidence": [
-        {{
-            "type": "video, photo, document, body_cam, surveillance, etc.",
-            "description": "description of the evidence - INCLUDE recordings even if deleted/seized, and potential evidence like body cam footage"
-        }}
-    ],
-    "damages": {{
-        "physical_injuries": "description of physical injuries, null if none mentioned",
-        "emotional_distress": "emotional harm: humiliation, fear, anxiety, loss of irreplaceable memories/photos, etc.",
-        "financial_losses": "financial impact: missed work, damaged property value, etc.",
-        "other_damages": "property damage, destroyed data, reputation harm, etc."
-    }},
-    "rights_violated": {{
-        "suggested_violations": [
-            {{
-                "right": "field name like first_amendment_speech",
-                "amendment": "first, fourth, fifth, or fourteenth",
-                "reason": "brief explanation of why this right may have been violated"
-            }}
-        ]
-    }},
+    "witnesses": [...],
+    "evidence": [...],
+    "damages": {{{{...}}}},
+    "rights_violated": {{{{...}}}},
     "questions_to_ask": []
-}}
+}}}}
 
-QUESTIONS TO ASK - Generate 3-8 follow-up questions, but ONLY for information NOT already in the story:
-- Do NOT ask about location if the story mentions where it happened
-- Do NOT ask about recording if the story mentions filming/recording
-- Do NOT ask about city/state if mentioned in the story
-- DO ask about: officer names/badge numbers, witnesses, evidence, injuries, financial losses - IF NOT mentioned
-- Skip topics marked "Not applicable or unknown"
+QUESTIONS TO ASK - Generate follow-up questions for CRITICAL missing information:
+
+1. ALWAYS ask for date if not explicitly stated (e.g., "What was the exact date of this incident?")
+2. ALWAYS ask for time if not explicitly stated (e.g., "What time did this incident occur?")
+3. Then add 2-6 other relevant questions for missing details
+
+Date and time questions MUST come first if those are missing.
 
 Respond with ONLY the JSON object."""
 
+            model_name = "gpt-4o-mini"
+            temperature = 0.1
+            max_tokens = 3000
+
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=model_name,
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a legal document assistant that extracts structured information from personal narratives. Be thorough - extract all information stated and reasonably inferred from context. Include evidence even if it was deleted or seized. Always respond with valid JSON."
+                        "content": system_message
                     },
                     {
                         "role": "user",
-                        "content": prompt
+                        "content": user_prompt
                     }
                 ],
-                temperature=0.1,  # Very low temperature for accuracy
-                max_tokens=3000,
+                temperature=temperature,
+                max_tokens=max_tokens,
                 response_format={"type": "json_object"}
             )
 
@@ -365,7 +415,21 @@ INCIDENT SUMMARY:
 {narrative.get('summary', 'No summary available')}
 """
 
-        prompt = f"""Based on this Section 1983 civil rights case information, recommend appropriate relief:
+        # Try to get prompt from database
+        db_prompt = self._get_prompt('suggest_relief')
+
+        if db_prompt:
+            # Use database prompt with variable substitution
+            system_message = db_prompt['system_message']
+            user_prompt = db_prompt['user_prompt_template'].format(context=context)
+            model_name = db_prompt['model_name']
+            temperature = db_prompt['temperature']
+            max_tokens = db_prompt['max_tokens']
+        else:
+            # Fallback to hardcoded prompt
+            system_message = "You are a legal assistant helping prepare Section 1983 civil rights complaints. Provide thoughtful relief recommendations based on the specific facts of each case. Always respond with valid JSON."
+
+            user_prompt = f"""Based on this Section 1983 civil rights case information, recommend appropriate relief:
 
 {context}
 
@@ -383,40 +447,44 @@ Analyze and provide recommendations for each type of relief. Return a JSON objec
     "declaratory_relief": {{
         "recommended": true/false,
         "reason": "Brief explanation - recommend if a court declaration that rights were violated would be valuable",
-        "suggested_declaration": "What should be declared, e.g., 'Filming in public areas of government buildings is protected by the First Amendment'"
+        "suggested_declaration": "What should be declared"
     }},
     "injunctive_relief": {{
         "recommended": true/false,
-        "reason": "Brief explanation - recommend if policy changes or training are needed to prevent future violations",
-        "suggested_injunction": "What changes should be ordered, if any"
+        "reason": "Brief explanation - recommend if policy changes or training are needed",
+        "suggested_injunction": "What changes should be ordered"
     }},
     "attorney_fees": {{
         "recommended": true,
-        "reason": "42 U.S.C. § 1988 allows recovery of attorney fees in civil rights cases - always recommend"
+        "reason": "42 U.S.C. § 1988 allows recovery of attorney fees in civil rights cases"
     }},
     "jury_trial": {{
         "recommended": true/false,
-        "reason": "Brief explanation - juries are often sympathetic to civil rights plaintiffs"
+        "reason": "Brief explanation"
     }}
 }}
 
-Be specific to THIS case. Reference the actual violations, damages, and evidence when explaining recommendations."""
+Be specific to THIS case."""
+
+            model_name = "gpt-4o-mini"
+            temperature = 0.2
+            max_tokens = 1500
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=model_name,
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a legal assistant helping prepare Section 1983 civil rights complaints. Provide thoughtful relief recommendations based on the specific facts of each case. Always respond with valid JSON."
+                        "content": system_message
                     },
                     {
                         "role": "user",
-                        "content": prompt
+                        "content": user_prompt
                     }
                 ],
-                temperature=0.2,
-                max_tokens=1500,
+                temperature=temperature,
+                max_tokens=max_tokens,
                 response_format={"type": "json_object"}
             )
 
@@ -621,8 +689,21 @@ Return a JSON object with this format:
                 'error': 'City and state are required',
             }
 
-        # Use chat completions with a detailed prompt about jurisdiction
-        prompt = f"""Determine the law enforcement agencies that have jurisdiction in {city}, {state}.
+        # Try to get prompt from database
+        db_prompt = self._get_prompt('find_law_enforcement')
+
+        if db_prompt:
+            # Use database prompt with variable substitution
+            system_message = db_prompt['system_message']
+            user_prompt = db_prompt['user_prompt_template'].format(city=city, state=state)
+            model_name = db_prompt['model_name']
+            temperature = db_prompt['temperature']
+            max_tokens = db_prompt['max_tokens']
+        else:
+            # Fallback to hardcoded prompt
+            system_message = "You are a legal research assistant with knowledge of US law enforcement jurisdictions. You know that small towns and unincorporated areas are served by county sheriffs, not local police. Be accurate about which locations have their own police departments."
+
+            user_prompt = f"""Determine the law enforcement agencies that have jurisdiction in {city}, {state}.
 
 CRITICAL: Many small towns, villages, and unincorporated communities do NOT have their own police department.
 In these cases, law enforcement is provided by:
@@ -660,18 +741,22 @@ Return a JSON object:
 
 Be conservative: If uncertain whether a place has local police, assume it does NOT and suggest County Sheriff as primary."""
 
+            model_name = "gpt-4o-mini"
+            temperature = 0.1
+            max_tokens = 1500
+
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=model_name,
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a legal research assistant with knowledge of US law enforcement jurisdictions. You know that small towns and unincorporated areas are served by county sheriffs, not local police. Be accurate about which locations have their own police departments."
+                        "content": system_message
                     },
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.1,
-                max_tokens=1500,
+                temperature=temperature,
+                max_tokens=max_tokens,
                 response_format={"type": "json_object"}
             )
 
