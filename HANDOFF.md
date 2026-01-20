@@ -669,17 +669,20 @@ docker-compose exec web python manage.py createsuperuser
 │   ├── views.py        # Login, register, profile, profile_complete views
 │   └── forms.py        # Auth forms, ProfileEditForm, ProfileCompleteForm
 │
+├── common/             # Shared utilities across apps
+│   └── constants.py    # US_STATES list and other shared constants
+│
 ├── documents/          # Main document builder app
 │   ├── models.py       # Document, Section, PlaintiffInfo, etc.
 │   ├── views.py        # Section edit, preview, AJAX endpoints, auto-apply logic
-│   ├── forms.py        # All section forms + PlaintiffAttorneyForm + US_STATES dropdown
+│   ├── forms.py        # All section forms + PlaintiffAttorneyForm
 │   ├── help_content.py # Tooltips and help text for each field
 │   ├── test_stories.py # 20 sample stories for testing AI
 │   ├── urls.py         # URL routing
 │   └── services/
 │       ├── court_lookup_service.py
 │       ├── openai_service.py  # AI integration
-│       └── document_generator.py  # Legal document generation (NEW)
+│       └── document_generator.py  # Legal document generation
 │
 ├── templates/
 │   ├── base.html
