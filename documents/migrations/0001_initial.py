@@ -1,4 +1,5 @@
-# Generated migration for documents app - initial schema
+# Generated manually - squashed from multiple migrations
+# Initial migration for documents app
 
 from django.conf import settings
 from django.db import migrations, models
@@ -14,26 +15,67 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # PromoCode first (Document has FK to it)
+        migrations.CreateModel(
+            name='PromoCode',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('code', models.CharField(help_text='Unique promo code (e.g., SMITH25)', max_length=20, unique=True)),
+                ('name', models.CharField(blank=True, help_text='Optional friendly name for this code', max_length=100)),
+                ('referral_amount', models.DecimalField(decimal_places=2, default=5.0, help_text='Amount earned per referral (default $5.00)', max_digits=10)),
+                ('is_active', models.BooleanField(default=True)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('times_used', models.IntegerField(default=0)),
+                ('total_earned', models.DecimalField(decimal_places=2, default=0, max_digits=10)),
+                ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='promo_codes', to=settings.AUTH_USER_MODEL)),
+            ],
+            options={
+                'ordering': ['-created_at'],
+            },
+        ),
+        # Document
         migrations.CreateModel(
             name='Document',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(default='Untitled Case', max_length=255)),
-                ('status', models.CharField(choices=[('draft', 'Draft'), ('in_progress', 'In Progress'), ('review', 'Ready for Review'), ('complete', 'Complete')], default='draft', max_length=20)),
+                ('title', models.CharField(max_length=255)),
+                ('payment_status', models.CharField(choices=[('draft', 'Draft'), ('expired', 'Expired'), ('paid', 'Paid'), ('finalized', 'Finalized')], default='draft', max_length=20)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
+                ('story_text', models.TextField(blank=True, help_text='Raw story text from user (voice or typed)')),
+                ('story_told_at', models.DateTimeField(blank=True, help_text='When the story was submitted', null=True)),
+                ('stripe_payment_id', models.CharField(blank=True, help_text='Stripe Payment Intent ID', max_length=255)),
+                ('amount_paid', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)),
+                ('paid_at', models.DateTimeField(blank=True, null=True)),
+                ('finalized_at', models.DateTimeField(blank=True, null=True)),
+                ('ai_generations_used', models.IntegerField(default=0, help_text='Free tier: count of generations used')),
+                ('ai_cost_used', models.DecimalField(decimal_places=4, default=0, help_text='Paid tier: actual API cost in dollars', max_digits=10)),
+                ('parsing_status', models.CharField(choices=[('idle', 'Idle'), ('processing', 'Processing'), ('completed', 'Completed'), ('failed', 'Failed')], default='idle', help_text='Current status of story parsing', max_length=20)),
+                ('parsing_result', models.JSONField(blank=True, help_text='Parsed sections from AI (stored for polling retrieval)', null=True)),
+                ('parsing_error', models.TextField(blank=True, help_text='Error message if parsing failed')),
+                ('parsing_started_at', models.DateTimeField(blank=True, help_text='When parsing started (to detect stale jobs)', null=True)),
+                ('pdf_status', models.CharField(choices=[('idle', 'Idle'), ('processing', 'Processing'), ('completed', 'Completed'), ('failed', 'Failed')], default='idle', help_text='Current status of PDF generation', max_length=20)),
+                ('pdf_progress_stage', models.CharField(blank=True, default='', help_text='Current stage of PDF generation for progress display', max_length=50)),
+                ('pdf_error', models.TextField(blank=True, default='', help_text='Error message if PDF generation failed')),
+                ('pdf_started_at', models.DateTimeField(blank=True, help_text='When PDF generation started (to detect stale jobs)', null=True)),
+                ('pdf_file_path', models.CharField(blank=True, default='', help_text='Path to generated PDF file', max_length=500)),
+                ('generated_complaint', models.TextField(blank=True, help_text='Cached AI-generated legal complaint document')),
+                ('generated_at', models.DateTimeField(blank=True, help_text='When the complaint was last generated', null=True)),
+                ('promo_code_used', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='documents_used', to='documents.promocode')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='documents', to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'ordering': ['-updated_at'],
             },
         ),
+        # DocumentSection
         migrations.CreateModel(
             name='DocumentSection',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('section_type', models.CharField(choices=[('plaintiff_info', 'Plaintiff Information'), ('incident_overview', 'Incident Overview'), ('defendants', 'Government Defendants'), ('incident_narrative', 'Incident Narrative'), ('rights_violated', 'Rights Violated'), ('witnesses', 'Witnesses'), ('evidence', 'Evidence'), ('damages', 'Damages'), ('prior_complaints', 'Prior Complaints'), ('relief_sought', 'Relief Sought')], max_length=30)),
-                ('status', models.CharField(choices=[('not_started', 'Not Started'), ('in_progress', 'In Progress'), ('completed', 'Completed')], default='not_started', max_length=20)),
+                ('status', models.CharField(choices=[('not_started', 'Not Started'), ('in_progress', 'In Progress'), ('needs_work', 'Needs Work'), ('completed', 'Completed'), ('not_applicable', 'Not Applicable')], default='not_started', max_length=20)),
+                ('story_relevance', models.CharField(choices=[('unknown', 'Not Analyzed'), ('relevant', 'Relevant'), ('may_not_apply', 'May Not Apply')], default='unknown', help_text='Whether this section appears relevant based on story analysis', max_length=20)),
                 ('order', models.PositiveIntegerField(default=0)),
                 ('notes', models.TextField(blank=True, help_text='Internal notes about what needs work')),
                 ('updated_at', models.DateTimeField(auto_now=True)),
@@ -44,11 +86,14 @@ class Migration(migrations.Migration):
                 'unique_together': {('document', 'section_type')},
             },
         ),
+        # PlaintiffInfo
         migrations.CreateModel(
             name='PlaintiffInfo',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('full_name', models.CharField(blank=True, max_length=255)),
+                ('first_name', models.CharField(blank=True, max_length=50)),
+                ('middle_name', models.CharField(blank=True, max_length=50)),
+                ('last_name', models.CharField(blank=True, max_length=50)),
                 ('street_address', models.CharField(blank=True, max_length=255)),
                 ('city', models.CharField(blank=True, max_length=100)),
                 ('state', models.CharField(blank=True, max_length=50)),
@@ -56,9 +101,20 @@ class Migration(migrations.Migration):
                 ('phone', models.CharField(blank=True, max_length=20)),
                 ('email', models.EmailField(blank=True, max_length=254)),
                 ('is_pro_se', models.BooleanField(default=True, help_text='Representing yourself without an attorney')),
+                ('attorney_name', models.CharField(blank=True, help_text='Full name of attorney', max_length=100)),
+                ('attorney_bar_number', models.CharField(blank=True, help_text='State bar number', max_length=50)),
+                ('attorney_firm_name', models.CharField(blank=True, help_text='Law firm name', max_length=200)),
+                ('attorney_street_address', models.CharField(blank=True, max_length=255)),
+                ('attorney_city', models.CharField(blank=True, max_length=100)),
+                ('attorney_state', models.CharField(blank=True, max_length=50)),
+                ('attorney_zip_code', models.CharField(blank=True, max_length=20)),
+                ('attorney_phone', models.CharField(blank=True, max_length=20)),
+                ('attorney_fax', models.CharField(blank=True, max_length=20)),
+                ('attorney_email', models.EmailField(blank=True, max_length=254)),
                 ('section', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='plaintiff_info', to='documents.documentsection')),
             ],
         ),
+        # IncidentOverview
         migrations.CreateModel(
             name='IncidentOverview',
             fields=[
@@ -71,9 +127,14 @@ class Migration(migrations.Migration):
                 ('location_type', models.CharField(blank=True, help_text='e.g., Public sidewalk, Government building, etc.', max_length=100)),
                 ('was_recording', models.BooleanField(default=False)),
                 ('recording_device', models.CharField(blank=True, max_length=100)),
+                ('federal_district_court', models.CharField(blank=True, help_text='Federal district court for filing', max_length=255)),
+                ('district_lookup_confidence', models.CharField(blank=True, choices=[('high', 'High Confidence'), ('medium', 'Medium Confidence'), ('low', 'Low Confidence')], max_length=20)),
+                ('use_manual_court', models.BooleanField(default=False, help_text='Manually enter court instead of using lookup')),
+                ('court_district_confirmed', models.BooleanField(default=False, help_text='User confirmed the court district is correct')),
                 ('section', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='incident_overview', to='documents.documentsection')),
             ],
         ),
+        # Defendant
         migrations.CreateModel(
             name='Defendant',
             fields=[
@@ -83,11 +144,14 @@ class Migration(migrations.Migration):
                 ('badge_number', models.CharField(blank=True, max_length=50)),
                 ('title_rank', models.CharField(blank=True, help_text='e.g., Sergeant, Detective, etc.', max_length=100)),
                 ('agency_name', models.CharField(blank=True, help_text='For individual officers, their employing agency', max_length=255)),
+                ('agency_inferred', models.BooleanField(default=False, help_text='True if agency was AI-inferred and needs review')),
                 ('address', models.TextField(blank=True, help_text='Official address for service')),
+                ('address_verified', models.BooleanField(default=False, help_text='User confirmed they verified the address is correct')),
                 ('description', models.TextField(blank=True, help_text='Physical description or identifying information')),
                 ('section', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='defendants', to='documents.documentsection')),
             ],
         ),
+        # IncidentNarrative
         migrations.CreateModel(
             name='IncidentNarrative',
             fields=[
@@ -102,6 +166,7 @@ class Migration(migrations.Migration):
                 ('section', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='incident_narrative', to='documents.documentsection')),
             ],
         ),
+        # RightsViolated
         migrations.CreateModel(
             name='RightsViolated',
             fields=[
@@ -130,6 +195,7 @@ class Migration(migrations.Migration):
                 ('section', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='rights_violated', to='documents.documentsection')),
             ],
         ),
+        # Witness
         migrations.CreateModel(
             name='Witness',
             fields=[
@@ -139,9 +205,14 @@ class Migration(migrations.Migration):
                 ('relationship', models.CharField(blank=True, help_text='How do you know this person?', max_length=100)),
                 ('what_they_witnessed', models.TextField(blank=True)),
                 ('willing_to_testify', models.BooleanField(default=False)),
+                ('has_evidence', models.BooleanField(default=False, help_text='Did this witness capture video/photo evidence?')),
+                ('evidence_description', models.TextField(blank=True, help_text='Describe what they recorded (video, photos, audio)')),
+                ('prior_interactions', models.TextField(blank=True, help_text='Any prior interactions this witness had with the defendant(s)')),
+                ('additional_notes', models.TextField(blank=True, help_text='Any other relevant information about this witness')),
                 ('section', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='witnesses', to='documents.documentsection')),
             ],
         ),
+        # Evidence
         migrations.CreateModel(
             name='Evidence',
             fields=[
@@ -157,6 +228,7 @@ class Migration(migrations.Migration):
                 ('section', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='evidence_items', to='documents.documentsection')),
             ],
         ),
+        # Damages
         migrations.CreateModel(
             name='Damages',
             fields=[
@@ -183,6 +255,7 @@ class Migration(migrations.Migration):
                 ('section', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='damages', to='documents.documentsection')),
             ],
         ),
+        # PriorComplaints
         migrations.CreateModel(
             name='PriorComplaints',
             fields=[
@@ -201,22 +274,96 @@ class Migration(migrations.Migration):
                 ('section', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='prior_complaints', to='documents.documentsection')),
             ],
         ),
+        # ReliefSought
         migrations.CreateModel(
             name='ReliefSought',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('compensatory_damages', models.BooleanField(default=True)),
-                ('compensatory_amount', models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True)),
-                ('punitive_damages', models.BooleanField(default=False)),
-                ('punitive_amount', models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True)),
-                ('attorney_fees', models.BooleanField(default=True)),
-                ('injunctive_relief', models.BooleanField(default=False)),
-                ('injunctive_description', models.TextField(blank=True, help_text='What specific actions do you want the court to order?')),
-                ('declaratory_relief', models.BooleanField(default=False)),
-                ('declaratory_description', models.TextField(blank=True, help_text='What do you want the court to declare?')),
-                ('other_relief', models.TextField(blank=True)),
-                ('jury_trial_demanded', models.BooleanField(default=True)),
+                ('compensatory_damages', models.BooleanField(default=True, help_text='Money to cover actual losses - medical bills, lost wages, emotional distress, damaged equipment', verbose_name='Compensatory Damages')),
+                ('compensatory_amount', models.DecimalField(blank=True, decimal_places=2, help_text='Leave blank to let the court/jury decide the amount', max_digits=12, null=True, verbose_name='Specific Amount (optional)')),
+                ('punitive_damages', models.BooleanField(default=True, help_text='Extra money to punish officers who clearly violated your rights', verbose_name='Punitive Damages')),
+                ('punitive_amount', models.DecimalField(blank=True, decimal_places=2, help_text='Leave blank to let the court/jury decide the amount', max_digits=12, null=True, verbose_name='Specific Amount (optional)')),
+                ('attorney_fees', models.BooleanField(default=True, help_text='42 U.S.C. § 1988 allows recovery of legal fees in civil rights cases - ALWAYS include this', verbose_name="Attorney's Fees")),
+                ('declaratory_relief', models.BooleanField(default=True, help_text='Official court declaration that your constitutional rights were violated', verbose_name='Declaratory Judgment')),
+                ('declaratory_description', models.TextField(blank=True, help_text='Customize what you want declared, or leave blank for standard language', verbose_name='Declaration Details (optional)')),
+                ('jury_trial_demanded', models.BooleanField(default=True, help_text='Have regular citizens decide your case - juries are often sympathetic to civil rights plaintiffs', verbose_name='Jury Trial')),
+                ('injunctive_relief', models.BooleanField(default=False, help_text='Court orders forcing the department to change policies or training - harder to get but creates lasting change', verbose_name='Injunctive Relief (Policy Changes)')),
+                ('injunctive_description', models.TextField(blank=True, help_text='Example: Require training on First Amendment rights, revise filming policies', verbose_name='What changes do you want?')),
+                ('other_relief', models.TextField(blank=True, help_text='Any other relief not covered above', verbose_name='Other Relief')),
                 ('section', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='relief_sought', to='documents.documentsection')),
             ],
+        ),
+        # PromoCodeUsage
+        migrations.CreateModel(
+            name='PromoCodeUsage',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('stripe_payment_id', models.CharField(max_length=255)),
+                ('amount_paid', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('referral_amount', models.DecimalField(decimal_places=2, default=5.0, max_digits=10)),
+                ('payout_status', models.CharField(choices=[('pending', 'Pending'), ('paid', 'Paid')], default='pending', max_length=20)),
+                ('payout_reference', models.CharField(blank=True, help_text='Reference for payout (PayPal transaction ID, check number, etc.)', max_length=255)),
+                ('payout_date', models.DateTimeField(blank=True, null=True)),
+                ('payout_notes', models.TextField(blank=True)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('document', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='promo_usage', to='documents.document')),
+                ('promo_code', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='usages', to='documents.promocode')),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='promo_code_usages', to=settings.AUTH_USER_MODEL)),
+            ],
+            options={
+                'verbose_name': 'Promo Code Usage',
+                'verbose_name_plural': 'Promo Code Usages',
+                'ordering': ['-created_at'],
+            },
+        ),
+        # PayoutRequest
+        migrations.CreateModel(
+            name='PayoutRequest',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('amount_requested', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('payment_method', models.CharField(blank=True, help_text='How user wants to be paid (PayPal email, Venmo, etc.)', max_length=100)),
+                ('payment_details', models.TextField(blank=True, help_text='Additional payment details provided by user')),
+                ('status', models.CharField(choices=[('pending', 'Pending'), ('processing', 'Processing'), ('completed', 'Completed'), ('rejected', 'Rejected')], default='pending', max_length=20)),
+                ('amount_paid', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)),
+                ('payment_reference', models.CharField(blank=True, help_text='Transaction ID or reference number', max_length=255)),
+                ('admin_notes', models.TextField(blank=True)),
+                ('processed_at', models.DateTimeField(blank=True, null=True)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('processed_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='processed_payouts', to=settings.AUTH_USER_MODEL)),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='payout_requests', to=settings.AUTH_USER_MODEL)),
+            ],
+            options={
+                'verbose_name': 'Payout Request',
+                'verbose_name_plural': 'Payout Requests',
+                'ordering': ['-created_at'],
+            },
+        ),
+        # AIPrompt
+        migrations.CreateModel(
+            name='AIPrompt',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('prompt_type', models.CharField(choices=[('parse_story', 'Parse Story - Analyzes user story and extracts structured data'), ('analyze_rights', 'Analyze Rights - Identifies constitutional violations'), ('suggest_agency', 'Suggest Agency - Finds defendants based on story'), ('suggest_relief', 'Suggest Relief - Recommends legal relief options'), ('find_law_enforcement', 'Find Law Enforcement - Identifies correct police/sheriff'), ('lookup_address', 'Lookup Address - Finds agency addresses')], help_text='Which AI function this prompt is used for', max_length=50, unique=True)),
+                ('title', models.CharField(help_text='Human-readable title displayed in admin', max_length=255)),
+                ('description', models.TextField(help_text='Detailed description of what this prompt does and when it is used')),
+                ('system_message', models.TextField(help_text='The system role message that sets AI behavior/persona')),
+                ('user_prompt_template', models.TextField(help_text='The main prompt template. Use {variable_name} for placeholders like {city}, {state}, {story_text}')),
+                ('available_variables', models.TextField(blank=True, help_text='Comma-separated list of variables available for this prompt (e.g., city, state, story_text)')),
+                ('model_name', models.CharField(default='gpt-4o-mini', help_text='OpenAI model to use (e.g., gpt-4o-mini, gpt-4o)', max_length=50)),
+                ('temperature', models.FloatField(default=0.1, help_text='AI temperature (0.0-1.0). Lower = more consistent, higher = more creative')),
+                ('max_tokens', models.IntegerField(default=2000, help_text='Maximum tokens in the response')),
+                ('is_active', models.BooleanField(default=True, help_text='If disabled, this prompt will not be used')),
+                ('version', models.IntegerField(default=1, help_text='Version number for tracking changes')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('last_edited_by', models.ForeignKey(blank=True, help_text='Admin user who last edited this prompt', null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
+            ],
+            options={
+                'verbose_name': 'AI Prompt',
+                'verbose_name_plural': 'AI Prompts',
+                'ordering': ['prompt_type'],
+            },
         ),
     ]
