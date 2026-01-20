@@ -1312,17 +1312,24 @@ function suggestSectionContent(sectionType) {
             let html = '';
 
             if (sectionType === 'damages') {
-                html = '<p class="small text-muted mb-2">Review these potential damages and add them to the form fields above:</p>';
-                html += '<ul class="list-group list-group-flush">';
-                data.suggestions.forEach(s => {
-                    html += `<li class="list-group-item">
-                        <strong class="text-capitalize">${escapeHtml(s.damage_type)} Damage:</strong>
-                        <span>${escapeHtml(s.description)}</span>
-                        ${s.details ? `<br><small class="text-muted">${escapeHtml(s.details)}</small>` : ''}
-                    </li>`;
-                });
-                html += '</ul>';
-                html += '<div class="alert alert-info mt-3 mb-0 small"><i class="bi bi-info-circle me-1"></i>Copy the relevant information into the damage fields above and save.</div>';
+                // Filter out damage types that already have content in form fields
+                const filteredDamages = (data.suggestions || []).filter(s => !suggestionExists(s, 'damages'));
+
+                if (filteredDamages.length === 0) {
+                    html = '<div class="alert alert-success mb-0"><i class="bi bi-check-circle me-1"></i>All suggested damage types already have content in your form.</div>';
+                } else {
+                    html = '<p class="small text-muted mb-2">Review these potential damages and add them to the form fields above:</p>';
+                    html += '<ul class="list-group list-group-flush">';
+                    filteredDamages.forEach(s => {
+                        html += `<li class="list-group-item">
+                            <strong class="text-capitalize">${escapeHtml(s.damage_type)} Damage:</strong>
+                            <span>${escapeHtml(s.description)}</span>
+                            ${s.details ? `<br><small class="text-muted">${escapeHtml(s.details)}</small>` : ''}
+                        </li>`;
+                    });
+                    html += '</ul>';
+                    html += '<div class="alert alert-info mt-3 mb-0 small"><i class="bi bi-info-circle me-1"></i>Copy the relevant information into the damage fields above and save.</div>';
+                }
             } else if (sectionType === 'rights_violated') {
                 html = '<p class="small text-muted mb-2">Review these potential constitutional violations and check the boxes above:</p>';
                 html += '<ul class="list-group list-group-flush">';
@@ -1521,6 +1528,33 @@ function showAddedNotification(message) {
 // Track added items to prevent duplicates
 const addedItems = new Set();
 
+// Map AI damage types to form field IDs
+const damageTypeToFieldMap = {
+    'emotional': 'id_emotional_distress_description',
+    'psychological': 'id_emotional_distress_description',
+    'mental': 'id_emotional_distress_description',
+    'physical': 'id_property_damage_description',
+    'property': 'id_property_damage_description',
+    'financial': 'id_lost_wages_amount',
+    'economic': 'id_lost_wages_amount',
+    'reputation': 'id_reputation_harm_description',
+    'reputational': 'id_reputation_harm_description',
+    'other': 'id_other_damages'
+};
+
+// Check if a damage form field already has content
+function damageFieldHasContent(damageType) {
+    const normalizedType = damageType.toLowerCase().trim();
+    const fieldId = damageTypeToFieldMap[normalizedType];
+    if (fieldId) {
+        const field = document.getElementById(fieldId);
+        if (field && field.value && field.value.trim().length > 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Get existing items from the list to filter out duplicates from suggestions
 function getExistingItems() {
     const existingItems = new Set();
@@ -1543,8 +1577,13 @@ function getExistingItems() {
     return existingItems;
 }
 
-// Check if a suggestion already exists in the list
+// Check if a suggestion already exists in the list or form
 function suggestionExists(suggestion, sectionType) {
+    if (sectionType === 'damages') {
+        // For damages, check if the form field already has content
+        return damageFieldHasContent(suggestion.damage_type);
+    }
+
     const existingItems = getExistingItems();
     let checkText = '';
 
