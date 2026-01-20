@@ -1860,18 +1860,45 @@ def apply_story_fields(request, document_id):
                         item_index = f.get('itemIndex')
                         field_name = f.get('field')
                         value = f.get('value')
-                        if item_index is not None and value:
+                        if item_index is not None and value is not None:
                             evidence_items = list(Evidence.objects.filter(section=doc_section))
                             idx = int(item_index)
                             if idx < len(evidence_items):
                                 evidence = evidence_items[idx]
                             else:
                                 evidence = Evidence(section=doc_section, evidence_type='other', title='Evidence')
-                            if field_name == 'type':
-                                evidence.evidence_type = value.lower()
+
+                            if field_name == 'type' or field_name == 'evidence_type':
+                                # Map common types to model choices
+                                type_map = {
+                                    'video': 'video', 'video recording': 'video', 'cell phone video': 'video',
+                                    'audio': 'audio', 'audio recording': 'audio',
+                                    'photo': 'photo', 'photograph': 'photo', 'photos': 'photo',
+                                    'document': 'document', 'documents': 'document',
+                                    'body_cam': 'body_cam', 'body camera': 'body_cam', 'bodycam': 'body_cam',
+                                    'dash_cam': 'dash_cam', 'dash camera': 'dash_cam', 'dashcam': 'dash_cam',
+                                    'surveillance': 'surveillance', 'security camera': 'surveillance',
+                                    'social_media': 'social_media',
+                                }
+                                evidence.evidence_type = type_map.get(value.lower(), 'other')
+                            elif field_name == 'title':
                                 evidence.title = value
                             elif field_name == 'description':
                                 evidence.description = value
+                            elif field_name == 'date_created' and value:
+                                try:
+                                    evidence.date_created = datetime.strptime(value, '%Y-%m-%d').date()
+                                except ValueError:
+                                    pass  # Skip invalid dates
+                            elif field_name == 'is_in_possession':
+                                evidence.is_in_possession = value in [True, 'true', 'True', 1, '1']
+                            elif field_name == 'needs_subpoena':
+                                evidence.needs_subpoena = value in [True, 'true', 'True', 1, '1']
+                            elif field_name == 'notes':
+                                evidence.notes = value
+                            elif field_name == 'location_obtained':
+                                evidence.location_obtained = value
+
                             evidence.save()
                             saved_count += 1
                     # Auto-complete if at least one evidence item added

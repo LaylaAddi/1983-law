@@ -137,8 +137,24 @@ Extract information for the following sections. Fill in as many fields as possib
             "description": "description of this defendant's role/actions"
         }}
     ],
-    "witnesses": [...],
-    "evidence": [...],
+    "witnesses": [
+        {{
+            "name": "witness name if known, or descriptive label like 'bystander', 'store employee'",
+            "description": "brief description of who they are",
+            "what_they_saw": "what they witnessed"
+        }}
+    ],
+    "evidence": [
+        {{
+            "evidence_type": "video|audio|photo|document|body_cam|dash_cam|surveillance|other",
+            "title": "brief title like 'My cell phone recording' or 'Body camera footage'",
+            "description": "what this evidence shows or contains",
+            "date_created": "YYYY-MM-DD if mentioned, use incident date if evidence was captured during incident, null otherwise",
+            "is_in_possession": "true if user has/captured this evidence, false if it needs to be requested (body cam, dash cam, surveillance)",
+            "needs_subpoena": "true if evidence needs to be subpoenaed from police/third party",
+            "notes": "additional details like duration, file format, or how to obtain"
+        }}
+    ],
     "damages": {{...}},
     "rights_violated": {{...}},
     "questions_to_ask": []
