@@ -1305,7 +1305,12 @@ function suggestSectionContent(sectionType) {
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-magic me-1"></i>Analyze Story & Suggest';
 
-        if (data.success && data.suggestions && data.suggestions.length > 0) {
+        // Check for either old format (suggestions) or new evidence format (evidence_you_have/evidence_to_obtain)
+        const hasOldSuggestions = data.suggestions && data.suggestions.length > 0;
+        const hasNewEvidenceFormat = (data.evidence_you_have && data.evidence_you_have.length > 0) ||
+                                     (data.evidence_to_obtain && data.evidence_to_obtain.length > 0);
+
+        if (data.success && (hasOldSuggestions || hasNewEvidenceFormat)) {
             let html = '';
 
             if (sectionType === 'damages') {
@@ -1353,22 +1358,23 @@ function suggestSectionContent(sectionType) {
                     </div>`;
                 });
             } else if (sectionType === 'evidence') {
-                // Handle new two-category format
+                // Handle both old format (suggestions) and new format (evidence_you_have/evidence_to_obtain)
                 const evidenceYouHave = data.evidence_you_have || [];
                 const evidenceToObtain = data.evidence_to_obtain || [];
+                const oldSuggestions = data.suggestions || [];
 
-                // Section 1: Evidence You Have (with Add buttons)
-                if (evidenceYouHave.length > 0) {
-                    html += '<div class="mb-4">';
-                    html += '<h6 class="text-success mb-2"><i class="bi bi-check-circle-fill me-1"></i>Evidence You Have</h6>';
-                    html += '<p class="small text-muted mb-2">Based on your story, you already have this evidence. Click "Add" to include it in your case:</p>';
-                    currentEvidenceSuggestions = evidenceYouHave;
-                    evidenceYouHave.forEach((s, index) => {
-                        html += `<div class="mb-2 p-3 border border-success rounded suggestion-item bg-success bg-opacity-10" data-index="${index}">
+                // Check if we're using the old format (backwards compatibility)
+                if (oldSuggestions.length > 0 && evidenceYouHave.length === 0 && evidenceToObtain.length === 0) {
+                    // Old format - show all as addable (legacy behavior)
+                    html = '<p class="small text-muted mb-2">Click "Add" to add each piece of evidence:</p>';
+                    currentEvidenceSuggestions = oldSuggestions;
+                    oldSuggestions.forEach((s, index) => {
+                        html += `<div class="mb-2 p-3 border rounded suggestion-item" data-index="${index}">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div class="flex-grow-1">
                                     <strong class="text-capitalize">${escapeHtml(s.evidence_type)}:</strong> ${escapeHtml(s.description)}
-                                    <br><small class="text-muted">${escapeHtml(s.details || '')}</small>
+                                    <br><small class="text-muted">How to obtain: ${escapeHtml(s.how_to_obtain || '')}</small>
+                                    <br><small class="text-info">Importance: ${escapeHtml(s.importance || '')}</small>
                                 </div>
                                 <div>
                                     <button type="button" class="btn btn-sm btn-success add-evidence-btn" data-index="${index}">
@@ -1378,26 +1384,50 @@ function suggestSectionContent(sectionType) {
                             </div>
                         </div>`;
                     });
-                    html += '</div>';
                 } else {
-                    html += '<div class="alert alert-secondary mb-4"><i class="bi bi-info-circle me-1"></i>No evidence was explicitly mentioned as being in your possession. If you have recordings, photos, or documents, make sure to describe them in your story.</div>';
-                }
+                    // New format - separate into two sections
+                    // Section 1: Evidence You Have (with Add buttons)
+                    if (evidenceYouHave.length > 0) {
+                        html += '<div class="mb-4">';
+                        html += '<h6 class="text-success mb-2"><i class="bi bi-check-circle-fill me-1"></i>Evidence You Have</h6>';
+                        html += '<p class="small text-muted mb-2">Based on your story, you already have this evidence. Click "Add" to include it in your case:</p>';
+                        currentEvidenceSuggestions = evidenceYouHave;
+                        evidenceYouHave.forEach((s, index) => {
+                            html += `<div class="mb-2 p-3 border border-success rounded suggestion-item bg-success bg-opacity-10" data-index="${index}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <strong class="text-capitalize">${escapeHtml(s.evidence_type)}:</strong> ${escapeHtml(s.description)}
+                                        <br><small class="text-muted">${escapeHtml(s.details || '')}</small>
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-sm btn-success add-evidence-btn" data-index="${index}">
+                                            <i class="bi bi-plus-lg me-1"></i>Add
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>`;
+                        });
+                        html += '</div>';
+                    } else {
+                        html += '<div class="alert alert-secondary mb-4"><i class="bi bi-info-circle me-1"></i>No evidence was explicitly mentioned as being in your possession. If you have recordings, photos, or documents, make sure to describe them in your story.</div>';
+                    }
 
-                // Section 2: Evidence to Obtain (informational only, no Add buttons)
-                if (evidenceToObtain.length > 0) {
-                    html += '<div class="mb-3">';
-                    html += '<h6 class="text-primary mb-2"><i class="bi bi-search me-1"></i>Evidence to Request/Obtain</h6>';
-                    html += '<p class="small text-muted mb-2">This evidence may exist and could strengthen your case. You\'ll need to request it:</p>';
-                    evidenceToObtain.forEach((s) => {
-                        html += `<div class="mb-2 p-3 border rounded bg-light">
-                            <div class="flex-grow-1">
-                                <strong class="text-capitalize">${escapeHtml(s.evidence_type)}:</strong> ${escapeHtml(s.description)}
-                                <br><small class="text-primary"><i class="bi bi-arrow-right me-1"></i>How to obtain: ${escapeHtml(s.how_to_obtain || 'Contact the relevant agency')}</small>
-                                <br><small class="text-muted"><i class="bi bi-lightbulb me-1"></i>Why important: ${escapeHtml(s.why_important || '')}</small>
-                            </div>
-                        </div>`;
-                    });
-                    html += '</div>';
+                    // Section 2: Evidence to Obtain (informational only, no Add buttons)
+                    if (evidenceToObtain.length > 0) {
+                        html += '<div class="mb-3">';
+                        html += '<h6 class="text-primary mb-2"><i class="bi bi-search me-1"></i>Evidence to Request/Obtain</h6>';
+                        html += '<p class="small text-muted mb-2">This evidence may exist and could strengthen your case. You\'ll need to request it:</p>';
+                        evidenceToObtain.forEach((s) => {
+                            html += `<div class="mb-2 p-3 border rounded bg-light">
+                                <div class="flex-grow-1">
+                                    <strong class="text-capitalize">${escapeHtml(s.evidence_type)}:</strong> ${escapeHtml(s.description)}
+                                    <br><small class="text-primary"><i class="bi bi-arrow-right me-1"></i>How to obtain: ${escapeHtml(s.how_to_obtain || 'Contact the relevant agency')}</small>
+                                    <br><small class="text-muted"><i class="bi bi-lightbulb me-1"></i>Why important: ${escapeHtml(s.why_important || '')}</small>
+                                </div>
+                            </div>`;
+                        });
+                        html += '</div>';
+                    }
                 }
             }
 
@@ -1515,8 +1545,14 @@ function addEvidenceSuggestion(suggestion, buttonElement) {
     formData.append('evidence_type', typeMap[suggestion.evidence_type] || 'other');
     formData.append('title', suggestion.description || '');
     formData.append('description', suggestion.description || '');
-    // Use details for evidence_you_have format
-    formData.append('notes', suggestion.details || '');
+    // Handle both old format (how_to_obtain/importance) and new format (details)
+    let notes = '';
+    if (suggestion.details) {
+        notes = suggestion.details;
+    } else if (suggestion.how_to_obtain || suggestion.importance) {
+        notes = `How to obtain: ${suggestion.how_to_obtain || 'Unknown'}\nImportance: ${suggestion.importance || 'Unknown'}`;
+    }
+    formData.append('notes', notes);
 
     fetch('/documents/{{ document.id }}/section/evidence/add/', {
         method: 'POST',
