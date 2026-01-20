@@ -1495,16 +1495,6 @@ function showAddedNotification(message) {
     notification.style.display = 'block';
     notification.classList.add('show');
 
-    // Also highlight the existing items list section
-    const existingList = document.querySelector('.card-body .list-group, .card-body table');
-    if (existingList) {
-        existingList.style.transition = 'background-color 0.3s';
-        existingList.style.backgroundColor = '#d4edda';
-        setTimeout(() => {
-            existingList.style.backgroundColor = '';
-        }, 2000);
-    }
-
     // Auto-hide after 5 seconds
     setTimeout(() => {
         notification.classList.remove('show');
@@ -1512,8 +1502,72 @@ function showAddedNotification(message) {
     }, 5000);
 }
 
+// Track added items to prevent duplicates
+const addedItems = new Set();
+
+function addItemToList(itemText, sectionType) {
+    const list = document.getElementById('defendantsList');
+    if (!list) {
+        // Create the list container if it doesn't exist
+        const container = document.getElementById('defendantsListContainer');
+        if (container) {
+            const newList = document.createElement('div');
+            newList.className = 'list-group mb-3';
+            newList.id = 'defendantsList';
+            container.appendChild(newList);
+        }
+    }
+
+    const listElement = document.getElementById('defendantsList');
+    if (listElement) {
+        // Create new item
+        const newItem = document.createElement('div');
+        newItem.className = 'list-group-item list-group-item-success';
+        newItem.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <strong>${escapeHtml(itemText)}</strong>
+                    <span class="badge bg-success ms-2">Just Added</span>
+                </div>
+            </div>
+        `;
+
+        // Add to top of list
+        listElement.insertBefore(newItem, listElement.firstChild);
+
+        // Scroll to the new item
+        newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Flash animation
+        newItem.style.transition = 'background-color 0.5s';
+        setTimeout(() => {
+            newItem.style.backgroundColor = '#d4edda';
+            setTimeout(() => {
+                newItem.style.backgroundColor = '';
+            }, 2000);
+        }, 100);
+
+        // Update counter in header
+        const header = document.getElementById('defendantsListHeader');
+        if (header) {
+            const match = header.textContent.match(/\((\d+)\)/);
+            if (match) {
+                const newCount = parseInt(match[1]) + 1;
+                header.textContent = header.textContent.replace(/\(\d+\)/, `(${newCount})`);
+            }
+        }
+    }
+}
+
 function addWitnessSuggestion(suggestion, buttonElement) {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const itemKey = `witness:${suggestion.name}`;
+
+    // Check for duplicate
+    if (addedItems.has(itemKey)) {
+        alert('This witness has already been added.');
+        return;
+    }
 
     if (buttonElement) {
         buttonElement.disabled = true;
@@ -1533,6 +1587,9 @@ function addWitnessSuggestion(suggestion, buttonElement) {
     })
     .then(response => {
         if (response.ok || response.redirected) {
+            // Mark as added to prevent duplicates
+            addedItems.add(itemKey);
+
             if (buttonElement) {
                 const card = buttonElement.closest('.suggestion-item');
                 if (card) {
@@ -1540,8 +1597,10 @@ function addWitnessSuggestion(suggestion, buttonElement) {
                     buttonElement.outerHTML = '<span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Added</span>';
                 }
             }
-            // Show success message instead of reloading
-            showAddedNotification('Witness added! Scroll up to see the updated list, or continue adding more.');
+
+            // Add to the list dynamically
+            addItemToList(suggestion.name || 'Witness', 'witnesses');
+            showAddedNotification('Witness added successfully!');
         } else {
             throw new Error('Failed to add witness');
         }
@@ -1560,6 +1619,13 @@ function addWitnessSuggestion(suggestion, buttonElement) {
 
 function addEvidenceSuggestion(suggestion, buttonElement) {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const itemKey = `evidence:${suggestion.description}`;
+
+    // Check for duplicate
+    if (addedItems.has(itemKey)) {
+        alert('This evidence has already been added.');
+        return;
+    }
 
     if (buttonElement) {
         buttonElement.disabled = true;
@@ -1597,6 +1663,9 @@ function addEvidenceSuggestion(suggestion, buttonElement) {
     })
     .then(response => {
         if (response.ok || response.redirected) {
+            // Mark as added to prevent duplicates
+            addedItems.add(itemKey);
+
             if (buttonElement) {
                 const card = buttonElement.closest('.suggestion-item');
                 if (card) {
@@ -1604,8 +1673,10 @@ function addEvidenceSuggestion(suggestion, buttonElement) {
                     buttonElement.outerHTML = '<span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Added</span>';
                 }
             }
-            // Show success message instead of reloading
-            showAddedNotification('Evidence added! Scroll up to see the updated list, or continue adding more.');
+
+            // Add to the list dynamically
+            addItemToList(suggestion.description || 'Evidence', 'evidence');
+            showAddedNotification('Evidence added successfully!');
         } else {
             throw new Error('Failed to add evidence');
         }
