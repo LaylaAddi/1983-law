@@ -1388,14 +1388,17 @@ The relief_sought section may not be saving properly when user clicks "Continue 
 8. Repeat
 
 **After completing work - provide these merge commands:**
+
+*Note: User deploys from local machine. Branches created by Claude exist only on remote until fetched.*
+
 ```bash
-# Pull the changes
+# Fetch the remote branch
 git fetch origin <branch-name>
 
-# Switch to master and merge
+# Switch to master and merge (use origin/ prefix for remote branch)
 git checkout master
 git pull origin master
-git merge <branch-name>
+git merge origin/<branch-name>
 
 # Push merged master
 git push origin master
