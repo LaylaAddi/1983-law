@@ -1278,6 +1278,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 let currentWitnessSuggestions = [];
 let currentEvidenceSuggestions = [];
+let currentDamageSuggestions = [];
 
 function suggestSectionContent(sectionType) {
     const btn = document.getElementById('aiSuggestBtn');
@@ -1318,17 +1319,26 @@ function suggestSectionContent(sectionType) {
                 if (filteredDamages.length === 0) {
                     html = '<div class="alert alert-success mb-0"><i class="bi bi-check-circle me-1"></i>All suggested damage types already have content in your form.</div>';
                 } else {
-                    html = '<p class="small text-muted mb-2">Review these potential damages and add them to the form fields above:</p>';
+                    html = '<p class="small text-muted mb-2">Click "Use" to fill in the form fields above:</p>';
                     html += '<ul class="list-group list-group-flush">';
-                    filteredDamages.forEach(s => {
+                    currentDamageSuggestions = filteredDamages;
+                    filteredDamages.forEach((s, index) => {
                         html += `<li class="list-group-item">
-                            <strong class="text-capitalize">${escapeHtml(s.damage_type)} Damage:</strong>
-                            <span>${escapeHtml(s.description)}</span>
-                            ${s.details ? `<br><small class="text-muted">${escapeHtml(s.details)}</small>` : ''}
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <strong class="text-capitalize">${escapeHtml(s.damage_type)} Damage:</strong>
+                                    <span>${escapeHtml(s.description)}</span>
+                                    ${s.details ? `<br><small class="text-muted">${escapeHtml(s.details)}</small>` : ''}
+                                </div>
+                                <div class="ms-2">
+                                    <button type="button" class="btn btn-sm btn-success use-damage-btn" data-index="${index}">
+                                        <i class="bi bi-arrow-up-circle me-1"></i>Use
+                                    </button>
+                                </div>
+                            </div>
                         </li>`;
                     });
                     html += '</ul>';
-                    html += '<div class="alert alert-info mt-3 mb-0 small"><i class="bi bi-info-circle me-1"></i>Copy the relevant information into the damage fields above and save.</div>';
                 }
             } else if (sectionType === 'rights_violated') {
                 html = '<p class="small text-muted mb-2">Review these potential constitutional violations and check the boxes above:</p>';
@@ -1478,6 +1488,14 @@ function suggestSectionContent(sectionType) {
                     addEvidenceSuggestion(currentEvidenceSuggestions[index], this);
                 });
             });
+
+            // Attach click handlers for damage use buttons
+            body.querySelectorAll('.use-damage-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    useDamageSuggestion(currentDamageSuggestions[index], this);
+                });
+            });
         } else if (data.error) {
             body.innerHTML = `<div class="alert alert-warning mb-0"><i class="bi bi-exclamation-triangle me-1"></i>${escapeHtml(data.error)}</div>`;
         } else {
@@ -1528,18 +1546,34 @@ function showAddedNotification(message) {
 // Track added items to prevent duplicates
 const addedItems = new Set();
 
-// Map AI damage types to form field IDs
+// Map AI damage types to form field IDs (text fields for descriptions)
 const damageTypeToFieldMap = {
     'emotional': 'id_emotional_distress_description',
     'psychological': 'id_emotional_distress_description',
     'mental': 'id_emotional_distress_description',
     'physical': 'id_property_damage_description',
     'property': 'id_property_damage_description',
-    'financial': 'id_lost_wages_amount',
-    'economic': 'id_lost_wages_amount',
     'reputation': 'id_reputation_harm_description',
     'reputational': 'id_reputation_harm_description',
+    // These go to "other damages" field
+    'financial': 'id_other_damages',
+    'economic': 'id_other_damages',
+    'constitutional': 'id_other_damages',
+    'inconvenience': 'id_other_damages',
+    'professional': 'id_other_damages',
+    'civil rights': 'id_other_damages',
     'other': 'id_other_damages'
+};
+
+// Map AI damage types to checkbox fields (to auto-check the category)
+const damageTypeToCheckboxMap = {
+    'emotional': 'id_emotional_distress',
+    'psychological': 'id_emotional_distress',
+    'mental': 'id_emotional_distress',
+    'physical': 'id_property_damage',
+    'property': 'id_property_damage',
+    'reputation': 'id_reputation_harm',
+    'reputational': 'id_reputation_harm'
 };
 
 // Check if a damage form field already has content
@@ -1553,6 +1587,59 @@ function damageFieldHasContent(damageType) {
         }
     }
     return false;
+}
+
+// Use a damage suggestion to fill in the form field
+function useDamageSuggestion(suggestion, buttonElement) {
+    const normalizedType = suggestion.damage_type.toLowerCase().trim();
+    const fieldId = damageTypeToFieldMap[normalizedType];
+    const checkboxId = damageTypeToCheckboxMap[normalizedType];
+
+    // Build the text content
+    let content = `${suggestion.damage_type.charAt(0).toUpperCase() + suggestion.damage_type.slice(1)} Damage: ${suggestion.description}`;
+    if (suggestion.details) {
+        content += `\n${suggestion.details}`;
+    }
+
+    // Find and fill the text field
+    const field = document.getElementById(fieldId);
+    if (field) {
+        // If field already has content, append with a separator
+        if (field.value && field.value.trim()) {
+            field.value = field.value.trim() + '\n\n' + content;
+        } else {
+            field.value = content;
+        }
+
+        // Check the corresponding checkbox if it exists
+        if (checkboxId) {
+            const checkbox = document.getElementById(checkboxId);
+            if (checkbox && !checkbox.checked) {
+                checkbox.checked = true;
+            }
+        }
+
+        // Highlight the field
+        field.style.transition = 'background-color 0.3s';
+        field.style.backgroundColor = '#d4edda';
+        setTimeout(() => {
+            field.style.backgroundColor = '';
+        }, 2000);
+
+        // Scroll to the field
+        field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Update button to show success
+        buttonElement.disabled = true;
+        buttonElement.innerHTML = '<i class="bi bi-check-lg me-1"></i>Added';
+        buttonElement.classList.remove('btn-success');
+        buttonElement.classList.add('btn-secondary');
+
+        // Show notification
+        showAddedNotification(`${suggestion.damage_type} damage added to form`);
+    } else {
+        alert(`Could not find the form field for ${suggestion.damage_type} damage. Please add it manually.`);
+    }
 }
 
 // Get existing items from the list to filter out duplicates from suggestions
