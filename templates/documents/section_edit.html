@@ -1691,7 +1691,7 @@ function suggestionExists(suggestion, sectionType) {
     return false;
 }
 
-function addItemToList(itemText, sectionType) {
+function addItemToList(itemText, sectionType, itemId) {
     // Show the container if it was hidden (d-none)
     const container = document.getElementById('defendantsListContainer');
     if (container) {
@@ -1709,6 +1709,21 @@ function addItemToList(itemText, sectionType) {
 
     const listElement = document.getElementById('defendantsList');
     if (listElement) {
+        const documentId = {{ document.id }};
+
+        // Build action buttons HTML
+        let actionsHtml = '';
+        if (itemId) {
+            const deleteUrl = `/documents/${documentId}/section/${sectionType}/delete/${itemId}/`;
+            actionsHtml = `
+                <div class="d-flex gap-2">
+                    <a href="${deleteUrl}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this item?')">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </div>
+            `;
+        }
+
         // Create new item
         const newItem = document.createElement('div');
         newItem.className = 'list-group-item list-group-item-success';
@@ -1718,6 +1733,7 @@ function addItemToList(itemText, sectionType) {
                     <strong>${escapeHtml(itemText)}</strong>
                     <span class="badge bg-success ms-2">Just Added</span>
                 </div>
+                ${actionsHtml}
             </div>
         `;
 
@@ -1849,9 +1865,19 @@ function addEvidenceSuggestion(suggestion, buttonElement) {
     fetch('/documents/{{ document.id }}/section/evidence/add/', {
         method: 'POST',
         body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
     .then(response => {
-        if (response.ok || response.redirected) {
+        if (response.ok) {
+            return response.json();
+        } else {
+            throw new Error('Failed to add evidence');
+        }
+    })
+    .then(data => {
+        if (data.success) {
             // Mark as added to prevent duplicates
             addedItems.add(itemKey);
 
@@ -1863,8 +1889,8 @@ function addEvidenceSuggestion(suggestion, buttonElement) {
                 }
             }
 
-            // Add to the list dynamically
-            addItemToList(suggestion.description || 'Evidence', 'evidence');
+            // Add to the list dynamically with the item ID for delete button
+            addItemToList(data.item_str || suggestion.description || 'Evidence', 'evidence', data.item_id);
             showAddedNotification('Evidence added successfully!');
         } else {
             throw new Error('Failed to add evidence');

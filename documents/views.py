@@ -475,6 +475,15 @@ def add_multiple_item(request, document_id, section_type):
             else:
                 messages.success(request, f'{config["title"][:-1]} added.')
 
+            # Return JSON for AJAX requests
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'item_id': obj.id,
+                    'item_str': str(obj),
+                    'message': f'{config["title"][:-1]} added.'
+                })
+
             return redirect('documents:section_edit',
                            document_id=document.id,
                            section_type=section_type)
