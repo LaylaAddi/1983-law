@@ -1337,9 +1337,14 @@ function suggestSectionContent(sectionType) {
                 html += '</ul>';
                 html += '<div class="alert alert-info mt-3 mb-0 small"><i class="bi bi-info-circle me-1"></i>Check the corresponding amendment boxes above based on these suggestions.</div>';
             } else if (sectionType === 'witnesses') {
-                html = '<p class="small text-muted mb-2">Click "Add" to add each witness:</p>';
-                currentWitnessSuggestions = data.suggestions;
-                data.suggestions.forEach((s, index) => {
+                // Filter out witnesses that already exist in the list
+                const filteredWitnesses = (data.suggestions || []).filter(s => !suggestionExists(s, 'witnesses'));
+                if (filteredWitnesses.length === 0) {
+                    html = '<div class="alert alert-info mb-0"><i class="bi bi-check-circle me-1"></i>All suggested witnesses have already been added to your list.</div>';
+                } else {
+                    html = '<p class="small text-muted mb-2">Click "Add" to add each witness:</p>';
+                    currentWitnessSuggestions = filteredWitnesses;
+                    filteredWitnesses.forEach((s, index) => {
                     html += `<div class="mb-2 p-3 border rounded suggestion-item" data-index="${index}">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
@@ -1354,12 +1359,22 @@ function suggestSectionContent(sectionType) {
                             </div>
                         </div>
                     </div>`;
-                });
+                    });
+                }
             } else if (sectionType === 'evidence') {
                 // Handle both old format (suggestions) and new format (evidence_you_have/evidence_to_obtain)
-                const evidenceYouHave = data.evidence_you_have || [];
-                const evidenceToObtain = data.evidence_to_obtain || [];
-                const oldSuggestions = data.suggestions || [];
+                // Track original counts to detect if all were filtered out as duplicates
+                const originalYouHaveCount = (data.evidence_you_have || []).length;
+                const originalOldCount = (data.suggestions || []).length;
+
+                // Filter out items that already exist in the list
+                const evidenceYouHave = (data.evidence_you_have || []).filter(s => !suggestionExists(s, 'evidence'));
+                const evidenceToObtain = (data.evidence_to_obtain || []).filter(s => !suggestionExists(s, 'evidence'));
+                const oldSuggestions = (data.suggestions || []).filter(s => !suggestionExists(s, 'evidence'));
+
+                // Check if all suggestions were filtered out as duplicates
+                const allYouHaveFiltered = originalYouHaveCount > 0 && evidenceYouHave.length === 0;
+                const allOldFiltered = originalOldCount > 0 && oldSuggestions.length === 0;
 
                 // Check if we're using the old format (backwards compatibility)
                 if (oldSuggestions.length > 0 && evidenceYouHave.length === 0 && evidenceToObtain.length === 0) {
@@ -1406,6 +1421,9 @@ function suggestSectionContent(sectionType) {
                             </div>`;
                         });
                         html += '</div>';
+                    } else if (allYouHaveFiltered) {
+                        // All suggested evidence was already in the list
+                        html += '<div class="alert alert-success mb-4"><i class="bi bi-check-circle me-1"></i>All suggested evidence you have is already in your list.</div>';
                     } else {
                         html += '<div class="alert alert-secondary mb-4"><i class="bi bi-info-circle me-1"></i>No evidence was explicitly mentioned as being in your possession. If you have recordings, photos, or documents, make sure to describe them in your story.</div>';
                     }
@@ -1502,6 +1520,46 @@ function showAddedNotification(message) {
 
 // Track added items to prevent duplicates
 const addedItems = new Set();
+
+// Get existing items from the list to filter out duplicates from suggestions
+function getExistingItems() {
+    const existingItems = new Set();
+    const listElement = document.getElementById('defendantsList');
+    if (listElement) {
+        listElement.querySelectorAll('.list-group-item strong').forEach(el => {
+            // Normalize: lowercase, trim, and remove extra whitespace
+            const text = el.textContent.toLowerCase().trim().replace(/\s+/g, ' ');
+            existingItems.add(text);
+        });
+    }
+    // Also include items added in this session
+    addedItems.forEach(key => {
+        // Keys are like "evidence:Video Recording" or "witness:John Doe"
+        const parts = key.split(':');
+        if (parts.length > 1) {
+            existingItems.add(parts.slice(1).join(':').toLowerCase().trim());
+        }
+    });
+    return existingItems;
+}
+
+// Check if a suggestion already exists in the list
+function suggestionExists(suggestion, sectionType) {
+    const existingItems = getExistingItems();
+    let checkText = '';
+
+    if (sectionType === 'evidence') {
+        // For evidence, check both type+description and just description
+        checkText = `${suggestion.evidence_type}: ${suggestion.description}`.toLowerCase().trim();
+        const descOnly = suggestion.description.toLowerCase().trim();
+        return existingItems.has(checkText) ||
+               Array.from(existingItems).some(item => item.includes(descOnly) || descOnly.includes(item));
+    } else if (sectionType === 'witnesses') {
+        checkText = suggestion.name.toLowerCase().trim();
+        return Array.from(existingItems).some(item => item.includes(checkText) || checkText.includes(item));
+    }
+    return false;
+}
 
 function addItemToList(itemText, sectionType) {
     // Show the container if it was hidden (d-none)
