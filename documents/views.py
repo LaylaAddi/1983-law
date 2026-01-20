@@ -1303,7 +1303,11 @@ def suggest_section_content(request, document_id, section_type):
 @login_required
 @require_http_methods(["POST"])
 def lookup_address(request, document_id):
-    """AJAX endpoint to lookup agency address using web search."""
+    """AJAX endpoint to lookup agency address using web search.
+
+    If agency_name is not provided but officer info is available,
+    will attempt to identify the agency first based on location and officer details.
+    """
 
     try:
         # Verify document ownership
@@ -1311,12 +1315,9 @@ def lookup_address(request, document_id):
 
         data = json.loads(request.body)
         agency_name = data.get('agency_name', '').strip()
-
-        if not agency_name:
-            return JsonResponse({
-                'success': False,
-                'error': 'Agency name is required.',
-            })
+        officer_name = data.get('officer_name', '').strip()
+        officer_title = data.get('officer_title', '').strip()
+        officer_description = data.get('officer_description', '').strip()
 
         # Get city/state from incident overview for context
         city = ''
@@ -1329,9 +1330,23 @@ def lookup_address(request, document_id):
         except (DocumentSection.DoesNotExist, AttributeError):
             pass
 
+        # If no agency name and no location context, we can't proceed
+        if not agency_name and not city and not state:
+            return JsonResponse({
+                'success': False,
+                'error': 'Please enter an agency name or complete the Incident Overview section with location info.',
+            })
+
         from .services.openai_service import OpenAIService
         service = OpenAIService()
-        result = service.lookup_agency_address(agency_name, city, state)
+        result = service.lookup_agency_address(
+            agency_name=agency_name,
+            city=city,
+            state=state,
+            officer_name=officer_name,
+            officer_title=officer_title,
+            officer_description=officer_description
+        )
 
         return JsonResponse(result)
 

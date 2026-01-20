@@ -436,7 +436,7 @@ When AI suggests defendants, users MUST verify the service address before accept
 3. **Verification Modal includes:**
    - Warning about proper service requirements
    - Current address displayed prominently
-   - Instructions to use "Lookup Address" to search
+   - Instructions to use "Find Agency & Address" to search
    - **REQUIRED checkbox:** "I confirm that I have verified the address is correct for serving legal documents to this defendant."
    - Accept button is DISABLED until checkbox is checked
 4. **On Accept:** Both `agency_inferred=False` and `address_verified=True` are set
@@ -444,7 +444,7 @@ When AI suggests defendants, users MUST verify the service address before accept
 **Edit Defendant Page:**
 - Shows red alert banner: "Address Verification Required" for AI-suggested defendants
 - Step-by-step instructions to verify address
-- "Lookup Address" button to search for official address
+- "Find Agency & Address" button to search for agency and official address
 
 **Document Detail Warning:**
 When defendants have `agency_inferred=True`, the Government Defendants section card shows:
@@ -455,13 +455,18 @@ When defendants have `agency_inferred=True`, the Government Defendants section c
 - Shows AI-suggested warning badge for defendants with agency_inferred=True
 - Displays the agency name inline for each defendant
 - Edit page at `/documents/{id}/defendant/{defendant_id}/edit/`
-- Edit page has Save/Cancel and **Lookup Address** buttons
+- Edit page has Save/Cancel and **Find Agency & Address** buttons
 
-**Address Lookup Feature (Web Search):**
-- "Lookup Address" button on edit defendant page
+**Find Agency & Address Feature (Enhanced - Web Search):**
+- "Find Agency & Address" button on edit defendant page
 - Uses OpenAI web search to find official agency headquarters address
-- User enters agency name, clicks button, gets real address from web
-- Shows result with "Use This Address" button to fill the form field
+- **NEW:** If agency name is missing for individual officers, AI identifies the likely agency based on:
+  - Officer's title/rank (e.g., "Deputy" → County Sheriff, "Trooper" → State Highway Patrol)
+  - Incident location (city/state from Incident Overview)
+  - Officer description
+- Shows results with separate "Use" buttons for agency and address
+- "Use All Information" button to apply both at once
+- AI-suggested agencies show warning badge
 - API endpoint: `/documents/{id}/lookup-address/`
 
 **Files involved:**
@@ -469,7 +474,7 @@ When defendants have `agency_inferred=True`, the Government Defendants section c
 - `documents/views.py` - `suggest_agency`, `edit_defendant`, `lookup_address`, and `accept_defendant_agency` view endpoints
 - `documents/urls.py` - Routes for suggest-agency, edit-defendant, lookup-address, and accept-defendant-agency
 - `templates/documents/section_edit.html` - Verification modal with checkbox for AI-suggested defendants
-- `templates/documents/edit_defendant.html` - Edit defendant form with Lookup Address button and verification warning
+- `templates/documents/edit_defendant.html` - Edit defendant form with Find Agency & Address button and verification warning
 - `templates/documents/document_detail.html` - Warning for defendants needing review
 - `documents/forms.py` - DefendantForm clears agency_inferred on save
 - `documents/models.py` - Defendant.agency_inferred and address_verified fields

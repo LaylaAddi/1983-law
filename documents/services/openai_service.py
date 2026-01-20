@@ -519,24 +519,114 @@ Return a JSON object with this format:
                 'verification_warning': f'Could not verify law enforcement agency for {city}, {state}. Please search online to find the correct agency - small towns are typically served by the County Sheriff, not a local police department.',
             }
 
-    def lookup_agency_address(self, agency_name: str, city: str = '', state: str = '') -> dict:
+    def _identify_agency_for_officer(self, city: str, state: str,
+                                      officer_name: str = '', officer_title: str = '',
+                                      officer_description: str = '') -> dict:
+        """
+        Identify the likely law enforcement agency for an officer based on location and officer info.
+
+        Args:
+            city: City where incident occurred
+            state: State where incident occurred
+            officer_name: Name of the officer
+            officer_title: Title/rank (e.g., "Sergeant", "Deputy", "Trooper")
+            officer_description: Description of the officer
+
+        Returns:
+            dict with 'success' and 'agency_name'
+        """
+        if not city and not state:
+            return {'success': False, 'error': 'Location required to identify agency'}
+
+        # Build context from officer info
+        officer_context = []
+        if officer_title:
+            officer_context.append(f"title/rank: {officer_title}")
+        if officer_description:
+            officer_context.append(f"description: {officer_description}")
+
+        officer_info = ", ".join(officer_context) if officer_context else "unknown officer"
+
+        location = f"{city}, {state}" if city and state else (city or state)
+
+        prompt = f"""Based on the following information, identify the most likely law enforcement agency this officer works for.
+
+Location: {location}
+Officer info: {officer_info}
+
+Consider:
+- Title like "Deputy" suggests County Sheriff's Office
+- Title like "Trooper" suggests State Highway Patrol
+- Title like "Officer" or "Detective" in a city suggests City Police Department
+- Small towns often don't have their own police and are served by County Sheriff
+
+Return a JSON object:
+{{
+    "agency_name": "Official agency name (e.g., 'Tampa Police Department', 'Hillsborough County Sheriff\\'s Office')",
+    "confidence": "high" or "medium" or "low",
+    "reasoning": "Brief explanation of why this agency was identified"
+}}
+
+If you cannot determine the agency with reasonable confidence, return:
+{{
+    "agency_name": null,
+    "confidence": "low",
+    "reasoning": "Explanation of why agency could not be determined"
+}}"""
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You identify law enforcement agencies based on location and officer information. Return only valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,
+                max_tokens=300,
+                response_format={"type": "json_object"}
+            )
+
+            import json
+            result = json.loads(response.choices[0].message.content)
+
+            if result.get('agency_name'):
+                return {
+                    'success': True,
+                    'agency_name': result['agency_name'],
+                    'confidence': result.get('confidence', 'medium'),
+                    'reasoning': result.get('reasoning', ''),
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('reasoning', 'Could not identify agency'),
+                }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+            }
+
+    def lookup_agency_address(self, agency_name: str, city: str = '', state: str = '',
+                               officer_name: str = '', officer_title: str = '',
+                               officer_description: str = '') -> dict:
         """
         Look up the official address for a government agency using web search.
+        If agency_name is not provided but officer info and location are available,
+        will first identify the likely agency.
 
         Args:
             agency_name: Name of the agency (e.g., "Tampa Police Department")
             city: City for context
             state: State for context
+            officer_name: Name of the officer (for agency identification)
+            officer_title: Title/rank of the officer (for agency identification)
+            officer_description: Description of the officer (for agency identification)
 
         Returns:
-            dict with 'success', 'address', 'source'
+            dict with 'success', 'address', 'source', and optionally 'suggested_agency'
         """
-        if not agency_name:
-            return {
-                'success': False,
-                'error': 'Agency name is required',
-            }
-
         location_context = ""
         if city and state:
             location_context = f" in {city}, {state}"
@@ -544,6 +634,24 @@ Return a JSON object with this format:
             location_context = f" in {city}"
         elif state:
             location_context = f" in {state}"
+
+        # If no agency name but we have officer info and location, identify the agency first
+        suggested_agency = None
+        if not agency_name and location_context:
+            agency_result = self._identify_agency_for_officer(
+                city=city, state=state,
+                officer_name=officer_name, officer_title=officer_title,
+                officer_description=officer_description
+            )
+            if agency_result.get('success') and agency_result.get('agency_name'):
+                suggested_agency = agency_result['agency_name']
+                agency_name = suggested_agency
+
+        if not agency_name:
+            return {
+                'success': False,
+                'error': 'Agency name is required. Please enter the agency name or provide location info to identify it.',
+            }
 
         query = f"What is the official headquarters address for {agency_name}{location_context}? I need the physical street address for legal service of process."
 
@@ -610,12 +718,15 @@ If no clear address is found, return:
             result = json.loads(parse_response.choices[0].message.content)
 
             if result.get('address'):
-                return {
+                response_data = {
                     'success': True,
                     'address': result['address'],
                     'confidence': result.get('confidence', 'medium'),
                     'source_note': result.get('source_note', 'Found via web search'),
                 }
+                if suggested_agency:
+                    response_data['suggested_agency'] = suggested_agency
+                return response_data
             else:
                 return {
                     'success': False,
