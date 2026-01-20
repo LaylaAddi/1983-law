@@ -781,11 +781,20 @@ If no clear address is found, return:
             import json
             result = json.loads(response.choices[0].message.content)
 
-            return {
+            # Build response with success flag
+            response_data = {
                 'success': True,
                 'suggestions': result.get('suggestions', []),
                 'notes': result.get('notes', ''),
             }
+
+            # For evidence section, also include the new two-category format
+            if section_type == 'evidence':
+                response_data['evidence_you_have'] = result.get('evidence_you_have', [])
+                response_data['evidence_to_obtain'] = result.get('evidence_to_obtain', [])
+                response_data['tips'] = result.get('tips', '')
+
+            return response_data
 
         except Exception as e:
             return {
