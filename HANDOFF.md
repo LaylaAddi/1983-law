@@ -901,29 +901,34 @@ The `build.sh` script previously ran `makemigrations` on every deploy, which cau
 2. Create migrations locally, test them, commit them
 3. If ghost migrations exist in the database, use `--fake` to skip them:
    ```bash
-   python manage.py migrate documents 0019_some_migration --fake
+   python manage.py migrate documents 0001 --fake
    python manage.py migrate
    ```
 
-### CaseLaw Model Removal (Migration 0019)
-The CaseLaw and DocumentCaseLaw models were created in migration 0007 but later removed from models.py. Migration 0019 properly removes these using Django's `DeleteModel` operations.
+### Squashed Migrations (January 2026)
+All migrations have been squashed into single `0001_initial.py` files for both `accounts` and `documents` apps. This eliminates all previous migration conflicts and ghost migrations.
 
-**If you get errors about CaseLaw tables:**
-The tables may have already been dropped by an older version of migration 0019 (which used raw SQL). To fix:
+**Current migration files:**
+- `accounts/migrations/0001_initial.py` - All accounts models
+- `documents/migrations/0001_initial.py` - All documents models
+
+**If setting up a new server or resetting migrations:**
 ```bash
-# Mark migration 0019 as unapplied
-python manage.py migrate documents 0019 --fake-zero
+# Clear migration history
+python manage.py migrate accounts zero --fake
+python manage.py migrate documents zero --fake
 
-# Re-apply 0019 (tables are already gone, so just fake it)
-python manage.py migrate documents 0019 --fake
+# Apply new initial migrations (tables already exist)
+python manage.py migrate --fake-initial
 
-# Continue with other migrations
-python manage.py migrate
+# Verify
+python manage.py showmigrations
 ```
 
 **Files involved:**
 - `build.sh` - Only runs `migrate`, NOT `makemigrations`
-- `documents/migrations/` - All migrations committed to git
+- `documents/migrations/0001_initial.py` - Single squashed migration
+- `accounts/migrations/0001_initial.py` - Single squashed migration
 
 ### Key Files for Deployment
 | File | Purpose |
