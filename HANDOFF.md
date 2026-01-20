@@ -231,6 +231,7 @@ AI prompts can now be edited via admin without code changes.
 | `suggest_witnesses` | Suggest Witnesses from Story | Per-section AI: identifies witnesses |
 | `suggest_evidence` | Suggest Evidence from Story | Per-section AI: identifies evidence to gather |
 | `suggest_rights_violated` | Suggest Rights Violations | Per-section AI: identifies constitutional violations |
+| `identify_officer_agency` | Identify Agency for Officer | Identifies agency when "Find Agency & Address" is clicked with empty agency field |
 
 **Each Prompt Has:**
 - **Title** - Human-readable name
@@ -470,7 +471,7 @@ When defendants have `agency_inferred=True`, the Government Defendants section c
 - API endpoint: `/documents/{id}/lookup-address/`
 
 **Files involved:**
-- `documents/services/openai_service.py` - `suggest_agency()` and `lookup_agency_address()` methods
+- `documents/services/openai_service.py` - `suggest_agency()`, `lookup_agency_address()`, and `_identify_agency_for_officer()` methods
 - `documents/views.py` - `suggest_agency`, `edit_defendant`, `lookup_address`, and `accept_defendant_agency` view endpoints
 - `documents/urls.py` - Routes for suggest-agency, edit-defendant, lookup-address, and accept-defendant-agency
 - `templates/documents/section_edit.html` - Verification modal with checkbox for AI-suggested defendants
@@ -480,6 +481,8 @@ When defendants have `agency_inferred=True`, the Government Defendants section c
 - `documents/models.py` - Defendant.agency_inferred and address_verified fields
 - `documents/migrations/0013_defendant_agency_inferred.py` - Migration for agency_inferred field
 - `documents/migrations/0017_defendant_address_verified.py` - Migration for address_verified field
+- `documents/prompts/identify_officer_agency.md` - Backup of agency identification prompt
+- `documents/management/commands/seed_ai_prompts.py` - Seeds `identify_officer_agency` prompt to database
 
 ### Witness Enhancement Feature (NEW)
 The Witnesses section now includes enhanced fields for tracking evidence captured by witnesses and their prior interactions with defendants.

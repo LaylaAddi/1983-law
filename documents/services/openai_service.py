@@ -549,40 +549,24 @@ Return a JSON object with this format:
 
         location = f"{city}, {state}" if city and state else (city or state)
 
-        prompt = f"""Based on the following information, identify the most likely law enforcement agency this officer works for.
-
-Location: {location}
-Officer info: {officer_info}
-
-Consider:
-- Title like "Deputy" suggests County Sheriff's Office
-- Title like "Trooper" suggests State Highway Patrol
-- Title like "Officer" or "Detective" in a city suggests City Police Department
-- Small towns often don't have their own police and are served by County Sheriff
-
-Return a JSON object:
-{{
-    "agency_name": "Official agency name (e.g., 'Tampa Police Department', 'Hillsborough County Sheriff\\'s Office')",
-    "confidence": "high" or "medium" or "low",
-    "reasoning": "Brief explanation of why this agency was identified"
-}}
-
-If you cannot determine the agency with reasonable confidence, return:
-{{
-    "agency_name": null,
-    "confidence": "low",
-    "reasoning": "Explanation of why agency could not be determined"
-}}"""
-
         try:
+            # Get prompt from database
+            prompt_config = self._get_prompt('identify_officer_agency')
+
+            # Format the user prompt with variables
+            user_prompt = prompt_config['user_prompt_template'].format(
+                location=location,
+                officer_info=officer_info
+            )
+
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=prompt_config['model_name'],
                 messages=[
-                    {"role": "system", "content": "You identify law enforcement agencies based on location and officer information. Return only valid JSON."},
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": prompt_config['system_message']},
+                    {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.1,
-                max_tokens=300,
+                temperature=prompt_config['temperature'],
+                max_tokens=prompt_config['max_tokens'],
                 response_format={"type": "json_object"}
             )
 
