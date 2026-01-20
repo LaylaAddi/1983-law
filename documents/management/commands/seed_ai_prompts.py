@@ -358,11 +358,11 @@ Return JSON format:
                 'description': '''Analyzes the user's story to identify evidence they HAVE vs evidence they should OBTAIN.
 
 CRITICAL DISTINCTION:
-- evidence_you_have: ONLY items the user explicitly states they possess (e.g., "I recorded on my phone", "I have photos")
+- evidence_you_have: Items the user indicates they possess or created (recordings, photos, documents)
 - evidence_to_obtain: Items that may exist but user doesn't have yet (body cams, police reports, etc.)
 
 Called when: User clicks "Analyze Story & Suggest" in the Evidence section.''',
-                'system_message': 'You are a legal assistant helping identify evidence for a Section 1983 civil rights complaint. You must CAREFULLY distinguish between evidence the user ALREADY HAS versus evidence they should TRY TO OBTAIN. Only include items in "evidence_you_have" if the story explicitly states the user possesses it. Always respond with valid JSON.',
+                'system_message': 'You are a legal assistant helping identify evidence for a Section 1983 civil rights complaint. Distinguish between evidence the user HAS versus evidence they should OBTAIN. If the user mentions recording, filming, photographing, or documenting something, assume they HAVE that evidence. Always respond with valid JSON.',
                 'user_prompt_template': '''Analyze this story and categorize evidence into TWO separate lists:
 
 STORY:
@@ -371,21 +371,23 @@ STORY:
 EXISTING EVIDENCE ALREADY RECORDED:
 {existing}
 
-CRITICAL INSTRUCTIONS:
-1. "evidence_you_have" - ONLY include if the story EXPLICITLY states the user has this evidence:
-   - "I recorded..." / "I was recording..." / "I have a video..."
-   - "I took photos..." / "I have pictures..."
-   - "I kept the documents..." / "I have copies..."
-   - Be STRICT - if unclear whether they have it, put it in "evidence_to_obtain"
+INSTRUCTIONS:
+
+1. "evidence_you_have" - Include if the story indicates the user has this evidence:
+   - ANY mention of recording/filming: "I was recording", "I recorded", "I filmed", "my phone was recording"
+   - ANY mention of photos: "I took photos", "I photographed", "I have pictures"
+   - ANY mention of the device used: "on my phone", "with my camera", "samsung phone"
+   - Documents they kept: receipts, tickets, citations they received
+   - IMPORTANT: If they say "I was recording" - they HAVE a recording. Include it!
 
 2. "evidence_to_obtain" - Evidence that likely EXISTS but user needs to REQUEST:
-   - Body camera footage (officers usually have body cams)
-   - Dashcam footage
-   - Police reports, incident reports
+   - Body camera footage from officers
+   - Police dashcam footage
+   - Police reports, incident reports, arrest records
    - 911 call recordings
    - Surveillance footage from nearby businesses
    - Medical records (if injured)
-   - Witness contact information
+   - Witness statements
 
 Return JSON format:
 {{
