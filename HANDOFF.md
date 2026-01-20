@@ -509,6 +509,87 @@ The Evidence section AI suggestion now **separates evidence into two categories*
 - `documents/prompts/suggest_evidence.md` - Backup of the prompt
 - `templates/documents/section_edit.html` - JavaScript to render two sections
 
+### Evidence Auto-Extraction from Story (NEW)
+Evidence is now **automatically extracted** with full details during "Tell Your Story" parsing.
+
+**Fields Extracted:**
+| Field | Description |
+|-------|-------------|
+| `evidence_type` | video, audio, photo, document, body_cam, dash_cam, surveillance, other |
+| `title` | Brief title like "My cell phone recording" |
+| `description` | What the evidence shows |
+| `date_created` | Uses incident date if captured during incident |
+| `is_in_possession` | True for user's recordings, false for body cam/dash cam |
+| `needs_subpoena` | True for police-held evidence |
+| `notes` | Additional details |
+
+**How It Works:**
+1. User tells their story mentioning evidence (e.g., "I was recording on my phone")
+2. AI extracts evidence with all fields populated
+3. Evidence records are auto-created in database
+4. Users can edit any evidence to refine details (add AM/PM to times, correct dates, etc.)
+
+**Files involved:**
+- `documents/management/commands/seed_ai_prompts.py` - Updated `parse_story` prompt with evidence structure
+- `documents/prompts/parse_story.md` - Backup of the prompt
+- `documents/views.py` - `apply_story_fields` handles all evidence fields
+
+**Note:** Requires `python manage.py seed_ai_prompts` after deploying.
+
+### Edit Evidence Feature (NEW)
+Evidence items now have Edit buttons for refining details after auto-extraction.
+
+**Features:**
+- Edit button on each evidence item in the list
+- Edit page at `/documents/{id}/evidence/{evidence_id}/edit/`
+- Form sections: Evidence Details, When & Where, Status, Notes
+- Works for both server-rendered and dynamically added items
+
+**Files involved:**
+- `documents/views.py` - `edit_evidence` view
+- `documents/urls.py` - Route for edit_evidence
+- `templates/documents/edit_evidence.html` - Edit form template
+- `templates/documents/section_edit.html` - Edit button in list
+
+### Duplicate Filtering for AI Suggestions (NEW)
+AI suggestions now filter out items that already exist in the user's list.
+
+**Sections with duplicate filtering:**
+- **Evidence** - Word-based matching (>70% of significant words must match)
+- **Witnesses** - Name matching (partial match detection)
+- **Damages** - Form field content detection
+
+**Features:**
+- Items already in list are not shown in suggestions
+- Items added during session are tracked to prevent re-adding
+- Shows "All suggested items already added" when everything filtered
+- Prevents exact duplicates and near-duplicates
+
+**Damage Auto-Fill:**
+- "Use" buttons on damage suggestions auto-fill form fields
+- Auto-checks corresponding checkbox (emotional distress, property damage, etc.)
+- Appends content if field already has text
+- Highlights filled field and scrolls to it
+
+**Files involved:**
+- `templates/documents/section_edit.html` - `suggestionExists()`, `getExistingItems()`, `useDamageSuggestion()` functions
+
+### Dynamic List Updates (NEW)
+When adding items from AI suggestions, items appear immediately at the top of the list without page refresh.
+
+**Features:**
+- List container always rendered (hidden when empty, shown when items added)
+- New items have "Just Added" badge and green highlight
+- Auto-scroll to show newly added item
+- Edit and Delete buttons work immediately
+- Counter in header updates automatically
+
+**Fixed Issue:** Previously items wouldn't appear if the list was initially empty because the container didn't exist in the DOM.
+
+**Files involved:**
+- `templates/documents/section_edit.html` - Container always rendered with `d-none` class when empty, `addItemToList()` function
+- `documents/views.py` - `add_multiple_item` returns JSON with item_id for AJAX requests
+
 ### Witness Enhancement Feature (NEW)
 The Witnesses section now includes enhanced fields for tracking evidence captured by witnesses and their prior interactions with defendants.
 
@@ -638,7 +719,7 @@ docker-compose exec web python manage.py createsuperuser
 | IncidentNarrative | Detailed story of what happened |
 | RightsViolated | Which amendments were violated |
 | Witness | People who saw the incident (multiple) - with enhanced evidence fields |
-| Evidence | Videos, documents, etc. (multiple) |
+| Evidence | Videos, documents, etc. (multiple) - with auto-extraction from story |
 | Damages | Physical, emotional, financial harm |
 | PriorComplaints | Previous complaints filed |
 | ReliefSought | What the plaintiff wants (money, declaration, etc.) |
