@@ -905,6 +905,22 @@ The `build.sh` script previously ran `makemigrations` on every deploy, which cau
    python manage.py migrate
    ```
 
+### CaseLaw Model Removal (Migration 0019)
+The CaseLaw and DocumentCaseLaw models were created in migration 0007 but later removed from models.py. Migration 0019 properly removes these using Django's `DeleteModel` operations.
+
+**If you get errors about CaseLaw tables:**
+The tables may have already been dropped by an older version of migration 0019 (which used raw SQL). To fix:
+```bash
+# Mark migration 0019 as unapplied
+python manage.py migrate documents 0019 --fake-zero
+
+# Re-apply 0019 (tables are already gone, so just fake it)
+python manage.py migrate documents 0019 --fake
+
+# Continue with other migrations
+python manage.py migrate
+```
+
 **Files involved:**
 - `build.sh` - Only runs `migrate`, NOT `makemigrations`
 - `documents/migrations/` - All migrations committed to git
