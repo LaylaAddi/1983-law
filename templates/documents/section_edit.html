@@ -591,6 +591,11 @@
                                                    class="btn btn-primary btn-sm">
                                                     <i class="bi bi-pencil me-1"></i>Edit
                                                 </a>
+                                                {% elif section.section_type == 'evidence' %}
+                                                <a href="{% url 'documents:edit_evidence' document.id item.id %}"
+                                                   class="btn btn-primary btn-sm">
+                                                    <i class="bi bi-pencil me-1"></i>Edit
+                                                </a>
                                                 {% endif %}
                                                 <a href="{% url 'documents:delete_multiple_item' document.id section.section_type item.id %}"
                                                    class="btn btn-outline-danger btn-sm"
@@ -1715,8 +1720,18 @@ function addItemToList(itemText, sectionType, itemId) {
         let actionsHtml = '';
         if (itemId) {
             const deleteUrl = `/documents/${documentId}/section/${sectionType}/delete/${itemId}/`;
+            let editUrl = '';
+            if (sectionType === 'evidence') {
+                editUrl = `/documents/${documentId}/evidence/${itemId}/edit/`;
+            } else if (sectionType === 'witnesses') {
+                editUrl = `/documents/${documentId}/witness/${itemId}/edit/`;
+            } else if (sectionType === 'defendants') {
+                editUrl = `/documents/${documentId}/defendant/${itemId}/edit/`;
+            }
+
             actionsHtml = `
                 <div class="d-flex gap-2">
+                    ${editUrl ? `<a href="${editUrl}" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i>Edit</a>` : ''}
                     <a href="${deleteUrl}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this item?')">
                         <i class="bi bi-trash"></i>
                     </a>

@@ -602,6 +602,34 @@ def edit_witness(request, document_id, witness_id):
 
 
 @login_required
+def edit_evidence(request, document_id, evidence_id):
+    """Edit a specific piece of evidence."""
+    from .forms import EvidenceForm
+
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    evidence = get_object_or_404(Evidence, id=evidence_id, section__document=document)
+    section = evidence.section
+
+    if request.method == 'POST':
+        form = EvidenceForm(request.POST, instance=evidence)
+        if form.is_valid():
+            form.save()
+            # Invalidate cached complaint since data changed
+            document.invalidate_generated_complaint()
+            messages.success(request, 'Evidence updated successfully.')
+            return redirect('documents:section_edit', document_id=document.id, section_type='evidence')
+    else:
+        form = EvidenceForm(instance=evidence)
+
+    return render(request, 'documents/edit_evidence.html', {
+        'document': document,
+        'evidence': evidence,
+        'form': form,
+        'section': section,
+    })
+
+
+@login_required
 @require_POST
 def update_section_status(request, document_id, section_type):
     """Update the status of a section (AJAX endpoint)."""

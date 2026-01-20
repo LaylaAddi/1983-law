@@ -29,6 +29,9 @@ urlpatterns = [
     # Edit individual witness
     path('<int:document_id>/witness/<int:witness_id>/edit/', views.edit_witness, name='edit_witness'),
 
+    # Edit individual evidence
+    path('<int:document_id>/evidence/<int:evidence_id>/edit/', views.edit_evidence, name='edit_evidence'),
+
     # AJAX endpoints for preview page
     path('<int:document_id>/section/<str:section_type>/save/', views.section_save_ajax, name='section_save_ajax'),
     path('<int:document_id>/section/<str:section_type>/delete-item/<int:item_id>/', views.delete_item_ajax, name='delete_item_ajax'),
