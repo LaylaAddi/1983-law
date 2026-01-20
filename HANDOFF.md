@@ -66,7 +66,7 @@ The app is functional with the following features complete:
    - **Per-Section AI Suggestions** (NEW) - Each section has "Analyze Story & Suggest" button:
      - **Damages**: Identifies physical, emotional, economic, constitutional damages
      - **Witnesses**: Identifies people mentioned who could be witnesses
-     - **Evidence**: Suggests evidence to gather (body cams, documents, recordings)
+     - **Evidence**: Distinguishes between evidence user HAS vs. evidence to OBTAIN (see below)
      - **Rights Violated**: Identifies constitutional violations with strength assessment
    - **Context-aware Rights Section** - Shows different messages based on section status
 
@@ -229,7 +229,7 @@ AI prompts can now be edited via admin without code changes.
 | `suggest_relief` | Suggest Legal Relief | Recommends damages/injunctions |
 | `suggest_damages` | Suggest Damages from Story | Per-section AI: identifies damages |
 | `suggest_witnesses` | Suggest Witnesses from Story | Per-section AI: identifies witnesses |
-| `suggest_evidence` | Suggest Evidence from Story | Per-section AI: identifies evidence to gather |
+| `suggest_evidence` | Suggest Evidence from Story | Per-section AI: separates evidence user HAS vs. evidence to OBTAIN |
 | `suggest_rights_violated` | Suggest Rights Violations | Per-section AI: identifies constitutional violations |
 | `identify_officer_agency` | Identify Agency for Officer | Identifies agency when "Find Agency & Address" is clicked with empty agency field |
 
@@ -483,6 +483,31 @@ When defendants have `agency_inferred=True`, the Government Defendants section c
 - `documents/migrations/0017_defendant_address_verified.py` - Migration for address_verified field
 - `documents/prompts/identify_officer_agency.md` - Backup of agency identification prompt
 - `documents/management/commands/seed_ai_prompts.py` - Seeds `identify_officer_agency` prompt to database
+
+### Evidence Categorization Feature (NEW)
+The Evidence section AI suggestion now **separates evidence into two categories** to prevent users from adding evidence they don't actually have.
+
+**Two Categories:**
+1. **Evidence You Have** (green section with "Add" buttons)
+   - ONLY includes evidence explicitly mentioned as in user's possession
+   - User must have stated "I recorded...", "I have photos...", etc.
+   - These can be added to the case with one click
+
+2. **Evidence to Obtain** (blue/gray informational section, NO add buttons)
+   - Evidence that likely exists but user needs to request
+   - Body camera footage, police reports, 911 recordings, surveillance footage
+   - Shows how to obtain each item (FOIA, subpoena, etc.)
+   - Informational only - cannot be added until user actually obtains it
+
+**Why This Matters:**
+- Legal documents should only list evidence the plaintiff actually possesses
+- Prevents users from accidentally claiming they have evidence they don't
+- Still provides helpful guidance on what evidence to pursue
+
+**Files involved:**
+- `documents/management/commands/seed_ai_prompts.py` - Updated `suggest_evidence` prompt
+- `documents/prompts/suggest_evidence.md` - Backup of the prompt
+- `templates/documents/section_edit.html` - JavaScript to render two sections
 
 ### Witness Enhancement Feature (NEW)
 The Witnesses section now includes enhanced fields for tracking evidence captured by witnesses and their prior interactions with defendants.

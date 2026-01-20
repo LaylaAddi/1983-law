@@ -355,18 +355,15 @@ Return JSON format:
             {
                 'prompt_type': 'suggest_evidence',
                 'title': 'Suggest Evidence from Story',
-                'description': '''Analyzes the user's story to identify potential evidence to gather.
+                'description': '''Analyzes the user's story to identify evidence they HAVE vs evidence they should OBTAIN.
 
-Identifies:
-- Video/audio recordings (body cams, dashcams, cell phones, surveillance)
-- Documents (police reports, citations, medical records)
-- Physical evidence (damaged property, injuries)
-- Digital evidence (social media posts, texts, emails)
-- Witness statements
+CRITICAL DISTINCTION:
+- evidence_you_have: ONLY items the user explicitly states they possess (e.g., "I recorded on my phone", "I have photos")
+- evidence_to_obtain: Items that may exist but user doesn't have yet (body cams, police reports, etc.)
 
-Called when: User clicks "AI Suggest Evidence" in the Evidence section.''',
-                'system_message': 'You are a legal assistant helping identify potential evidence for a Section 1983 civil rights complaint. Analyze the story and identify ALL potential evidence mentioned or that should be obtained. Always respond with valid JSON.',
-                'user_prompt_template': '''Analyze this story and identify all potential evidence:
+Called when: User clicks "Analyze Story & Suggest" in the Evidence section.''',
+                'system_message': 'You are a legal assistant helping identify evidence for a Section 1983 civil rights complaint. You must CAREFULLY distinguish between evidence the user ALREADY HAS versus evidence they should TRY TO OBTAIN. Only include items in "evidence_you_have" if the story explicitly states the user possesses it. Always respond with valid JSON.',
+                'user_prompt_template': '''Analyze this story and categorize evidence into TWO separate lists:
 
 STORY:
 {story_text}
@@ -374,24 +371,45 @@ STORY:
 EXISTING EVIDENCE ALREADY RECORDED:
 {existing}
 
-Consider: Was anyone recording? Would there be body camera footage? What documents would exist?
+CRITICAL INSTRUCTIONS:
+1. "evidence_you_have" - ONLY include if the story EXPLICITLY states the user has this evidence:
+   - "I recorded..." / "I was recording..." / "I have a video..."
+   - "I took photos..." / "I have pictures..."
+   - "I kept the documents..." / "I have copies..."
+   - Be STRICT - if unclear whether they have it, put it in "evidence_to_obtain"
+
+2. "evidence_to_obtain" - Evidence that likely EXISTS but user needs to REQUEST:
+   - Body camera footage (officers usually have body cams)
+   - Dashcam footage
+   - Police reports, incident reports
+   - 911 call recordings
+   - Surveillance footage from nearby businesses
+   - Medical records (if injured)
+   - Witness contact information
 
 Return JSON format:
 {{
-    "suggestions": [
+    "evidence_you_have": [
+        {{
+            "evidence_type": "video|audio|document|physical|digital|photo",
+            "description": "What the evidence is",
+            "details": "Specific details from story about this evidence"
+        }}
+    ],
+    "evidence_to_obtain": [
         {{
             "evidence_type": "video|audio|document|physical|digital|witness_statement",
             "description": "What the evidence is",
-            "how_to_obtain": "How to get this evidence",
-            "importance": "Why this evidence matters"
+            "how_to_obtain": "How to request/get this evidence (FOIA, subpoena, etc.)",
+            "why_important": "Why this evidence matters for the case"
         }}
     ],
-    "notes": "Tips for preserving or obtaining evidence"
+    "tips": "General tips for preserving evidence and making requests"
 }}''',
                 'available_variables': 'story_text, existing',
                 'model_name': 'gpt-4o-mini',
                 'temperature': 0.3,
-                'max_tokens': 2000,
+                'max_tokens': 2500,
             },
             {
                 'prompt_type': 'suggest_rights_violated',
