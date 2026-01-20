@@ -664,7 +664,11 @@
                                 </div>
                             </div>
                         </div>
-                        {% elif section.section_type == 'witnesses' or section.section_type == 'evidence' %}
+                        {% elif section.section_type == 'witnesses' %}
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="bi bi-plus-lg me-1"></i>Add Witness
+                        </button>
+                        {% elif section.section_type == 'evidence' %}
                         <div class="d-flex gap-2 flex-wrap">
                             <button type="submit" class="btn btn-outline-primary">
                                 <i class="bi bi-plus-lg me-1"></i>Add
@@ -1274,7 +1278,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-{% if section.section_type in 'damages,rights_violated,witnesses,evidence' %}
+{% if section.section_type in 'damages,rights_violated,evidence' %}
 <script>
 let currentWitnessSuggestions = [];
 let currentEvidenceSuggestions = [];
