@@ -118,10 +118,6 @@ class Document(models.Model):
         done = sections.filter(status__in=['completed', 'not_applicable']).count()
         return int((done / sections.count()) * 100)
 
-    def get_sections_needing_work(self):
-        """Return sections flagged as needing work."""
-        return self.sections.filter(status='needs_work')
-
     def has_sections_needing_work(self):
         """Check if any sections need work."""
         return self.sections.filter(status='needs_work').exists()
@@ -230,13 +226,6 @@ class Document(models.Model):
             remaining_pct = max(0, int(((budget - self.ai_cost_used) / budget) * 100))
             return f"AI: {remaining_pct}% remaining"
         return "AI unavailable"
-
-    def get_ai_remaining_percent(self):
-        """Get AI remaining as percentage (for paid tier)."""
-        if self.payment_status == 'paid':
-            budget = Decimal(str(settings.PAID_AI_BUDGET))
-            return max(0, int(((budget - self.ai_cost_used) / budget) * 100))
-        return 0
 
     def record_ai_usage(self, cost=None):
         """Record AI usage. For draft: increment count. For paid: add cost."""
