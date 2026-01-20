@@ -1475,6 +1475,43 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function showAddedNotification(message) {
+    // Create or update the notification banner
+    let notification = document.getElementById('addedNotification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'addedNotification';
+        notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        notification.style.cssText = 'top: 70px; left: 50%; transform: translateX(-50%); z-index: 1050; min-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+        notification.innerHTML = `
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <span id="addedNotificationText"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        document.body.appendChild(notification);
+    }
+
+    document.getElementById('addedNotificationText').textContent = message;
+    notification.style.display = 'block';
+    notification.classList.add('show');
+
+    // Also highlight the existing items list section
+    const existingList = document.querySelector('.card-body .list-group, .card-body table');
+    if (existingList) {
+        existingList.style.transition = 'background-color 0.3s';
+        existingList.style.backgroundColor = '#d4edda';
+        setTimeout(() => {
+            existingList.style.backgroundColor = '';
+        }, 2000);
+    }
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => { notification.style.display = 'none'; }, 150);
+    }, 5000);
+}
+
 function addWitnessSuggestion(suggestion, buttonElement) {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
@@ -1503,8 +1540,8 @@ function addWitnessSuggestion(suggestion, buttonElement) {
                     buttonElement.outerHTML = '<span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Added</span>';
                 }
             }
-            // Refresh to show the new witness in the list
-            location.reload();
+            // Show success message instead of reloading
+            showAddedNotification('Witness added! Scroll up to see the updated list, or continue adding more.');
         } else {
             throw new Error('Failed to add witness');
         }
@@ -1567,8 +1604,8 @@ function addEvidenceSuggestion(suggestion, buttonElement) {
                     buttonElement.outerHTML = '<span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Added</span>';
                 }
             }
-            // Refresh to show the new evidence in the list
-            location.reload();
+            // Show success message instead of reloading
+            showAddedNotification('Evidence added! Scroll up to see the updated list, or continue adding more.');
         } else {
             throw new Error('Failed to add evidence');
         }
