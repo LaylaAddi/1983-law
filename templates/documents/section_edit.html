@@ -1429,7 +1429,7 @@ function addWitnessSuggestion(suggestion, buttonElement) {
     formData.append('what_they_witnessed', suggestion.what_they_witnessed || '');
     formData.append('contact_info', suggestion.contact_info || '');
 
-    fetch('/documents/{{ document.id }}/add/witnesses/', {
+    fetch('/documents/{{ document.id }}/section/witnesses/add/', {
         method: 'POST',
         body: formData,
     })
@@ -1485,7 +1485,7 @@ function addEvidenceSuggestion(suggestion, buttonElement) {
     formData.append('description', suggestion.description || '');
     formData.append('notes', `How to obtain: ${suggestion.how_to_obtain || 'Unknown'}\nImportance: ${suggestion.importance || 'Unknown'}`);
 
-    fetch('/documents/{{ document.id }}/add/evidence/', {
+    fetch('/documents/{{ document.id }}/section/evidence/add/', {
         method: 'POST',
         body: formData,
     })
