@@ -885,16 +885,32 @@
     <!-- Sidebar -->
     <div class="col-lg-4">
         <!-- Section Status -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-flag me-2"></i>Section Status</h5>
+        <div class="card mb-4 border-primary border-2 shadow">
+            <div class="card-header bg-primary text-white py-3">
+                <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Update Section Status</h5>
             </div>
             <div class="card-body">
+                <!-- Current Status Badge -->
+                <div class="text-center mb-3 py-2 rounded" style="background-color: #f8f9fa;">
+                    <small class="text-muted d-block mb-1">Current Status</small>
+                    {% if section.status == 'completed' %}
+                        <span class="badge bg-success px-3 py-2 fs-6"><i class="bi bi-check-circle me-1"></i>Completed</span>
+                    {% elif section.status == 'in_progress' %}
+                        <span class="badge bg-warning text-dark px-3 py-2 fs-6"><i class="bi bi-pencil me-1"></i>In Progress</span>
+                    {% elif section.status == 'needs_work' %}
+                        <span class="badge bg-danger px-3 py-2 fs-6"><i class="bi bi-exclamation-triangle me-1"></i>Needs Work</span>
+                    {% elif section.status == 'not_applicable' %}
+                        <span class="badge bg-secondary px-3 py-2 fs-6"><i class="bi bi-dash-circle me-1"></i>N/A</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark px-3 py-2 fs-6 border"><i class="bi bi-circle me-1"></i>Not Started</span>
+                    {% endif %}
+                </div>
+
                 <form method="post" action="{% url 'documents:update_section_status' document.id section.section_type %}">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label class="form-label">Mark this section as:</label>
-                        <select name="status" class="form-select">
+                        <label class="form-label fw-bold text-primary"><i class="bi bi-arrow-repeat me-1"></i>Change to:</label>
+                        <select name="status" class="form-select form-select-lg border-primary">
                             {% for value, label in section.STATUS_CHOICES %}
                                 <option value="{{ value }}" {% if section.status == value %}selected{% endif %}>
                                     {{ label }}
@@ -903,12 +919,12 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Notes (if needs work):</label>
+                        <label class="form-label text-muted"><i class="bi bi-sticky me-1"></i>Notes (optional):</label>
                         <textarea name="notes" class="form-control" rows="2"
-                                  placeholder="What needs to be fixed?">{{ section.notes }}</textarea>
+                                  placeholder="Add notes if needed...">{{ section.notes }}</textarea>
                     </div>
-                    <button type="submit" class="btn btn-outline-primary btn-sm w-100">
-                        Update Status
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-check2-square me-1"></i>Update Status
                     </button>
                 </form>
             </div>
