@@ -1140,8 +1140,66 @@ document.addEventListener('DOMContentLoaded', function() {
             btnWrapper.appendChild(helpIcon);
             courtFieldContainer.appendChild(btnWrapper);
 
+            // Create mini terminal for lookup status
+            var lookupTerminal = document.createElement('div');
+            lookupTerminal.id = 'courtLookupTerminal';
+            lookupTerminal.className = 'mt-2 p-2 bg-dark text-light rounded d-none';
+            lookupTerminal.style.cssText = 'font-family: monospace; font-size: 0.8rem; max-height: 80px; overflow-y: auto;';
+            lookupTerminal.innerHTML = '<div id="terminalLines"></div>';
+            courtFieldContainer.appendChild(lookupTerminal);
+
             // Initialize the tooltip
             new bootstrap.Tooltip(helpIcon);
+        }
+
+        // Mini terminal animation for court lookup
+        var lookupCommands = [
+            { cmd: 'lookup --city', out: 'Checking city database...' },
+            { cmd: 'query --district', out: 'Searching district courts...' },
+            { cmd: 'verify --jurisdiction', out: 'Verifying jurisdiction...' },
+            { cmd: 'fetch --court-name', out: 'Fetching court details...' },
+            { cmd: 'search --web', out: 'Searching federal records...' },
+            { cmd: 'validate --result', out: 'Validating court match...' }
+        ];
+        var terminalInterval = null;
+
+        function startLookupTerminal(city, state) {
+            var terminal = document.getElementById('courtLookupTerminal');
+            var linesDiv = document.getElementById('terminalLines');
+            if (!terminal || !linesDiv) return;
+
+            terminal.classList.remove('d-none');
+            linesDiv.innerHTML = '<span style="color: #6c757d;"># Looking up federal court for ' + city + ', ' + state + '</span>';
+
+            var cmdIndex = 0;
+            terminalInterval = setInterval(function() {
+                var cmd = lookupCommands[cmdIndex % lookupCommands.length];
+                linesDiv.innerHTML += '<br><span style="color: #0d6efd;">❯</span> ' + cmd.cmd;
+                setTimeout(function() {
+                    linesDiv.innerHTML += '<br><span style="color: #6c757d;">→ ' + cmd.out + '</span>';
+                    terminal.scrollTop = terminal.scrollHeight;
+                }, 100);
+                cmdIndex++;
+                terminal.scrollTop = terminal.scrollHeight;
+            }, 800);
+        }
+
+        function stopLookupTerminal(success, message) {
+            if (terminalInterval) {
+                clearInterval(terminalInterval);
+                terminalInterval = null;
+            }
+            var linesDiv = document.getElementById('terminalLines');
+            if (linesDiv) {
+                var color = success ? '#198754' : '#dc3545';
+                var icon = success ? '✓' : '✗';
+                linesDiv.innerHTML += '<br><span style="color: ' + color + ';">' + icon + ' ' + message + '</span>';
+            }
+            // Hide terminal after 2 seconds
+            setTimeout(function() {
+                var terminal = document.getElementById('courtLookupTerminal');
+                if (terminal) terminal.classList.add('d-none');
+            }, 2000);
         }
 
         function lookupDistrictCourt() {
@@ -1160,8 +1218,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Show loading
             lookupBtn.disabled = true;
-            lookupBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Looking up...';
+            lookupBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Searching...';
             courtField.placeholder = 'Looking up district court...';
+
+            // Start mini terminal animation
+            startLookupTerminal(city, state);
 
             fetch('/documents/lookup-district-court/?city=' + encodeURIComponent(city) + '&state=' + encodeURIComponent(state))
                 .then(function(response) { return response.json(); })
@@ -1181,11 +1242,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         var confidenceText = data.confidence === 'high' ? 'High confidence match' : 'Best match found';
                         var confidenceClass = data.confidence === 'high' ? 'text-success' : 'text-warning';
-                        confidenceBadge.innerHTML = '<i class="bi bi-check-circle me-1"></i><span class="' + confidenceClass + '">' + confidenceText + '</span>';
+                        var methodNote = data.method === 'gpt_web_search' ? ' (via web search)' : '';
+                        confidenceBadge.innerHTML = '<i class="bi bi-check-circle me-1"></i><span class="' + confidenceClass + '">' + confidenceText + methodNote + '</span>';
 
                         lookupBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Found!';
                         lookupBtn.classList.remove('btn-outline-primary');
                         lookupBtn.classList.add('btn-success');
+
+                        // Stop terminal with success
+                        stopLookupTerminal(true, 'Court found: ' + data.court_name);
                     } else {
                         courtField.placeholder = 'Could not find - check manual entry';
                         var confidenceBadge = document.getElementById('court-confidence');
@@ -1195,10 +1260,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             confidenceBadge.className = 'd-block mt-1';
                             courtField.parentNode.insertBefore(confidenceBadge, lookupBtn);
                         }
-                        confidenceBadge.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>City not in database. Try a nearby major city or enter manually.</span>';
+                        confidenceBadge.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Could not determine court. Enter manually or try a nearby city.</span>';
                         lookupBtn.innerHTML = '<i class="bi bi-x-lg me-1"></i>Not Found';
                         lookupBtn.classList.remove('btn-outline-primary');
                         lookupBtn.classList.add('btn-warning');
+
+                        // Stop terminal with failure
+                        stopLookupTerminal(false, 'Could not determine court');
                     }
                 })
                 .catch(function(error) {
@@ -1207,6 +1275,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     lookupBtn.innerHTML = '<i class="bi bi-x-lg me-1"></i>Error';
                     lookupBtn.classList.remove('btn-outline-primary');
                     lookupBtn.classList.add('btn-danger');
+
+                    // Stop terminal with error
+                    stopLookupTerminal(false, 'Lookup error: ' + error.message);
                 })
                 .finally(function() {
                     lookupBtn.disabled = false;
