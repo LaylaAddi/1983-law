@@ -72,8 +72,43 @@
     ];
 
     let progressInterval = null;
+    let waitingInterval = null;
     let terminalLineIndex = 0;
     let currentStoryText = '';
+
+    // Continuous processing commands to show while waiting for AI
+    const WAITING_COMMANDS = [
+        { cmd: 'validate-usc --section=42-1983', out: 'Verifying statutory requirements...' },
+        { cmd: 'check-jurisdiction --federal=true', out: 'Confirming federal jurisdiction...' },
+        { cmd: 'cross-ref --case-law --recent=5y', out: 'Cross-referencing case law...' },
+        { cmd: 'analyze-precedent --circuit=all', out: 'Analyzing circuit precedents...' },
+        { cmd: 'verify-standing --plaintiff', out: 'Verifying plaintiff standing...' },
+        { cmd: 'compute-damages --type=compensatory', out: 'Computing potential damages...' },
+        { cmd: 'scan-qualified-immunity --factors', out: 'Evaluating qualified immunity...' },
+        { cmd: 'map-violations --to-amendments', out: 'Mapping violations to amendments...' },
+        { cmd: 'build-timeline --chronological', out: 'Building incident timeline...' },
+        { cmd: 'extract-quotes --from-narrative', out: 'Extracting key quotes...' },
+        { cmd: 'identify-witnesses --potential', out: 'Identifying potential witnesses...' },
+        { cmd: 'catalog-evidence --available', out: 'Cataloging available evidence...' },
+        { cmd: 'assess-credibility --factors=7', out: 'Assessing credibility factors...' },
+        { cmd: 'generate-causes-of-action', out: 'Generating causes of action...' },
+        { cmd: 'draft-prayer-for-relief', out: 'Drafting prayer for relief...' },
+        { cmd: 'validate-complaint --schema=federal', out: 'Validating complaint structure...' },
+        { cmd: 'optimize-narrative --clarity', out: 'Optimizing narrative clarity...' },
+        { cmd: 'check-statute-of-limitations', out: 'Checking statute of limitations...' },
+        { cmd: 'verify-exhaustion --admin-remedies', out: 'Verifying administrative remedies...' },
+        { cmd: 'analyze-municipal-liability', out: 'Analyzing municipal liability...' },
+        { cmd: 'review-monell-claims --policy', out: 'Reviewing Monell claim viability...' },
+        { cmd: 'calculate-fee-shifting --1988', out: 'Calculating fee-shifting basis...' },
+        { cmd: 'index-constitutional-provisions', out: 'Indexing constitutional provisions...' },
+        { cmd: 'finalize-defendant-list', out: 'Finalizing defendant identifications...' },
+        { cmd: 'compile-factual-allegations', out: 'Compiling factual allegations...' },
+        { cmd: 'structure-legal-arguments', out: 'Structuring legal arguments...' },
+        { cmd: 'verify-service-addresses', out: 'Verifying service addresses...' },
+        { cmd: 'format-caption --court=federal', out: 'Formatting case caption...' },
+        { cmd: 'prepare-verification --pro-se', out: 'Preparing verification statement...' },
+        { cmd: 'finalize-json --sections=all', out: 'Finalizing section data...' }
+    ];
 
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
@@ -510,16 +545,56 @@
 
                 commandIndex++;
             } else {
-                // Done with commands, show waiting state
+                // Done with initial commands, start continuous waiting animation
                 clearInterval(progressInterval);
                 progressInterval = null;
 
-                addTerminalLine(`<span class="terminal-info"><span class="terminal-spinner"></span> Waiting for AI response...</span>`);
-
-                const statusText = document.getElementById('terminalStatusText');
-                if (statusText) statusText.textContent = 'Waiting for analysis to complete...';
+                // Start the continuous waiting commands
+                startWaitingAnimation();
             }
         }, 800);
+    }
+
+    function startWaitingAnimation() {
+        let waitingIndex = 0;
+        const shuffled = [...WAITING_COMMANDS].sort(() => Math.random() - 0.5);
+
+        // Add initial waiting message
+        addTerminalLine(`<span class="terminal-comment"># Awaiting AI analysis results...</span>`);
+
+        waitingInterval = setInterval(() => {
+            const cmd = shuffled[waitingIndex % shuffled.length];
+
+            // Add command
+            addTerminalLine(`
+                <span class="terminal-prompt">❯</span>
+                <span class="terminal-path">~/processing</span>
+                <span class="terminal-command"> ${escapeHtml(cmd.cmd)}</span>
+            `);
+
+            // Add output after small delay
+            setTimeout(() => {
+                addTerminalLine(`<span class="terminal-output">→ ${escapeHtml(cmd.out)}</span>`);
+            }, 150);
+
+            // Update status text
+            const statusText = document.getElementById('terminalStatusText');
+            if (statusText) statusText.textContent = cmd.out;
+
+            waitingIndex++;
+
+            // Re-shuffle when we've gone through all commands
+            if (waitingIndex % shuffled.length === 0) {
+                shuffled.sort(() => Math.random() - 0.5);
+            }
+        }, 1200);
+    }
+
+    function stopWaitingAnimation() {
+        if (waitingInterval) {
+            clearInterval(waitingInterval);
+            waitingInterval = null;
+        }
     }
 
     function stopProgressAnimation() {
@@ -527,6 +602,9 @@
             clearInterval(progressInterval);
             progressInterval = null;
         }
+
+        // Also stop waiting animation
+        stopWaitingAnimation();
 
         // Update terminal to show completion
         const progressFill = document.getElementById('terminalProgressFill');
