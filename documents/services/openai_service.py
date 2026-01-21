@@ -957,3 +957,73 @@ If no clear court can be determined, return:
                 'success': False,
                 'error': str(e),
             }
+
+    def rewrite_section(self, section_type: str, current_content: str,
+                        issue: dict, document_data: dict) -> dict:
+        """
+        Rewrite a section to fix an identified issue.
+
+        Args:
+            section_type: Type of section (e.g., 'incident_narrative', 'damages')
+            current_content: Current text content of the section
+            issue: Dict with 'title', 'description', 'suggestion' from review
+            document_data: Full document data for context
+
+        Returns:
+            dict with 'success', 'rewritten_content', 'changes_summary', 'field_updates'
+        """
+        import json
+
+        try:
+            prompt = self._get_prompt('rewrite_section')
+
+            # Create a condensed document context (not the full JSON)
+            context_parts = []
+            if document_data.get('plaintiff', {}).get('first_name'):
+                p = document_data['plaintiff']
+                context_parts.append(f"Plaintiff: {p.get('first_name', '')} {p.get('last_name', '')}")
+            if document_data.get('incident', {}).get('incident_date'):
+                inc = document_data['incident']
+                context_parts.append(f"Incident: {inc.get('incident_date', '')} at {inc.get('incident_location', '')}, {inc.get('city', '')}, {inc.get('state', '')}")
+            if document_data.get('defendants'):
+                def_names = [d.get('name', '') for d in document_data['defendants'][:3]]
+                context_parts.append(f"Defendants: {', '.join(def_names)}")
+            if document_data.get('narrative', {}).get('summary'):
+                context_parts.append(f"Summary: {document_data['narrative']['summary'][:200]}...")
+
+            document_context = '\n'.join(context_parts) if context_parts else 'No additional context available'
+
+            user_prompt = prompt['user_prompt_template'].format(
+                section_type=section_type,
+                current_content=current_content or '(No content yet)',
+                issue_title=issue.get('title', ''),
+                issue_description=issue.get('description', ''),
+                issue_suggestion=issue.get('suggestion', ''),
+                document_context=document_context
+            )
+
+            response = self.client.chat.completions.create(
+                model=prompt['model_name'],
+                messages=[
+                    {"role": "system", "content": prompt['system_message']},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=prompt['temperature'],
+                max_tokens=prompt['max_tokens'],
+                response_format={"type": "json_object"}
+            )
+
+            result = json.loads(response.choices[0].message.content)
+
+            return {
+                'success': True,
+                'rewritten_content': result.get('rewritten_content', ''),
+                'changes_summary': result.get('changes_summary', ''),
+                'field_updates': result.get('field_updates', {}),
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+            }

@@ -317,9 +317,38 @@ Comprehensive AI review of Section 1983 complaints on the Review & Edit page.
 - `documents/management/commands/seed_ai_prompts.py` - `review_document` prompt
 - `templates/documents/document_review.html` - UI with highlights and sidebar
 
-**API Endpoint:** `/documents/{id}/ai-review/` (POST)
+**API Endpoints:**
+- `/documents/{id}/ai-review/` (POST) - Run comprehensive review
+- `/documents/{id}/generate-fix/` (POST) - Generate AI fix for an issue
+- `/documents/{id}/apply-fix/` (POST) - Apply fix to database
 
-**Note:** Requires `python manage.py seed_ai_prompts` after deploying to add the new prompt.
+### Step-Through Fix Mode (NEW)
+After AI review, users can step through issues one-by-one and apply AI-generated fixes.
+
+**How It Works:**
+1. After AI Review, click "Fix Issues Step-by-Step"
+2. For each issue:
+   - View the issue description and suggestion
+   - Click "Generate AI Fix" to get rewritten content
+   - See word-level diff (red=removed, green=added)
+   - Apply the fix or skip to next issue
+3. Final comparison shows all changes applied/skipped
+4. Page reloads to show updated document
+5. Can run AI Review again to verify fixes
+
+**Word-Level Diff Algorithm:**
+- Uses LCS (Longest Common Subsequence) algorithm
+- Shows removed words with red strikethrough
+- Shows added words with green highlight
+- Unchanged words shown in gray
+
+**Files:**
+- `documents/views.py` - `generate_fix`, `apply_fix`, `_get_section_content` functions
+- `documents/services/openai_service.py` - `rewrite_section()` method
+- `documents/management/commands/seed_ai_prompts.py` - `rewrite_section` prompt
+- `templates/documents/document_review.html` - Step-through UI and diff display
+
+**Note:** Requires `python manage.py seed_ai_prompts` after deploying to add the new prompts.
 
 ### Federal Court Lookup (NEW)
 Automatically finds the correct federal district court for any US location.

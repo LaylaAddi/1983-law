@@ -239,6 +239,102 @@
         padding: 0.25rem 0.75rem;
     }
 
+    /* Step-through fix mode */
+    .fix-mode-header {
+        background: linear-gradient(135deg, #6f42c1 0%, #9b59b6 100%);
+        color: white;
+        padding: 0.75rem;
+        border-radius: 0.5rem 0.5rem 0 0;
+        margin: -1rem -1rem 1rem -1rem;
+    }
+
+    .fix-progress {
+        height: 4px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 2px;
+        margin-top: 0.5rem;
+    }
+
+    .fix-progress-bar {
+        height: 100%;
+        background: white;
+        border-radius: 2px;
+        transition: width 0.3s ease;
+    }
+
+    /* Diff view styling */
+    .diff-container {
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        line-height: 1.6;
+        background: #f8f9fa;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .diff-word-removed {
+        background: #fecaca;
+        color: #991b1b;
+        text-decoration: line-through;
+        padding: 0 2px;
+        border-radius: 2px;
+    }
+
+    .diff-word-added {
+        background: #bbf7d0;
+        color: #166534;
+        padding: 0 2px;
+        border-radius: 2px;
+    }
+
+    .diff-word-unchanged {
+        color: #6b7280;
+    }
+
+    /* Changes applied summary */
+    .changes-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .change-item {
+        border-left: 3px solid #10b981;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: rgba(16, 185, 129, 0.05);
+        border-radius: 0 0.375rem 0.375rem 0;
+    }
+
+    .change-item.skipped {
+        border-left-color: #9ca3af;
+        background: rgba(156, 163, 175, 0.05);
+    }
+
+    .change-item .before-after {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .change-item .before, .change-item .after {
+        font-size: 0.75rem;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+    }
+
+    .change-item .before {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+    }
+
+    .change-item .after {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+    }
+
     /* Item list in edit panel */
     .item-list {
         max-height: 200px;
@@ -1019,5 +1115,463 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// ============================================
+// STEP-THROUGH FIX MODE
+// ============================================
+
+let fixModeActive = false;
+let currentIssueIndex = 0;
+let appliedChanges = [];
+let pendingFix = null;
+
+function startFixMode() {
+    if (!aiReviewResults || !aiReviewResults.issues || aiReviewResults.issues.length === 0) {
+        alert('No issues to fix. Run AI Review first.');
+        return;
+    }
+
+    fixModeActive = true;
+    currentIssueIndex = 0;
+    appliedChanges = [];
+    pendingFix = null;
+
+    showCurrentIssue();
+}
+
+function showCurrentIssue() {
+    const issues = aiReviewResults.issues;
+    if (currentIssueIndex >= issues.length) {
+        showFinalComparison();
+        return;
+    }
+
+    const issue = issues[currentIssueIndex];
+    const panelTitle = document.getElementById('editPanelTitle');
+    const panelBody = document.getElementById('editPanelBody');
+
+    // Scroll to the section
+    scrollToIssue(issue.section, currentIssueIndex);
+
+    const severityIcon = issue.severity === 'critical' ? 'x-circle text-danger' :
+                         issue.severity === 'warning' ? 'exclamation-triangle text-warning' :
+                         'lightbulb text-info';
+
+    const progress = ((currentIssueIndex) / issues.length) * 100;
+
+    let html = `
+        <div class="fix-mode-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-wrench me-2"></i>Fix Mode</span>
+                <span class="badge bg-light text-dark">Issue ${currentIssueIndex + 1} of ${issues.length}</span>
+            </div>
+            <div class="fix-progress">
+                <div class="fix-progress-bar" style="width: ${progress}%"></div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <div class="d-flex align-items-start mb-2">
+                <i class="bi bi-${severityIcon} me-2 mt-1"></i>
+                <div>
+                    <strong>${escapeHtml(issue.title)}</strong>
+                    <div class="small text-muted">${escapeHtml(issue.description)}</div>
+                </div>
+            </div>
+            <div class="alert alert-info small mb-0">
+                <strong>Suggestion:</strong> ${escapeHtml(issue.suggestion)}
+            </div>
+        </div>
+
+        <div id="fixContentArea">
+            <button class="btn btn-primary w-100" onclick="generateFix(${currentIssueIndex})">
+                <i class="bi bi-magic me-1"></i>Generate AI Fix
+            </button>
+        </div>
+
+        <hr>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="skipIssue()">
+                <i class="bi bi-skip-forward me-1"></i>Skip
+            </button>
+            <button class="btn btn-outline-danger btn-sm" onclick="exitFixMode()">
+                <i class="bi bi-x-circle me-1"></i>Exit
+            </button>
+        </div>
+    `;
+
+    panelTitle.innerHTML = '<i class="bi bi-wrench me-2"></i>Fix Issues';
+    panelBody.innerHTML = html;
+}
+
+async function generateFix(issueIndex) {
+    const issue = aiReviewResults.issues[issueIndex];
+    const fixArea = document.getElementById('fixContentArea');
+    const mappedSection = sectionNameMap[issue.section.toLowerCase()] || issue.section;
+
+    fixArea.innerHTML = `
+        <div class="text-center py-3">
+            <div class="spinner-border text-purple" role="status">
+                <span class="visually-hidden">Generating fix...</span>
+            </div>
+            <div class="small text-muted mt-2">AI is generating a fix...</div>
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`/documents/{{ document.id }}/generate-fix/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                section_type: mappedSection,
+                issue_title: issue.title,
+                issue_description: issue.description,
+                issue_suggestion: issue.suggestion,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            pendingFix = {
+                issue: issue,
+                section_type: mappedSection,
+                original_content: data.original_content,
+                rewritten_content: data.rewritten_content,
+                changes_summary: data.changes_summary,
+                field_updates: data.field_updates,
+            };
+
+            showFixPreview(pendingFix);
+        } else {
+            fixArea.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-circle me-1"></i>
+                    ${escapeHtml(data.error || 'Failed to generate fix')}
+                </div>
+                <button class="btn btn-outline-primary btn-sm" onclick="generateFix(${issueIndex})">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Try Again
+                </button>
+            `;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        fixArea.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-circle me-1"></i>
+                Error generating fix. Please try again.
+            </div>
+            <button class="btn btn-outline-primary btn-sm" onclick="generateFix(${issueIndex})">
+                <i class="bi bi-arrow-clockwise me-1"></i>Try Again
+            </button>
+        `;
+    }
+}
+
+function showFixPreview(fix) {
+    const fixArea = document.getElementById('fixContentArea');
+
+    const diffHtml = generateWordDiff(fix.original_content || '', fix.rewritten_content || '');
+
+    fixArea.innerHTML = `
+        <div class="mb-3">
+            <h6 class="text-muted mb-2"><i class="bi bi-file-diff me-1"></i>Proposed Changes</h6>
+            <div class="diff-container">${diffHtml}</div>
+        </div>
+
+        <div class="alert alert-light small mb-3">
+            <strong>Summary:</strong> ${escapeHtml(fix.changes_summary)}
+        </div>
+
+        <div class="d-grid gap-2">
+            <button class="btn btn-success" onclick="applyFix()">
+                <i class="bi bi-check-lg me-1"></i>Apply This Fix
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="skipIssue()">
+                <i class="bi bi-skip-forward me-1"></i>Skip This Issue
+            </button>
+        </div>
+    `;
+}
+
+async function applyFix() {
+    if (!pendingFix) return;
+
+    const fixArea = document.getElementById('fixContentArea');
+    fixArea.innerHTML = `
+        <div class="text-center py-3">
+            <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Applying fix...</span>
+            </div>
+            <div class="small text-muted mt-2">Saving changes...</div>
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`/documents/{{ document.id }}/apply-fix/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                section_type: pendingFix.section_type,
+                field_updates: pendingFix.field_updates,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            appliedChanges.push({
+                issue: pendingFix.issue,
+                section_type: pendingFix.section_type,
+                original_content: pendingFix.original_content,
+                new_content: pendingFix.rewritten_content,
+                applied: true,
+            });
+
+            pendingFix = null;
+            currentIssueIndex++;
+            showCurrentIssue();
+        } else {
+            fixArea.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-circle me-1"></i>
+                    ${escapeHtml(data.error || 'Failed to apply fix')}
+                </div>
+                <button class="btn btn-outline-primary btn-sm" onclick="showFixPreview(pendingFix)">
+                    <i class="bi bi-arrow-left me-1"></i>Back
+                </button>
+            `;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        fixArea.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-circle me-1"></i>
+                Error applying fix. Please try again.
+            </div>
+            <button class="btn btn-outline-primary btn-sm" onclick="showFixPreview(pendingFix)">
+                <i class="bi bi-arrow-left me-1"></i>Back
+            </button>
+        `;
+    }
+}
+
+function skipIssue() {
+    if (pendingFix) {
+        appliedChanges.push({
+            issue: pendingFix.issue,
+            section_type: pendingFix.section_type,
+            original_content: pendingFix.original_content,
+            new_content: null,
+            applied: false,
+        });
+    } else if (aiReviewResults && aiReviewResults.issues[currentIssueIndex]) {
+        appliedChanges.push({
+            issue: aiReviewResults.issues[currentIssueIndex],
+            section_type: null,
+            original_content: null,
+            new_content: null,
+            applied: false,
+        });
+    }
+
+    pendingFix = null;
+    currentIssueIndex++;
+    showCurrentIssue();
+}
+
+function exitFixMode() {
+    if (appliedChanges.length > 0) {
+        if (!confirm('You have applied changes. Exit fix mode?')) {
+            return;
+        }
+    }
+
+    fixModeActive = false;
+    currentIssueIndex = 0;
+    appliedChanges = [];
+    pendingFix = null;
+
+    // Show the original review results
+    if (aiReviewResults) {
+        displayAIReview(aiReviewResults);
+    } else {
+        clearAIReview();
+    }
+}
+
+function showFinalComparison() {
+    fixModeActive = false;
+    const panelTitle = document.getElementById('editPanelTitle');
+    const panelBody = document.getElementById('editPanelBody');
+
+    const appliedCount = appliedChanges.filter(c => c.applied).length;
+    const skippedCount = appliedChanges.filter(c => !c.applied).length;
+
+    let html = `
+        <div class="fix-mode-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-check-circle me-2"></i>Review Complete</span>
+            </div>
+        </div>
+
+        <div class="alert alert-success mb-3">
+            <strong>${appliedCount} changes applied</strong>, ${skippedCount} skipped
+        </div>
+
+        <h6 class="mb-2"><i class="bi bi-list-check me-1"></i>Changes Summary</h6>
+        <div class="changes-list mb-3">
+    `;
+
+    appliedChanges.forEach((change, index) => {
+        const statusClass = change.applied ? '' : 'skipped';
+        const statusIcon = change.applied ? 'check-circle text-success' : 'skip-forward text-muted';
+        const statusText = change.applied ? 'Applied' : 'Skipped';
+
+        html += `
+            <div class="change-item ${statusClass}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>${escapeHtml(change.issue.title)}</strong>
+                        <div class="small text-muted">${escapeHtml(change.issue.section)}</div>
+                    </div>
+                    <span class="badge ${change.applied ? 'bg-success' : 'bg-secondary'}">
+                        <i class="bi bi-${statusIcon} me-1"></i>${statusText}
+                    </span>
+                </div>
+                ${change.applied && change.original_content ? `
+                <div class="before-after">
+                    <div class="before">
+                        <strong class="text-danger">Before:</strong><br>
+                        ${escapeHtml(change.original_content.substring(0, 100))}${change.original_content.length > 100 ? '...' : ''}
+                    </div>
+                    <div class="after">
+                        <strong class="text-success">After:</strong><br>
+                        ${escapeHtml(change.new_content.substring(0, 100))}${change.new_content.length > 100 ? '...' : ''}
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        `;
+    });
+
+    html += `
+        </div>
+
+        <div class="d-grid gap-2">
+            <button class="btn btn-success" onclick="finalizeChanges()">
+                <i class="bi bi-check-lg me-1"></i>Done - View Updated Document
+            </button>
+            <button class="btn btn-outline-primary btn-sm" onclick="startAIReview()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Run AI Review Again
+            </button>
+        </div>
+    `;
+
+    panelTitle.innerHTML = '<i class="bi bi-clipboard-check me-2"></i>Changes Applied';
+    panelBody.innerHTML = html;
+}
+
+function finalizeChanges() {
+    // Reload the page to show updated document
+    window.location.reload();
+}
+
+// ============================================
+// WORD-LEVEL DIFF ALGORITHM
+// ============================================
+
+function generateWordDiff(oldText, newText) {
+    if (!oldText && !newText) return '<em class="text-muted">No content</em>';
+    if (!oldText) return `<span class="diff-word-added">${escapeHtml(newText)}</span>`;
+    if (!newText) return `<span class="diff-word-removed">${escapeHtml(oldText)}</span>`;
+
+    const oldWords = tokenize(oldText);
+    const newWords = tokenize(newText);
+
+    const diff = computeDiff(oldWords, newWords);
+
+    return diff.map(item => {
+        if (item.type === 'equal') {
+            return `<span class="diff-word-unchanged">${escapeHtml(item.value)}</span>`;
+        } else if (item.type === 'delete') {
+            return `<span class="diff-word-removed">${escapeHtml(item.value)}</span>`;
+        } else if (item.type === 'insert') {
+            return `<span class="diff-word-added">${escapeHtml(item.value)}</span>`;
+        }
+    }).join(' ');
+}
+
+function tokenize(text) {
+    // Split by whitespace while preserving punctuation
+    return text.split(/(\s+)/).filter(t => t.trim().length > 0);
+}
+
+function computeDiff(oldArr, newArr) {
+    // Simple LCS-based diff algorithm
+    const m = oldArr.length;
+    const n = newArr.length;
+
+    // Build LCS matrix
+    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (oldArr[i - 1] === newArr[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+
+    // Backtrack to find diff
+    const result = [];
+    let i = m, j = n;
+
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && oldArr[i - 1] === newArr[j - 1]) {
+            result.unshift({ type: 'equal', value: oldArr[i - 1] });
+            i--;
+            j--;
+        } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+            result.unshift({ type: 'insert', value: newArr[j - 1] });
+            j--;
+        } else {
+            result.unshift({ type: 'delete', value: oldArr[i - 1] });
+            i--;
+        }
+    }
+
+    return result;
+}
+
+// Update displayAIReview to add "Fix Issues" button
+const originalDisplayAIReview = displayAIReview;
+displayAIReview = function(data) {
+    originalDisplayAIReview(data);
+
+    // Add "Fix Issues" button if there are issues
+    if (data.issues && data.issues.length > 0) {
+        const panelBody = document.getElementById('editPanelBody');
+        const clearBtn = panelBody.querySelector('button[onclick="clearAIReview()"]');
+        if (clearBtn) {
+            const fixBtn = document.createElement('button');
+            fixBtn.className = 'btn btn-purple btn-sm w-100 mb-2';
+            fixBtn.style.backgroundColor = '#6f42c1';
+            fixBtn.style.borderColor = '#6f42c1';
+            fixBtn.style.color = 'white';
+            fixBtn.innerHTML = '<i class="bi bi-wrench me-1"></i>Fix Issues Step-by-Step';
+            fixBtn.onclick = startFixMode;
+            clearBtn.parentNode.insertBefore(fixBtn, clearBtn);
+        }
+    }
+};
 </script>
 {% endblock %}
