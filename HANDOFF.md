@@ -568,12 +568,33 @@ Evidence items now have Edit buttons for refining details after auto-extraction.
 - Edit page at `/documents/{id}/evidence/{evidence_id}/edit/`
 - Form sections: Evidence Details, When & Where, Status, Notes
 - Works for both server-rendered and dynamically added items
+- **"Use Incident Location" button** - When editing evidence, shows button to auto-fill location from incident overview
 
 **Files involved:**
-- `documents/views.py` - `edit_evidence` view
+- `documents/views.py` - `edit_evidence` view (passes incident_location to template)
 - `documents/urls.py` - Route for edit_evidence
-- `templates/documents/edit_evidence.html` - Edit form template
+- `templates/documents/edit_evidence.html` - Edit form template with "Use Incident Location" button
 - `templates/documents/section_edit.html` - Edit button in list
+
+### Evidence Location Defaults (NEW)
+Evidence location (`location_obtained`) now defaults to the incident location for evidence in possession.
+
+**When Location is Auto-Filled:**
+1. **Story Parsing** - When AI extracts evidence from "Tell Your Story", evidence items marked as `is_in_possession=True` with no explicit location get the incident location
+2. **Manual Adding** - When adding evidence via section edit page, if `is_in_possession=True` and location is blank, defaults to incident location
+3. **Editing** - "Use Incident Location" button allows one-click filling of the incident location
+
+**Location Format:**
+Combines available fields from Incident Overview: `incident_location, city, state`
+Example: "Downtown parking lot, Tampa, FL"
+
+**Why This Matters:**
+- Evidence captured during the incident (personal recordings) logically happened at the incident location
+- Saves user time and ensures consistency
+- Location remains editable for evidence obtained elsewhere
+
+**Files involved:**
+- `documents/views.py` - `apply_story_fields` and `add_multiple_item` views
 
 ### Duplicate Filtering for AI Suggestions (NEW)
 AI suggestions now filter out items that already exist in the user's list.

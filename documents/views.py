@@ -457,6 +457,25 @@ def add_multiple_item(request, document_id, section_type):
             obj.section = section
             obj.save()
 
+            # For evidence in possession with no location, default to incident location
+            if section_type == 'evidence' and hasattr(obj, 'is_in_possession'):
+                if obj.is_in_possession and not obj.location_obtained:
+                    try:
+                        overview_section = document.sections.get(section_type='incident_overview')
+                        incident_overview = IncidentOverview.objects.get(section=overview_section)
+                        location_parts = []
+                        if incident_overview.incident_location:
+                            location_parts.append(incident_overview.incident_location)
+                        if incident_overview.city:
+                            location_parts.append(incident_overview.city)
+                        if incident_overview.state:
+                            location_parts.append(incident_overview.state)
+                        if location_parts:
+                            obj.location_obtained = ', '.join(location_parts)
+                            obj.save()
+                    except (DocumentSection.DoesNotExist, IncidentOverview.DoesNotExist):
+                        pass
+
             # Invalidate cached complaint since data changed
             document.invalidate_generated_complaint()
 
@@ -610,6 +629,22 @@ def edit_evidence(request, document_id, evidence_id):
     evidence = get_object_or_404(Evidence, id=evidence_id, section__document=document)
     section = evidence.section
 
+    # Get incident location for "Use Incident Location" button
+    incident_location_str = ''
+    try:
+        overview_section = document.sections.get(section_type='incident_overview')
+        incident_overview = IncidentOverview.objects.get(section=overview_section)
+        location_parts = []
+        if incident_overview.incident_location:
+            location_parts.append(incident_overview.incident_location)
+        if incident_overview.city:
+            location_parts.append(incident_overview.city)
+        if incident_overview.state:
+            location_parts.append(incident_overview.state)
+        incident_location_str = ', '.join(location_parts) if location_parts else ''
+    except (DocumentSection.DoesNotExist, IncidentOverview.DoesNotExist):
+        pass
+
     if request.method == 'POST':
         form = EvidenceForm(request.POST, instance=evidence)
         if form.is_valid():
@@ -626,6 +661,7 @@ def edit_evidence(request, document_id, evidence_id):
         'evidence': evidence,
         'form': form,
         'section': section,
+        'incident_location': incident_location_str,
     })
 
 
@@ -1901,6 +1937,31 @@ def apply_story_fields(request, document_id):
 
                             evidence.save()
                             saved_count += 1
+
+                    # Default location_obtained to incident location for evidence in possession
+                    try:
+                        overview_section = document.sections.get(section_type='incident_overview')
+                        incident_overview = IncidentOverview.objects.get(section=overview_section)
+                        # Build location string from incident overview
+                        location_parts = []
+                        if incident_overview.incident_location:
+                            location_parts.append(incident_overview.incident_location)
+                        if incident_overview.city:
+                            location_parts.append(incident_overview.city)
+                        if incident_overview.state:
+                            location_parts.append(incident_overview.state)
+                        incident_location_str = ', '.join(location_parts) if location_parts else ''
+
+                        if incident_location_str:
+                            # Update evidence items in possession with blank location
+                            Evidence.objects.filter(
+                                section=doc_section,
+                                is_in_possession=True,
+                                location_obtained=''
+                            ).update(location_obtained=incident_location_str)
+                    except (DocumentSection.DoesNotExist, IncidentOverview.DoesNotExist):
+                        pass  # No incident overview available
+
                     # Auto-complete if at least one evidence item added
                     if Evidence.objects.filter(section=doc_section).exists():
                         doc_section.status = 'completed'
