@@ -69,6 +69,12 @@ The app is functional with the following features complete:
      - **Evidence**: Distinguishes between evidence user HAS vs. evidence to OBTAIN (see below)
      - **Rights Violated**: Identifies constitutional violations with strength assessment
    - **Context-aware Rights Section** - Shows different messages based on section status
+   - **AI Document Review** (NEW) - Comprehensive review of the complete document:
+     - Legal strength analysis
+     - Clarity and readability suggestions
+     - Completeness check for required elements
+     - Inline highlighting of issues (critical=red, warning=yellow, suggestion=blue)
+     - Click issues in sidebar to scroll to problem area
 
 7. **Document Completion Validation** (NEW)
    - Checkout blocked until all sections complete or marked N/A
@@ -283,6 +289,37 @@ python manage.py seed_ai_prompts
 3. `find_law_enforcement_agency(city, state)` - Identifies correct police/sheriff jurisdiction
 4. `_verify_inferred_agencies(parsed_result)` - Post-processes to correct small town agencies
 5. `lookup_federal_court(city, state)` - Uses GPT web search to find federal district court
+6. `review_document(document_data)` - Comprehensive AI review of the complete document
+
+### AI Document Review (NEW)
+Comprehensive AI review of Section 1983 complaints on the Review & Edit page.
+
+**How It Works:**
+1. User clicks "AI Review" button on `/documents/{id}/review/`
+2. All document data is sent to GPT for analysis
+3. AI returns structured feedback with issues by section
+4. Issues are highlighted inline with severity colors
+5. User clicks issue in sidebar to scroll to problem area
+
+**What AI Reviews:**
+- **Legal Strength** - Are constitutional violations clearly stated? Sufficient factual support?
+- **Clarity** - Is narrative clear? Are dates/times/locations specific?
+- **Completeness** - All required 1983 elements present? Damages described? Relief appropriate?
+
+**Issue Severities:**
+- **Critical** (red) - Must fix before filing
+- **Warning** (yellow) - Should address
+- **Suggestion** (blue) - Nice to have improvements
+
+**Files:**
+- `documents/views.py` - `ai_review_document` endpoint
+- `documents/services/openai_service.py` - `review_document()` method
+- `documents/management/commands/seed_ai_prompts.py` - `review_document` prompt
+- `templates/documents/document_review.html` - UI with highlights and sidebar
+
+**API Endpoint:** `/documents/{id}/ai-review/` (POST)
+
+**Note:** Requires `python manage.py seed_ai_prompts` after deploying to add the new prompt.
 
 ### Federal Court Lookup (NEW)
 Automatically finds the correct federal district court for any US location.

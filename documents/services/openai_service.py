@@ -904,3 +904,56 @@ If no clear court can be determined, return:
                 'success': False,
                 'error': str(e),
             }
+
+    def review_document(self, document_data: dict) -> dict:
+        """
+        Perform AI review of a Section 1983 complaint document.
+
+        Analyzes legal strength, clarity, and completeness.
+        Returns structured feedback with issues keyed by section.
+
+        Args:
+            document_data: Dict containing all document sections data
+
+        Returns:
+            dict with 'success', 'issues' list, 'strengths', 'summary'
+        """
+        import json
+
+        try:
+            # Get prompt from database
+            prompt = self._get_prompt('review_document')
+
+            # Convert document data to JSON string for the prompt
+            document_json = json.dumps(document_data, indent=2, default=str)
+
+            user_prompt = prompt['user_prompt_template'].format(
+                document_json=document_json
+            )
+
+            response = self.client.chat.completions.create(
+                model=prompt['model_name'],
+                messages=[
+                    {"role": "system", "content": prompt['system_message']},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=prompt['temperature'],
+                max_tokens=prompt['max_tokens'],
+                response_format={"type": "json_object"}
+            )
+
+            result = json.loads(response.choices[0].message.content)
+
+            return {
+                'success': True,
+                'overall_assessment': result.get('overall_assessment', 'needs_work'),
+                'issues': result.get('issues', []),
+                'strengths': result.get('strengths', []),
+                'summary': result.get('summary', ''),
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+            }
