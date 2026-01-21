@@ -720,6 +720,32 @@
                     <!-- Single item section -->
                     <form method="post" id="sectionForm">
                         {% csrf_token %}
+
+                        {% if section.section_type in 'damages,rights_violated' %}
+                        <!-- AI Suggest Section - At Top -->
+                        <div class="card bg-light mb-4">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-robot me-1"></i>AI Assistant</h6>
+                                <p class="card-text small text-muted">
+                                    Let AI analyze your story and suggest content for this section.
+                                </p>
+                                <button type="button" class="btn btn-info text-white" id="aiSuggestBtn" onclick="suggestSectionContent('{{ section.section_type }}')">
+                                    <i class="bi bi-magic me-1"></i>Analyze Story & Suggest
+                                </button>
+                                <div id="aiSuggestionsContainer" class="mt-3" style="display: none;">
+                                    <div class="card border-info">
+                                        <div class="card-header bg-info text-white py-2">
+                                            <i class="bi bi-lightbulb me-1"></i>AI Suggestions
+                                        </div>
+                                        <div class="card-body" id="aiSuggestionsBody">
+                                            <!-- Suggestions populated by JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
                         {% for field in form %}
                             {% if section.section_type == 'incident_overview' and field.name in 'federal_district_court,use_manual_court,court_district_confirmed' %}
                                 {% if field.name == 'federal_district_court' %}
@@ -829,31 +855,6 @@
                             </div>
                             {% endif %}
                         {% endfor %}
-
-                        {% if section.section_type in 'damages,rights_violated' %}
-                        <!-- AI Suggest Section -->
-                        <div class="card bg-light mb-4">
-                            <div class="card-body">
-                                <h6 class="card-title"><i class="bi bi-robot me-1"></i>AI Assistant</h6>
-                                <p class="card-text small text-muted">
-                                    Let AI analyze your story and suggest content for this section.
-                                </p>
-                                <button type="button" class="btn btn-info text-white" id="aiSuggestBtn" onclick="suggestSectionContent('{{ section.section_type }}')">
-                                    <i class="bi bi-magic me-1"></i>Analyze Story & Suggest
-                                </button>
-                                <div id="aiSuggestionsContainer" class="mt-3" style="display: none;">
-                                    <div class="card border-info">
-                                        <div class="card-header bg-info text-white py-2">
-                                            <i class="bi bi-lightbulb me-1"></i>AI Suggestions
-                                        </div>
-                                        <div class="card-body" id="aiSuggestionsBody">
-                                            <!-- Suggestions populated by JavaScript -->
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
 
                         <hr class="my-4">
 
@@ -1660,7 +1661,9 @@ const damageTypeToFieldMap = {
     'emotional': 'id_emotional_distress_description',
     'psychological': 'id_emotional_distress_description',
     'mental': 'id_emotional_distress_description',
-    'physical': 'id_property_damage_description',
+    'physical': 'id_physical_injury_description',
+    'bodily': 'id_physical_injury_description',
+    'injury': 'id_physical_injury_description',
     'property': 'id_property_damage_description',
     'reputation': 'id_reputation_harm_description',
     'reputational': 'id_reputation_harm_description',
@@ -1679,7 +1682,9 @@ const damageTypeToCheckboxMap = {
     'emotional': 'id_emotional_distress',
     'psychological': 'id_emotional_distress',
     'mental': 'id_emotional_distress',
-    'physical': 'id_property_damage',
+    'physical': 'id_physical_injury',
+    'bodily': 'id_physical_injury',
+    'injury': 'id_physical_injury',
     'property': 'id_property_damage',
     'reputation': 'id_reputation_harm',
     'reputational': 'id_reputation_harm'
