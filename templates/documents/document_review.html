@@ -1325,10 +1325,49 @@ async function generateFix(issueIndex) {
     }
 }
 
+function detectPlaceholders(text) {
+    // Detect common placeholder patterns that AI might incorrectly insert
+    const placeholderPatterns = [
+        /\[insert\s+\w+\]/gi,
+        /\[DATE\]/gi,
+        /\[TIME\]/gi,
+        /\[LOCATION\]/gi,
+        /\[NAME\]/gi,
+        /\[ADDRESS\]/gi,
+        /\[AMOUNT\]/gi,
+        /\[\w+\s+here\]/gi,
+        /\[your\s+\w+\]/gi,
+        /\[specific\s+\w+\]/gi,
+    ];
+
+    const found = [];
+    for (const pattern of placeholderPatterns) {
+        const matches = text.match(pattern);
+        if (matches) {
+            found.push(...matches);
+        }
+    }
+    return found;
+}
+
 function showFixPreview(fix) {
     const fixArea = document.getElementById('fixContentArea');
 
     const diffHtml = generateWordDiff(fix.original_content || '', fix.rewritten_content || '');
+
+    // Check for placeholders in the rewritten content
+    const placeholders = detectPlaceholders(fix.rewritten_content || '');
+    let warningHtml = '';
+    if (placeholders.length > 0) {
+        warningHtml = `
+            <div class="alert alert-danger small mb-3">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                <strong>Warning:</strong> AI inserted placeholder text that may lose your data:
+                <code>${escapeHtml(placeholders.join(', '))}</code>
+                <br><strong>Recommendation:</strong> Skip this fix or regenerate it.
+            </div>
+        `;
+    }
 
     fixArea.innerHTML = `
         <div class="mb-3">
@@ -1336,14 +1375,25 @@ function showFixPreview(fix) {
             <div class="diff-container">${diffHtml}</div>
         </div>
 
+        ${warningHtml}
+
         <div class="alert alert-light small mb-3">
             <strong>Summary:</strong> ${escapeHtml(fix.changes_summary)}
         </div>
 
         <div class="d-grid gap-2">
+            ${placeholders.length > 0 ? `
+            <button class="btn btn-warning" onclick="generateFix(currentIssueIndex)">
+                <i class="bi bi-arrow-clockwise me-1"></i>Regenerate Fix
+            </button>
+            <button class="btn btn-outline-danger btn-sm" onclick="applyFix()">
+                <i class="bi bi-exclamation-triangle me-1"></i>Apply Anyway (Not Recommended)
+            </button>
+            ` : `
             <button class="btn btn-success" onclick="applyFix()">
                 <i class="bi bi-check-lg me-1"></i>Apply This Fix
             </button>
+            `}
             <button class="btn btn-outline-secondary btn-sm" onclick="skipIssue()">
                 <i class="bi bi-skip-forward me-1"></i>Skip This Issue
             </button>

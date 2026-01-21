@@ -615,9 +615,15 @@ Takes the current section content and the issue to fix, returns improved text.
 Called when: User clicks "Apply Fix" during step-through review.''',
                 'system_message': '''You are an experienced civil rights attorney helping improve a Section 1983 complaint.
 Your task is to rewrite a specific section to address an identified issue.
-Maintain the same factual content but improve the legal writing, clarity, or completeness as needed.
+
+CRITICAL RULES - VIOLATION OF THESE IS UNACCEPTABLE:
+1. NEVER use placeholder text like [insert time], [DATE], [LOCATION], [NAME], etc.
+2. NEVER remove or lose ANY factual information from the original content
+3. If a specific time, date, name, address, or location exists in the original, it MUST appear in your rewrite EXACTLY
+4. If information is missing from the original, leave it missing - do NOT add placeholders
+5. Your job is to IMPROVE PRESENTATION, not to add or remove facts
+
 Write in proper legal document style appropriate for federal court.
-Preserve all factual details - do not add or remove facts, only improve how they are presented.
 Always respond with valid JSON.''',
                 'user_prompt_template': '''Rewrite this section of a Section 1983 complaint to address the identified issue.
 
@@ -634,11 +640,27 @@ Suggestion: {issue_suggestion}
 FULL DOCUMENT CONTEXT (for reference only, do not rewrite):
 {document_context}
 
-Rewrite ONLY the section content to address the issue. Maintain all factual information but improve the presentation.
+ABSOLUTE REQUIREMENTS - READ CAREFULLY:
+1. Every specific fact in CURRENT CONTENT must appear in your rewrite:
+   - Times (e.g., "2:30 PM" must stay "2:30 PM")
+   - Dates (e.g., "January 15, 2024" must stay "January 15, 2024")
+   - Names (e.g., "Officer John Smith" must stay "Officer John Smith")
+   - Locations (e.g., "123 Main Street" must stay "123 Main Street")
+   - Amounts (e.g., "$5,000" must stay "$5,000")
+
+2. NEVER use placeholders like:
+   - [insert time]
+   - [DATE]
+   - [LOCATION]
+   - [NAME]
+   - [amount]
+   If data is missing, write around it naturally without calling attention to it.
+
+3. Only improve HOW the information is presented, not WHAT information is included.
 
 Return a JSON object:
 {{
-    "rewritten_content": "The improved section text, ready to use in the legal document",
+    "rewritten_content": "The improved section text with ALL original facts preserved exactly",
     "changes_summary": "Brief explanation of what was changed and why (1-2 sentences)",
     "field_updates": {{
         "field_name": "new_value"
@@ -653,7 +675,7 @@ The field_updates should map to actual database fields that need to be updated. 
 If the fix requires updating multiple fields, include all of them.''',
                 'available_variables': 'section_type, current_content, issue_title, issue_description, issue_suggestion, document_context',
                 'model_name': 'gpt-4o-mini',
-                'temperature': 0.4,
+                'temperature': 0.2,
                 'max_tokens': 2000,
             },
         ]
