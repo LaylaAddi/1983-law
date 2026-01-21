@@ -1342,8 +1342,38 @@ CSS page-break controls prevent awkward formatting:
 
 ## Future Plans
 
-- **Mobile App Version** - Tell Your Story will be key feature
-- **Voice Input** - Add speech-to-text (Whisper) later
+### Speech-to-Text for Tell Your Story (Priority Feature)
+The main mobile feature request is to allow users to record their story by speaking instead of typing.
+
+**Planned Implementation:**
+- Add a microphone button to the Tell Your Story textarea
+- Use **Web Speech API** (browser built-in, free) - NOT OpenAI Whisper
+- Real-time transcription as user speaks
+- Works on Chrome, Edge, Safari (desktop + mobile)
+- No server costs - all processing in browser
+
+**Why Web Speech API:**
+- Free (no API costs)
+- Real-time (shows words as user speaks)
+- Works on mobile browsers
+- Good accuracy for conversational speech
+- Privacy - audio processed locally
+
+**Files to modify:**
+- `static/js/tell-story.js` - Add speech recognition logic
+- `templates/documents/tell_your_story.html` - Add microphone button UI
+
+**User Flow:**
+1. User clicks microphone button
+2. Browser asks for microphone permission
+3. User speaks their story
+4. Text appears in real-time in textarea
+5. User can edit, then analyze as usual
+
+### Mobile App Version
+- Tell Your Story with voice input will be key feature
+- Options: PWA (Progressive Web App), Capacitor wrapper, or wrapper services
+- PWA is simplest (add to home screen, works offline)
 
 ---
 
