@@ -1405,6 +1405,202 @@ def ai_review_document(request, document_id):
 
 @login_required
 @require_http_methods(["POST"])
+def generate_fix(request, document_id):
+    """AJAX endpoint to generate AI-suggested fix for an issue.
+
+    Takes issue details and returns rewritten section content.
+    """
+    try:
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+        data = json.loads(request.body)
+
+        section_type = data.get('section_type', '')
+        issue = {
+            'title': data.get('issue_title', ''),
+            'description': data.get('issue_description', ''),
+            'suggestion': data.get('issue_suggestion', ''),
+        }
+
+        # Get current content for the section
+        current_content = _get_section_content(document, section_type)
+
+        # Get full document data for context
+        document_data = _collect_document_data(document)
+
+        from .services.openai_service import OpenAIService
+        service = OpenAIService()
+        result = service.rewrite_section(
+            section_type=section_type,
+            current_content=current_content,
+            issue=issue,
+            document_data=document_data
+        )
+
+        # Include the original content for diff comparison
+        result['original_content'] = current_content
+
+        return JsonResponse(result)
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}',
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def apply_fix(request, document_id):
+    """AJAX endpoint to apply an AI-suggested fix to a section.
+
+    Saves the field_updates to the database.
+    """
+    try:
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+        data = json.loads(request.body)
+
+        section_type = data.get('section_type', '')
+        field_updates = data.get('field_updates', {})
+
+        if not section_type or not field_updates:
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing section_type or field_updates',
+            })
+
+        # Get the section and its model instance
+        config = SECTION_CONFIG.get(section_type)
+        if not config:
+            return JsonResponse({
+                'success': False,
+                'error': f'Unknown section type: {section_type}',
+            })
+
+        Model = config.get('model')
+        if not Model:
+            return JsonResponse({
+                'success': False,
+                'error': f'No model for section type: {section_type}',
+            })
+
+        try:
+            section = document.sections.get(section_type=section_type)
+
+            # Handle multiple-item sections differently
+            if config.get('multiple', False):
+                # For multiple items, we can't directly update - return info for manual handling
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Multiple-item sections require manual editing',
+                })
+
+            # Get the model instance
+            instance = Model.objects.get(section=section)
+
+            # Apply field updates
+            updated_fields = []
+            for field_name, new_value in field_updates.items():
+                if hasattr(instance, field_name):
+                    setattr(instance, field_name, new_value)
+                    updated_fields.append(field_name)
+
+            if updated_fields:
+                instance.save()
+                # Invalidate cached complaint
+                document.invalidate_generated_complaint()
+
+            return JsonResponse({
+                'success': True,
+                'updated_fields': updated_fields,
+            })
+
+        except DocumentSection.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': f'Section not found: {section_type}',
+            })
+        except Model.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': f'No data found for section: {section_type}',
+            })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}',
+        })
+
+
+def _get_section_content(document, section_type):
+    """Get the current text content of a section for AI rewriting."""
+    try:
+        section = document.sections.get(section_type=section_type)
+
+        if section_type == 'incident_narrative':
+            narrative = section.incident_narrative
+            return narrative.detailed_narrative or narrative.summary or ''
+
+        elif section_type == 'incident_overview':
+            overview = section.incident_overview
+            parts = []
+            if overview.incident_date:
+                parts.append(f"Date: {overview.incident_date}")
+            if overview.incident_time:
+                parts.append(f"Time: {overview.incident_time}")
+            if overview.incident_location:
+                parts.append(f"Location: {overview.incident_location}")
+            if overview.city:
+                parts.append(f"City: {overview.city}")
+            if overview.state:
+                parts.append(f"State: {overview.state}")
+            return '\n'.join(parts)
+
+        elif section_type == 'damages':
+            damages = section.damages
+            parts = []
+            if damages.physical_injury and damages.physical_injury_description:
+                parts.append(f"Physical: {damages.physical_injury_description}")
+            if damages.emotional_distress and damages.emotional_distress_description:
+                parts.append(f"Emotional: {damages.emotional_distress_description}")
+            if damages.property_damage and damages.property_damage_description:
+                parts.append(f"Property: {damages.property_damage_description}")
+            return '\n'.join(parts)
+
+        elif section_type == 'rights_violated':
+            rights = section.rights_violated
+            parts = []
+            if rights.fourth_amendment and rights.fourth_amendment_details:
+                parts.append(f"4th Amendment: {rights.fourth_amendment_details}")
+            if rights.first_amendment and rights.first_amendment_details:
+                parts.append(f"1st Amendment: {rights.first_amendment_details}")
+            if rights.fourteenth_amendment and rights.fourteenth_amendment_details:
+                parts.append(f"14th Amendment: {rights.fourteenth_amendment_details}")
+            return '\n'.join(parts)
+
+        elif section_type == 'plaintiff_info':
+            plaintiff = section.plaintiff_info
+            return f"{plaintiff.first_name} {plaintiff.last_name}, residing at {plaintiff.street_address}, {plaintiff.city}, {plaintiff.state} {plaintiff.zip_code}"
+
+        elif section_type == 'relief_sought':
+            relief = section.relief_sought
+            parts = []
+            if relief.compensatory_damages:
+                parts.append(f"Compensatory damages: ${relief.compensatory_amount or 'unspecified'}")
+            if relief.punitive_damages:
+                parts.append(f"Punitive damages: ${relief.punitive_amount or 'unspecified'}")
+            if relief.injunctive_relief and relief.injunctive_description:
+                parts.append(f"Injunctive relief: {relief.injunctive_description}")
+            return '\n'.join(parts)
+
+        return ''
+
+    except (DocumentSection.DoesNotExist, AttributeError):
+        return ''
+
+
+@login_required
+@require_http_methods(["POST"])
 def lookup_address(request, document_id):
     """AJAX endpoint to lookup agency address using web search.
 

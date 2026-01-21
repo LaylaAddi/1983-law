@@ -53,6 +53,8 @@ urlpatterns = [
 
     # AI document review endpoint
     path('<int:document_id>/ai-review/', views.ai_review_document, name='ai_review_document'),
+    path('<int:document_id>/generate-fix/', views.generate_fix, name='generate_fix'),
+    path('<int:document_id>/apply-fix/', views.apply_fix, name='apply_fix'),
 
     # Tell Your Story (AI-assisted form filling)
     path('<int:document_id>/tell-your-story/', views.tell_your_story, name='tell_your_story'),

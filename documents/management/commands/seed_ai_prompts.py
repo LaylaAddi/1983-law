@@ -604,6 +604,58 @@ Limit to the most important 3-6 issues. Prioritize critical issues first.''',
                 'temperature': 0.3,
                 'max_tokens': 2500,
             },
+            {
+                'prompt_type': 'rewrite_section',
+                'title': 'Rewrite Section to Fix Issue',
+                'description': '''Rewrites a specific section of the complaint to address an identified issue.
+
+Used during the step-through fix workflow after AI review identifies issues.
+Takes the current section content and the issue to fix, returns improved text.
+
+Called when: User clicks "Apply Fix" during step-through review.''',
+                'system_message': '''You are an experienced civil rights attorney helping improve a Section 1983 complaint.
+Your task is to rewrite a specific section to address an identified issue.
+Maintain the same factual content but improve the legal writing, clarity, or completeness as needed.
+Write in proper legal document style appropriate for federal court.
+Preserve all factual details - do not add or remove facts, only improve how they are presented.
+Always respond with valid JSON.''',
+                'user_prompt_template': '''Rewrite this section of a Section 1983 complaint to address the identified issue.
+
+SECTION TYPE: {section_type}
+
+CURRENT CONTENT:
+{current_content}
+
+ISSUE TO FIX:
+Title: {issue_title}
+Description: {issue_description}
+Suggestion: {issue_suggestion}
+
+FULL DOCUMENT CONTEXT (for reference only, do not rewrite):
+{document_context}
+
+Rewrite ONLY the section content to address the issue. Maintain all factual information but improve the presentation.
+
+Return a JSON object:
+{{
+    "rewritten_content": "The improved section text, ready to use in the legal document",
+    "changes_summary": "Brief explanation of what was changed and why (1-2 sentences)",
+    "field_updates": {{
+        "field_name": "new_value"
+    }}
+}}
+
+The field_updates should map to actual database fields that need to be updated. Common fields:
+- For narrative: "detailed_narrative"
+- For damages: "physical_injury_description", "emotional_distress_description", etc.
+- For incident: "incident_location", "incident_date", etc.
+
+If the fix requires updating multiple fields, include all of them.''',
+                'available_variables': 'section_type, current_content, issue_title, issue_description, issue_suggestion, document_context',
+                'model_name': 'gpt-4o-mini',
+                'temperature': 0.4,
+                'max_tokens': 2000,
+            },
         ]
 
         created_count = 0
