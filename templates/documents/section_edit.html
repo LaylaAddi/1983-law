@@ -511,6 +511,19 @@
                                                     <br><small class="text-success"><i class="bi bi-check-circle me-1"></i>Willing to testify</small>
                                                     {% endif %}
                                                 {% endif %}
+                                                {% if section.section_type == 'evidence' %}
+                                                    {% if item.date_created %}
+                                                    <br><small class="text-muted"><i class="bi bi-calendar me-1"></i>{{ item.date_created }}</small>
+                                                    {% endif %}
+                                                    {% if item.location_obtained %}
+                                                    <br><small class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ item.location_obtained }}</small>
+                                                    {% else %}
+                                                    <br><small class="text-muted"><i class="bi bi-geo-alt me-1"></i>No location set</small>
+                                                    {% endif %}
+                                                    {% if not item.is_in_possession %}
+                                                    <br><small class="text-info"><i class="bi bi-hourglass me-1"></i>Not yet in possession</small>
+                                                    {% endif %}
+                                                {% endif %}
                                             </div>
                                             <div class="d-flex gap-2">
                                                 {% if section.section_type == 'defendants' %}
