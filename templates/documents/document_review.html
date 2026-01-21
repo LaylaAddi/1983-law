@@ -335,6 +335,41 @@
         border: 1px solid #bbf7d0;
     }
 
+    /* Current section being fixed - prominent indicator */
+    .editable-section.fixing-now {
+        outline: 3px solid #6f42c1 !important;
+        outline-offset: 2px;
+        box-shadow: 0 0 20px rgba(111, 66, 193, 0.4);
+        animation: pulse-fix 1.5s ease-in-out infinite;
+        position: relative;
+    }
+
+    .editable-section.fixing-now::before {
+        content: 'EDITING THIS SECTION';
+        position: absolute;
+        top: -28px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #6f42c1;
+        color: white;
+        font-size: 0.7rem;
+        font-weight: bold;
+        padding: 4px 12px;
+        border-radius: 4px;
+        white-space: nowrap;
+        z-index: 100;
+        font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    @keyframes pulse-fix {
+        0%, 100% {
+            box-shadow: 0 0 20px rgba(111, 66, 193, 0.4);
+        }
+        50% {
+            box-shadow: 0 0 30px rgba(111, 66, 193, 0.7);
+        }
+    }
+
     /* Item list in edit panel */
     .item-list {
         max-height: 200px;
@@ -1139,9 +1174,25 @@ function startFixMode() {
     showCurrentIssue();
 }
 
+function clearFixingHighlight() {
+    document.querySelectorAll('.editable-section.fixing-now').forEach(el => {
+        el.classList.remove('fixing-now');
+    });
+}
+
+function highlightCurrentFixSection(sectionName) {
+    clearFixingHighlight();
+    const mappedSection = sectionNameMap[sectionName.toLowerCase()] || sectionName;
+    const sections = document.querySelectorAll(`[data-section="${mappedSection}"]`);
+    sections.forEach(el => {
+        el.classList.add('fixing-now');
+    });
+}
+
 function showCurrentIssue() {
     const issues = aiReviewResults.issues;
     if (currentIssueIndex >= issues.length) {
+        clearFixingHighlight();
         showFinalComparison();
         return;
     }
@@ -1149,6 +1200,9 @@ function showCurrentIssue() {
     const issue = issues[currentIssueIndex];
     const panelTitle = document.getElementById('editPanelTitle');
     const panelBody = document.getElementById('editPanelBody');
+
+    // Highlight the current section being fixed
+    highlightCurrentFixSection(issue.section);
 
     // Scroll to the section
     scrollToIssue(issue.section, currentIssueIndex);
@@ -1397,6 +1451,9 @@ function exitFixMode() {
     currentIssueIndex = 0;
     appliedChanges = [];
     pendingFix = null;
+
+    // Clear the fixing highlight
+    clearFixingHighlight();
 
     // Show the original review results
     if (aiReviewResults) {
