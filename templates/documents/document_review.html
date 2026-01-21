@@ -370,6 +370,41 @@
         }
     }
 
+    /* Section just updated - success indicator */
+    .editable-section.just-updated {
+        outline: 3px solid #10b981 !important;
+        outline-offset: 2px;
+        box-shadow: 0 0 25px rgba(16, 185, 129, 0.5);
+        animation: flash-success 0.5s ease-out;
+        position: relative;
+    }
+
+    .editable-section.just-updated::before {
+        content: 'UPDATED';
+        position: absolute;
+        top: -28px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #10b981;
+        color: white;
+        font-size: 0.7rem;
+        font-weight: bold;
+        padding: 4px 12px;
+        border-radius: 4px;
+        white-space: nowrap;
+        z-index: 100;
+        font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    @keyframes flash-success {
+        0% {
+            background-color: rgba(16, 185, 129, 0.3);
+        }
+        100% {
+            background-color: transparent;
+        }
+    }
+
     /* Item list in edit panel */
     .item-list {
         max-height: 200px;
@@ -1189,6 +1224,41 @@ function highlightCurrentFixSection(sectionName) {
     });
 }
 
+function updateSectionContent(sectionType, newContent) {
+    // Find the section in the document and update it visually
+    const mappedSection = sectionType;
+    const sections = document.querySelectorAll(`[data-section="${mappedSection}"]`);
+
+    sections.forEach(el => {
+        // Remove fixing-now class and add just-updated class
+        el.classList.remove('fixing-now', 'ai-issue-critical', 'ai-issue-warning', 'ai-issue-suggestion');
+        el.classList.add('just-updated');
+
+        // Find the paragraph element(s) inside and update the text
+        const paragraphs = el.querySelectorAll('p:not(.no-indent)');
+        if (paragraphs.length > 0 && newContent) {
+            // Update the main paragraph content (skip the strong number prefix)
+            const mainP = paragraphs[0];
+            const strongEl = mainP.querySelector('strong');
+            if (strongEl) {
+                // Preserve the paragraph number, update the rest
+                const numberText = strongEl.outerHTML;
+                mainP.innerHTML = numberText + ' ' + escapeHtml(newContent);
+            } else {
+                mainP.innerHTML = escapeHtml(newContent);
+            }
+        }
+
+        // Scroll to show the updated section
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Remove the just-updated class after a delay (keep the visual for next issues)
+        setTimeout(() => {
+            el.classList.remove('just-updated');
+        }, 3000);
+    });
+}
+
 function showCurrentIssue() {
     const issues = aiReviewResults.issues;
     if (currentIssueIndex >= issues.length) {
@@ -1405,6 +1475,9 @@ async function applyFix() {
     if (!pendingFix) return;
 
     const fixArea = document.getElementById('fixContentArea');
+    const sectionType = pendingFix.section_type;
+    const newContent = pendingFix.rewritten_content;
+
     fixArea.innerHTML = `
         <div class="text-center py-3">
             <div class="spinner-border text-success" role="status">
@@ -1437,6 +1510,9 @@ async function applyFix() {
                 new_content: pendingFix.rewritten_content,
                 applied: true,
             });
+
+            // Update the document section visually
+            updateSectionContent(sectionType, newContent);
 
             pendingFix = null;
             currentIssueIndex++;
