@@ -1375,6 +1375,36 @@ def suggest_section_content(request, document_id, section_type):
 
 @login_required
 @require_http_methods(["POST"])
+def ai_review_document(request, document_id):
+    """AJAX endpoint to perform AI review of the complete document.
+
+    Analyzes legal strength, clarity, and completeness.
+    Returns structured feedback with issues keyed by section.
+    """
+    try:
+        document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        # Collect all document data
+        document_data = _collect_document_data(document)
+
+        # Also include story text for context
+        document_data['story_text'] = document.story_text or ''
+
+        from .services.openai_service import OpenAIService
+        service = OpenAIService()
+        result = service.review_document(document_data)
+
+        return JsonResponse(result)
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}',
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
 def lookup_address(request, document_id):
     """AJAX endpoint to lookup agency address using web search.
 

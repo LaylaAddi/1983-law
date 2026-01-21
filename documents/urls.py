@@ -51,6 +51,9 @@ urlpatterns = [
     # AI address lookup endpoint (web search)
     path('<int:document_id>/lookup-address/', views.lookup_address, name='lookup_address'),
 
+    # AI document review endpoint
+    path('<int:document_id>/ai-review/', views.ai_review_document, name='ai_review_document'),
+
     # Tell Your Story (AI-assisted form filling)
     path('<int:document_id>/tell-your-story/', views.tell_your_story, name='tell_your_story'),
     path('<int:document_id>/parse-story/', views.parse_story, name='parse_story'),

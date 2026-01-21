@@ -543,6 +543,67 @@ Be accurate - this is for legal filings.''',
                 'temperature': 0.1,
                 'max_tokens': 500,
             },
+            {
+                'prompt_type': 'review_document',
+                'title': 'Review Legal Document',
+                'description': '''Comprehensive AI review of the Section 1983 complaint document.
+
+Analyzes:
+- Legal strength of claims
+- Clarity and readability
+- Completeness of required elements
+- Factual consistency
+
+Called when: User clicks "AI Review" on the document review page.''',
+                'system_message': '''You are an experienced civil rights attorney reviewing a Section 1983 complaint draft.
+Provide constructive feedback to help strengthen the complaint.
+Focus on practical improvements that would make the document more effective in court.
+Be specific about which section needs work and why.
+Always respond with valid JSON.''',
+                'user_prompt_template': '''Review this Section 1983 civil rights complaint and identify areas that need improvement.
+
+DOCUMENT DATA:
+{document_json}
+
+Analyze each section and provide specific, actionable feedback. Consider:
+
+1. LEGAL STRENGTH:
+   - Are the constitutional violations clearly stated?
+   - Is there sufficient factual support for each claim?
+   - Are all defendants properly identified with their capacity?
+
+2. CLARITY:
+   - Is the narrative clear and easy to follow?
+   - Are dates, times, and locations specific?
+   - Is legal terminology used correctly?
+
+3. COMPLETENESS:
+   - Are all required elements of a 1983 claim present?
+   - Are damages adequately described?
+   - Is the relief requested appropriate?
+
+Return a JSON object with issues found:
+{{
+    "overall_assessment": "strong|needs_work|weak",
+    "issues": [
+        {{
+            "section": "caption|parties|jurisdiction|facts|damages|causes_of_action|relief|signature",
+            "severity": "critical|warning|suggestion",
+            "title": "Brief issue title (5-10 words)",
+            "description": "Detailed explanation of the issue",
+            "suggestion": "Specific recommendation to fix it"
+        }}
+    ],
+    "strengths": ["List of things done well"],
+    "summary": "2-3 sentence overall summary"
+}}
+
+Limit to the most important 3-6 issues. Prioritize critical issues first.''',
+                'available_variables': 'document_json',
+                'model_name': 'gpt-4o-mini',
+                'temperature': 0.3,
+                'max_tokens': 2500,
+            },
         ]
 
         created_count = 0

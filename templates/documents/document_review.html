@@ -167,6 +167,78 @@
         outline: 2px solid #0d6efd;
     }
 
+    /* AI Review highlighting */
+    .editable-section.ai-issue-critical {
+        background: rgba(220, 53, 69, 0.15);
+        border-left: 4px solid #dc3545;
+        padding-left: calc(0.5rem + 4px);
+        margin-left: -4px;
+    }
+
+    .editable-section.ai-issue-warning {
+        background: rgba(255, 193, 7, 0.15);
+        border-left: 4px solid #ffc107;
+        padding-left: calc(0.5rem + 4px);
+        margin-left: -4px;
+    }
+
+    .editable-section.ai-issue-suggestion {
+        background: rgba(13, 202, 240, 0.1);
+        border-left: 4px solid #0dcaf0;
+        padding-left: calc(0.5rem + 4px);
+        margin-left: -4px;
+    }
+
+    .ai-issue-badge {
+        position: absolute;
+        top: 0.25rem;
+        left: 0.25rem;
+        font-size: 0.7rem;
+        cursor: pointer;
+        z-index: 5;
+    }
+
+    .ai-review-panel {
+        border: 2px solid #6f42c1;
+    }
+
+    .ai-review-panel .card-header {
+        background: #6f42c1;
+        color: white;
+    }
+
+    .ai-issue-item {
+        padding: 0.75rem;
+        border-radius: 0.375rem;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: transform 0.1s ease;
+    }
+
+    .ai-issue-item:hover {
+        transform: translateX(3px);
+    }
+
+    .ai-issue-item.critical {
+        background: rgba(220, 53, 69, 0.1);
+        border-left: 3px solid #dc3545;
+    }
+
+    .ai-issue-item.warning {
+        background: rgba(255, 193, 7, 0.1);
+        border-left: 3px solid #ffc107;
+    }
+
+    .ai-issue-item.suggestion {
+        background: rgba(13, 202, 240, 0.1);
+        border-left: 3px solid #0dcaf0;
+    }
+
+    .ai-strength-badge {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.75rem;
+    }
+
     /* Item list in edit panel */
     .item-list {
         max-height: 200px;
@@ -234,6 +306,9 @@
                 <h5 class="mb-0 ms-2">Review & Edit</h5>
             </div>
             <div class="d-flex gap-2">
+                <button class="btn btn-outline-purple btn-sm" id="aiReviewBtn" onclick="startAIReview()" style="border-color: #6f42c1; color: #6f42c1;">
+                    <i class="bi bi-robot me-1"></i>AI Review
+                </button>
                 <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
                     <i class="bi bi-printer me-1"></i>Print
                 </button>
@@ -747,5 +822,202 @@ document.addEventListener('keydown', function(e) {
         cancelEdit();
     }
 });
+
+// AI Review functionality
+let aiReviewResults = null;
+
+// Map section names from AI response to data-section attributes
+const sectionNameMap = {
+    'caption': 'incident_overview',
+    'parties': 'plaintiff_info',
+    'jurisdiction': 'incident_overview',
+    'facts': 'incident_narrative',
+    'damages': 'damages',
+    'causes_of_action': 'rights_violated',
+    'relief': 'relief_sought',
+    'signature': 'plaintiff_info',
+    'defendants': 'defendants',
+    'plaintiff': 'plaintiff_info',
+    'incident': 'incident_overview',
+    'narrative': 'incident_narrative',
+    'rights': 'rights_violated',
+    'rights_violated': 'rights_violated'
+};
+
+function startAIReview() {
+    const btn = document.getElementById('aiReviewBtn');
+    const originalText = btn.innerHTML;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Analyzing...';
+    btn.style.backgroundColor = '#6f42c1';
+    btn.style.color = 'white';
+
+    // Clear previous highlights
+    clearAIHighlights();
+
+    fetch(`/documents/{{ document.id }}/ai-review/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        btn.style.backgroundColor = '';
+        btn.style.color = '#6f42c1';
+
+        if (data.success) {
+            aiReviewResults = data;
+            displayAIReview(data);
+        } else {
+            alert('AI Review failed: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        btn.style.backgroundColor = '';
+        btn.style.color = '#6f42c1';
+        console.error('Error:', error);
+        alert('Error performing AI review. Please try again.');
+    });
+}
+
+function clearAIHighlights() {
+    document.querySelectorAll('.editable-section').forEach(el => {
+        el.classList.remove('ai-issue-critical', 'ai-issue-warning', 'ai-issue-suggestion');
+        const badges = el.querySelectorAll('.ai-issue-badge');
+        badges.forEach(b => b.remove());
+    });
+}
+
+function displayAIReview(data) {
+    // Update the edit panel to show AI review results
+    const panelTitle = document.getElementById('editPanelTitle');
+    const panelBody = document.getElementById('editPanelBody');
+
+    // Determine badge color based on overall assessment
+    let assessmentBadge = '';
+    if (data.overall_assessment === 'strong') {
+        assessmentBadge = '<span class="badge bg-success ai-strength-badge">Strong</span>';
+    } else if (data.overall_assessment === 'needs_work') {
+        assessmentBadge = '<span class="badge bg-warning text-dark ai-strength-badge">Needs Work</span>';
+    } else {
+        assessmentBadge = '<span class="badge bg-danger ai-strength-badge">Weak</span>';
+    }
+
+    panelTitle.innerHTML = `<i class="bi bi-robot me-2"></i>AI Review ${assessmentBadge}`;
+
+    let html = '';
+
+    // Summary
+    if (data.summary) {
+        html += `<div class="alert alert-light border mb-3 small">${escapeHtml(data.summary)}</div>`;
+    }
+
+    // Strengths
+    if (data.strengths && data.strengths.length > 0) {
+        html += '<div class="mb-3"><h6 class="text-success"><i class="bi bi-check-circle me-1"></i>Strengths</h6><ul class="small mb-0">';
+        data.strengths.forEach(s => {
+            html += `<li>${escapeHtml(s)}</li>`;
+        });
+        html += '</ul></div>';
+    }
+
+    // Issues
+    if (data.issues && data.issues.length > 0) {
+        html += '<div class="mb-3"><h6><i class="bi bi-exclamation-circle me-1"></i>Issues to Address</h6>';
+        data.issues.forEach((issue, index) => {
+            const severityClass = issue.severity || 'suggestion';
+            const severityIcon = severityClass === 'critical' ? 'x-circle text-danger' :
+                                 severityClass === 'warning' ? 'exclamation-triangle text-warning' :
+                                 'lightbulb text-info';
+
+            html += `
+                <div class="ai-issue-item ${severityClass}" onclick="scrollToIssue('${issue.section}', ${index})">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-${severityIcon} me-2 mt-1"></i>
+                        <div>
+                            <strong>${escapeHtml(issue.title)}</strong>
+                            <div class="small text-muted">${escapeHtml(issue.description)}</div>
+                            <div class="small mt-1"><strong>Suggestion:</strong> ${escapeHtml(issue.suggestion)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add highlight to the corresponding section
+            highlightSection(issue.section, severityClass, index);
+        });
+        html += '</div>';
+    } else {
+        html += '<div class="alert alert-success"><i class="bi bi-check-circle me-1"></i>No issues found! Your document looks good.</div>';
+    }
+
+    // Clear button
+    html += `<button class="btn btn-outline-secondary btn-sm w-100" onclick="clearAIReview()">
+        <i class="bi bi-x-circle me-1"></i>Clear Review
+    </button>`;
+
+    panelBody.innerHTML = html;
+
+    // Make the panel visible with review styling
+    const panelCard = document.querySelector('.edit-panel-card');
+    panelCard.classList.add('ai-review-panel');
+}
+
+function highlightSection(sectionName, severity, issueIndex) {
+    // Map section name to data-section attribute
+    const mappedSection = sectionNameMap[sectionName.toLowerCase()] || sectionName;
+
+    const sections = document.querySelectorAll(`[data-section="${mappedSection}"]`);
+    sections.forEach(el => {
+        // Add the highest severity class (critical > warning > suggestion)
+        if (severity === 'critical') {
+            el.classList.remove('ai-issue-warning', 'ai-issue-suggestion');
+            el.classList.add('ai-issue-critical');
+        } else if (severity === 'warning' && !el.classList.contains('ai-issue-critical')) {
+            el.classList.remove('ai-issue-suggestion');
+            el.classList.add('ai-issue-warning');
+        } else if (severity === 'suggestion' && !el.classList.contains('ai-issue-critical') && !el.classList.contains('ai-issue-warning')) {
+            el.classList.add('ai-issue-suggestion');
+        }
+    });
+}
+
+function scrollToIssue(sectionName, issueIndex) {
+    const mappedSection = sectionNameMap[sectionName.toLowerCase()] || sectionName;
+    const section = document.querySelector(`[data-section="${mappedSection}"]`);
+    if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Flash effect
+        section.style.transition = 'box-shadow 0.3s ease';
+        section.style.boxShadow = '0 0 20px rgba(111, 66, 193, 0.5)';
+        setTimeout(() => {
+            section.style.boxShadow = '';
+        }, 1500);
+    }
+}
+
+function clearAIReview() {
+    clearAIHighlights();
+    aiReviewResults = null;
+
+    const panelCard = document.querySelector('.edit-panel-card');
+    panelCard.classList.remove('ai-review-panel');
+
+    cancelEdit();
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 </script>
 {% endblock %}
