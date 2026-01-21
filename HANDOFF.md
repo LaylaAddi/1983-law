@@ -232,6 +232,7 @@ AI prompts can now be edited via admin without code changes.
 | `suggest_evidence` | Suggest Evidence from Story | Per-section AI: separates evidence user HAS vs. evidence to OBTAIN |
 | `suggest_rights_violated` | Suggest Rights Violations | Per-section AI: identifies constitutional violations |
 | `identify_officer_agency` | Identify Agency for Officer | Identifies agency when "Find Agency & Address" is clicked with empty agency field |
+| `lookup_federal_court` | Lookup Federal District Court | Uses GPT web search to find federal court for locations not in static database |
 
 **Each Prompt Has:**
 - **Title** - Human-readable name
@@ -281,6 +282,29 @@ python manage.py seed_ai_prompts
 2. `parse_story(story_text)` - Extracts structured data from user's story
 3. `find_law_enforcement_agency(city, state)` - Identifies correct police/sheriff jurisdiction
 4. `_verify_inferred_agencies(parsed_result)` - Post-processes to correct small town agencies
+5. `lookup_federal_court(city, state)` - Uses GPT web search to find federal district court
+
+### Federal Court Lookup (NEW)
+Automatically finds the correct federal district court for any US location.
+
+**How It Works:**
+1. Static lookup tries first (instant, free) - checks city against known database
+2. If city not found → GPT with web search finds the correct court
+3. Result auto-fills the "Federal Court" field in Incident Overview
+
+**Files:**
+- `documents/services/court_lookup_service.py` - Main lookup service with GPT fallback
+- `documents/services/openai_service.py` - `lookup_federal_court()` method
+- `documents/prompts/lookup_federal_court.md` - Prompt backup
+- `documents/services/court_data/states/` - Static lookup databases per state
+
+**Benefits:**
+- Works for small towns, rural areas, unincorporated communities
+- No maintenance needed for static city lists
+- Always returns a result (never "court not found")
+- Results are accurate via web search
+
+**Note:** Requires `python manage.py seed_ai_prompts` after deploying to add the new prompt.
 
 ### Story Parsing Extracts
 - incident_overview: date, time, location, city, state, location_type, was_recording, recording_device

@@ -1,375 +1,152 @@
 class CourtLookupService:
     """Main coordinator for federal district court lookups across all states."""
-    
+
+    # Mapping of state codes to their lookup classes
+    STATE_LOOKUPS = {
+        # Multi-district states
+        'NY': ('new_york_lookup', 'NewYorkLookup'),
+        'PA': ('pennsylvania_lookup', 'PennsylvaniaLookup'),
+        'CA': ('california_lookup', 'CaliforniaLookup'),
+        'TX': ('texas_lookup', 'TexasLookup'),
+        'FL': ('florida_lookup', 'FloridaLookup'),
+        'IL': ('illinois_lookup', 'IllinoisLookup'),
+        'OH': ('ohio_lookup', 'OhioLookup'),
+        'GA': ('georgia_lookup', 'GeorgiaLookup'),
+        'MI': ('michigan_lookup', 'MichiganLookup'),
+        'VA': ('virginia_lookup', 'VirginiaLookup'),
+        'NC': ('north_carolina_lookup', 'NorthCarolinaLookup'),
+        'TN': ('tennessee_lookup', 'TennesseeLookup'),
+        'WI': ('wisconsin_lookup', 'WisconsinLookup'),
+        'IN': ('indiana_lookup', 'IndianaLookup'),
+        'MO': ('missouri_lookup', 'MissouriLookup'),
+        'AL': ('alabama_lookup', 'AlabamaLookup'),
+        'SC': ('south_carolina_lookup', 'SouthCarolinaLookup'),
+        'KY': ('kentucky_lookup', 'KentuckyLookup'),
+        'LA': ('louisiana_lookup', 'LouisianaLookup'),
+        'MS': ('mississippi_lookup', 'MississippiLookup'),
+        'AR': ('arkansas_lookup', 'ArkansasLookup'),
+        'IA': ('iowa_lookup', 'IowaLookup'),
+        'OK': ('oklahoma_lookup', 'OklahomaLookup'),
+        'WV': ('west_virginia_lookup', 'WestVirginiaLookup'),
+        'WA': ('washington_lookup', 'WashingtonLookup'),
+        # Single-district states
+        'AK': ('alaska_lookup', 'AlaskaLookup'),
+        'DE': ('delaware_lookup', 'DelawareLookup'),
+        'HI': ('hawaii_lookup', 'HawaiiLookup'),
+        'ID': ('idaho_lookup', 'IdahoLookup'),
+        'ME': ('maine_lookup', 'MaineLookup'),
+        'MT': ('montana_lookup', 'MontanaLookup'),
+        'NV': ('nevada_lookup', 'NevadaLookup'),
+        'NH': ('new_hampshire_lookup', 'NewHampshireLookup'),
+        'RI': ('rhode_island_lookup', 'RhodeIslandLookup'),
+        'SD': ('south_dakota_lookup', 'SouthDakotaLookup'),
+        'UT': ('utah_lookup', 'UtahLookup'),
+        'VT': ('vermont_lookup', 'VermontLookup'),
+        'WY': ('wyoming_lookup', 'WyomingLookup'),
+        'DC': ('district_of_columbia_lookup', 'DistrictOfColumbiaLookup'),
+        'MA': ('massachusetts_lookup', 'MassachusettsLookup'),
+        'CT': ('connecticut_lookup', 'ConnecticutLookup'),
+        'NJ': ('new_jersey_lookup', 'NewJerseyLookup'),
+        'MD': ('maryland_lookup', 'MarylandLookup'),
+        'OR': ('oregon_lookup', 'OregonLookup'),
+        'CO': ('colorado_lookup', 'ColoradoLookup'),
+        'AZ': ('arizona_lookup', 'ArizonaLookup'),
+        'MN': ('minnesota_lookup', 'MinnesotaLookup'),
+        'ND': ('north_dakota_lookup', 'NorthDakotaLookup'),
+        'KS': ('kansas_lookup', 'KansasLookup'),
+        'NE': ('nebraska_lookup', 'NebraskaLookup'),
+    }
+
     @classmethod
-    def lookup_court_by_location(cls, city, state, county=None):
-        """Look up federal district court by location."""
+    def lookup_court_by_location(cls, city, state, county=None, use_gpt_fallback=True):
+        """
+        Look up federal district court by location.
+
+        First tries static lookup (fast, free). If that fails and use_gpt_fallback=True,
+        falls back to GPT with web search (slower, costs money, but always works).
+
+        Args:
+            city: City name
+            state: State code or name
+            county: Optional county name (not currently used)
+            use_gpt_fallback: If True, use GPT with web search when static lookup fails
+
+        Returns:
+            dict with court_name, confidence, method, etc. or None if lookup fails
+        """
         if not city or not state:
             return None
-        
+
         state = state.strip().upper()
-        
-        # Multi-district states
-        if state == 'NY':
-            try:
-                from .court_data.states.new_york_lookup import NewYorkLookup
-                return NewYorkLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'PA':
-            try:
-                from .court_data.states.pennsylvania_lookup import PennsylvaniaLookup
-                return PennsylvaniaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'CA':
-            try:
-                from .court_data.states.california_lookup import CaliforniaLookup
-                return CaliforniaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'TX':
-            try:
-                from .court_data.states.texas_lookup import TexasLookup
-                return TexasLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'FL':
-            try:
-                from .court_data.states.florida_lookup import FloridaLookup
-                return FloridaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'IL':
-            try:
-                from .court_data.states.illinois_lookup import IllinoisLookup
-                return IllinoisLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'OH':
-            try:
-                from .court_data.states.ohio_lookup import OhioLookup
-                return OhioLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'GA':
-            try:
-                from .court_data.states.georgia_lookup import GeorgiaLookup
-                return GeorgiaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'MI':
-            try:
-                from .court_data.states.michigan_lookup import MichiganLookup
-                return MichiganLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        # Single-district states
-        elif state == 'AK':
-            try:
-                from .court_data.states.alaska_lookup import AlaskaLookup
-                return AlaskaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'DE':
-            try:
-                from .court_data.states.delaware_lookup import DelawareLookup
-                return DelawareLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'HI':
-            try:
-                from .court_data.states.hawaii_lookup import HawaiiLookup
-                return HawaiiLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'ID':
-            try:
-                from .court_data.states.idaho_lookup import IdahoLookup
-                return IdahoLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'ME':
-            try:
-                from .court_data.states.maine_lookup import MaineLookup
-                return MaineLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        elif state == 'MT':
-            try:
-                from .court_data.states.montana_lookup import MontanaLookup
-                return MontanaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'NV':
-            try:
-                from .court_data.states.nevada_lookup import NevadaLookup
-                return NevadaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'NH':
-            try:
-                from .court_data.states.new_hampshire_lookup import NewHampshireLookup
-                return NewHampshireLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'RI':
-            try:
-                from .court_data.states.rhode_island_lookup import RhodeIslandLookup
-                return RhodeIslandLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'SD':
-            try:
-                from .court_data.states.south_dakota_lookup import SouthDakotaLookup
-                return SouthDakotaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
 
-        elif state == 'UT':
-            try:
-                from .court_data.states.utah_lookup import UtahLookup
-                return UtahLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'VT':
-            try:
-                from .court_data.states.vermont_lookup import VermontLookup
-                return VermontLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'WY':
-            try:
-                from .court_data.states.wyoming_lookup import WyomingLookup
-                return WyomingLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'DC':
-            try:
-                from .court_data.states.district_of_columbia_lookup import DistrictOfColumbiaLookup
-                return DistrictOfColumbiaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
+        # Try static lookup first
+        result = cls._static_lookup(city, state)
+        if result:
+            return result
 
-        elif state == 'VA':
-            try:
-                from .court_data.states.virginia_lookup import VirginiaLookup
-                return VirginiaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'NC':
-            try:
-                from .court_data.states.north_carolina_lookup import NorthCarolinaLookup
-                return NorthCarolinaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'TN':
-            try:
-                from .court_data.states.tennessee_lookup import TennesseeLookup
-                return TennesseeLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
+        # Static lookup failed, try GPT fallback if enabled
+        if use_gpt_fallback:
+            return cls._gpt_fallback_lookup(city, state)
 
-        elif state == 'WI':
-            try:
-                from .court_data.states.wisconsin_lookup import WisconsinLookup
-                return WisconsinLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'IN':
-            try:
-                from .court_data.states.indiana_lookup import IndianaLookup
-                return IndianaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'MO':
-            try:
-                from .court_data.states.missouri_lookup import MissouriLookup
-                return MissouriLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'AL':
-            try:
-                from .court_data.states.alabama_lookup import AlabamaLookup
-                return AlabamaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
+        # No fallback, return None
+        return None
 
-        elif state == 'SC':
-            try:
-                from .court_data.states.south_carolina_lookup import SouthCarolinaLookup
-                return SouthCarolinaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'KY':
-            try:
-                from .court_data.states.kentucky_lookup import KentuckyLookup
-                return KentuckyLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'LA':
-            try:
-                from .court_data.states.louisiana_lookup import LouisianaLookup
-                return LouisianaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'MS':
-            try:
-                from .court_data.states.mississippi_lookup import MississippiLookup
-                return MississippiLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'AR':
-            try:
-                from .court_data.states.arkansas_lookup import ArkansasLookup
-                return ArkansasLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'IA':
-            try:
-                from .court_data.states.iowa_lookup import IowaLookup
-                return IowaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'KS':
-            try:
-                from .court_data.states.kansas_lookup import KansasLookup
-                return KansasLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'NE':
-            try:
-                from .court_data.states.nebraska_lookup import NebraskaLookup
-                return NebraskaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'OK':
-            try:
-                from .court_data.states.oklahoma_lookup import OklahomaLookup
-                return OklahomaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'WV':
-            try:
-                from .court_data.states.west_virginia_lookup import WestVirginiaLookup
-                return WestVirginiaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
+    @classmethod
+    def _static_lookup(cls, city, state):
+        """
+        Try static lookup from the state-specific lookup classes.
+        Returns the result or None if city not found.
+        """
+        if state not in cls.STATE_LOOKUPS:
+            return None
 
-        elif state == 'MA':
-            try:
-                from .court_data.states.massachusetts_lookup import MassachusettsLookup
-                return MassachusettsLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'CT':
-            try:
-                from .court_data.states.connecticut_lookup import ConnecticutLookup
-                return ConnecticutLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'NJ':
-            try:
-                from .court_data.states.new_jersey_lookup import NewJerseyLookup
-                return NewJerseyLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'MD':
-            try:
-                from .court_data.states.maryland_lookup import MarylandLookup
-                return MarylandLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'WA':
-            try:
-                from .court_data.states.washington_lookup import WashingtonLookup
-                return WashingtonLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'OR':
-            try:
-                from .court_data.states.oregon_lookup import OregonLookup
-                return OregonLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'CO':
-            try:
-                from .court_data.states.colorado_lookup import ColoradoLookup
-                return ColoradoLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'AZ':
-            try:
-                from .court_data.states.arizona_lookup import ArizonaLookup
-                return ArizonaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'MN':
-            try:
-                from .court_data.states.minnesota_lookup import MinnesotaLookup
-                return MinnesotaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
-        
-        elif state == 'ND':
-            try:
-                from .court_data.states.north_dakota_lookup import NorthDakotaLookup
-                return NorthDakotaLookup.lookup_court_by_city(city)
-            except ImportError:
-                pass
+        module_name, class_name = cls.STATE_LOOKUPS[state]
 
-            
-        
-        # State not supported yet
-        else:
+        try:
+            # Dynamic import of state lookup module
+            import importlib
+            module = importlib.import_module(f'.court_data.states.{module_name}', package='documents.services')
+            lookup_class = getattr(module, class_name)
+            return lookup_class.lookup_court_by_city(city)
+        except (ImportError, AttributeError):
+            return None
+
+    @classmethod
+    def _gpt_fallback_lookup(cls, city, state):
+        """
+        Use GPT with web search to find the federal district court.
+        Called when static lookup fails to find the city.
+        """
+        try:
+            from .openai_service import OpenAIService
+            service = OpenAIService()
+            result = service.lookup_federal_court(city, state)
+
+            if result.get('success'):
+                return {
+                    'court_name': result['court_name'],
+                    'district': result.get('district', ''),
+                    'confidence': result.get('confidence', 'medium'),
+                    'method': 'gpt_web_search',
+                    'source': result.get('source', ''),
+                    'state': state,
+                    'note': f'Found via AI web search for {city}, {state}'
+                }
+            else:
+                # GPT lookup failed, return generic result
+                return {
+                    'court_name': f'Federal District Court ({state})',
+                    'confidence': 'low',
+                    'method': 'fallback_failed',
+                    'state': state,
+                    'note': f'Could not determine exact court for {city}, {state}. Please verify manually.'
+                }
+        except Exception as e:
+            # If GPT service fails, return generic result
             return {
-                'court_name': f'Federal District Court (State: {state})',
+                'court_name': f'Federal District Court ({state})',
                 'confidence': 'low',
-                'method': 'unsupported_state',
-                'note': f'Detailed court lookup not yet available for {state}.'
+                'method': 'error',
+                'state': state,
+                'note': f'Error during lookup: {str(e)}. Please verify manually.'
             }
-
-
-

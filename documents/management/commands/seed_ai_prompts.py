@@ -513,6 +513,36 @@ If you cannot determine the agency with reasonable confidence, return:
                 'temperature': 0.1,
                 'max_tokens': 300,
             },
+            {
+                'prompt_type': 'lookup_federal_court',
+                'title': 'Lookup Federal District Court',
+                'description': '''Uses web search to find the correct federal district court for a given city and state.
+
+Called when: Static court lookup fails to find the city in its database (small towns, rural areas).
+
+Returns the official name of the federal district court with jurisdiction.''',
+                'system_message': 'You are a legal research assistant that identifies federal district court jurisdictions. Use web search to find accurate, current information. Always respond with valid JSON.',
+                'user_prompt_template': '''What federal district court has jurisdiction over {city}, {state}?
+
+Search for the correct United States District Court that covers this location. Federal district courts have names like:
+- "United States District Court for the Northern District of New York"
+- "United States District Court for the Southern District of California"
+- "United States District Court for the District of Alaska" (single-district states)
+
+Return a JSON object:
+{{
+    "court_name": "Full official court name",
+    "district": "The district name (e.g., 'Northern', 'Southern', 'Eastern', 'Western', or 'District' for single-district states)",
+    "confidence": "high" or "medium",
+    "source": "Brief note about how this was determined"
+}}
+
+Be accurate - this is for legal filings.''',
+                'available_variables': 'city, state',
+                'model_name': 'gpt-4o-mini',
+                'temperature': 0.1,
+                'max_tokens': 500,
+            },
         ]
 
         created_count = 0

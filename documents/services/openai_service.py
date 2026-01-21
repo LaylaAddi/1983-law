@@ -723,6 +723,109 @@ If no clear address is found, return:
                 'error': str(e),
             }
 
+    def lookup_federal_court(self, city: str, state: str) -> dict:
+        """
+        Look up the federal district court with jurisdiction over a location using web search.
+
+        This is used as a fallback when the static court lookup doesn't have the city
+        in its database (small towns, rural areas).
+
+        Args:
+            city: City/town name
+            state: State name or abbreviation
+
+        Returns:
+            dict with 'success', 'court_name', 'district', 'confidence'
+        """
+        if not city or not state:
+            return {
+                'success': False,
+                'error': 'City and state are required',
+            }
+
+        try:
+            # Get prompt from database
+            prompt = self._get_prompt('lookup_federal_court')
+            user_prompt = prompt['user_prompt_template'].format(city=city, state=state)
+
+            # Use GPT with web search to find the correct federal court
+            response = self.client.responses.create(
+                model=prompt['model_name'],
+                tools=[{"type": "web_search_preview"}],
+                input=f"{prompt['system_message']}\n\n{user_prompt}"
+            )
+
+            # Extract the text response
+            response_text = ""
+            for item in response.output:
+                if hasattr(item, 'content'):
+                    for content in item.content:
+                        if hasattr(content, 'text'):
+                            response_text = content.text
+                            break
+
+            if not response_text:
+                return {
+                    'success': False,
+                    'error': 'No response from web search',
+                }
+
+            # Parse the response to extract structured data
+            parse_prompt = f"""Extract the federal district court information from this text. Return a JSON object:
+
+Text: {response_text}
+
+Return format:
+{{
+    "court_name": "Full official court name (e.g., 'United States District Court for the Northern District of New York')",
+    "district": "The district name (e.g., 'Northern', 'Southern', 'Eastern', 'Western', or 'District' for single-district states)",
+    "confidence": "high" or "medium",
+    "source": "Brief note about how this was determined"
+}}
+
+If no clear court can be determined, return:
+{{
+    "court_name": null,
+    "district": null,
+    "confidence": "low",
+    "source": "Could not determine federal court"
+}}"""
+
+            parse_response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "Extract federal court information from text. Return only valid JSON."},
+                    {"role": "user", "content": parse_prompt}
+                ],
+                temperature=0.1,
+                max_tokens=500,
+                response_format={"type": "json_object"}
+            )
+
+            import json
+            result = json.loads(parse_response.choices[0].message.content)
+
+            if result.get('court_name'):
+                return {
+                    'success': True,
+                    'court_name': result['court_name'],
+                    'district': result.get('district', ''),
+                    'confidence': result.get('confidence', 'medium'),
+                    'source': result.get('source', 'Found via web search'),
+                    'method': 'gpt_web_search',
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Could not determine federal court for this location',
+                }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+            }
+
     def suggest_section_content(self, section_type: str, story_text: str, existing_data: dict = None) -> dict:
         """
         Analyze story and suggest content for a specific section.

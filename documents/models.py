@@ -811,6 +811,7 @@ class AIPrompt(models.Model):
         ('suggest_relief', 'Suggest Relief - Recommends legal relief options'),
         ('find_law_enforcement', 'Find Law Enforcement - Identifies correct police/sheriff'),
         ('lookup_address', 'Lookup Address - Finds agency addresses'),
+        ('lookup_federal_court', 'Lookup Federal Court - Finds federal district court for location'),
     ]
 
     prompt_type = models.CharField(
