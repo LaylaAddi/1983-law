@@ -229,8 +229,23 @@ class DefendantForm(forms.ModelForm):
             'title_rank': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Sergeant, Detective'}),
             'agency_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Employing agency'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Official address for service'}),
+            'address_verified': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Physical description or identifying info'}),
         }
+        labels = {
+            'address_verified': 'I have verified this address is correct for serving legal documents',
+        }
+
+    def clean(self):
+        """Require address_verified checkbox when address is provided."""
+        cleaned_data = super().clean()
+        address = cleaned_data.get('address', '').strip()
+        address_verified = cleaned_data.get('address_verified', False)
+
+        if address and not address_verified:
+            self.add_error('address_verified', 'You must verify the address is correct before saving.')
+
+        return cleaned_data
 
     def save(self, commit=True):
         """Clear agency_inferred flag when user manually saves/reviews a defendant."""

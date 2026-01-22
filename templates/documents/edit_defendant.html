@@ -38,6 +38,23 @@
                         {% csrf_token %}
 
                         {% for field in form %}
+                            {% if field.name == 'address_verified' %}
+                            <div class="mb-3 p-3 bg-light border rounded">
+                                <div class="form-check">
+                                    {{ field }}
+                                    <label class="form-check-label fw-bold" for="{{ field.id_for_label }}">
+                                        {{ field.label }} <span class="text-danger">*</span>
+                                    </label>
+                                </div>
+                                <div class="form-text mt-2">
+                                    <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                                    This address will be used to serve legal documents. Incorrect addresses can result in case dismissal.
+                                </div>
+                                {% if field.errors %}
+                                    <div class="text-danger small mt-1">{{ field.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% else %}
                             <div class="mb-3">
                                 <label for="{{ field.id_for_label }}" class="form-label">
                                     {{ field.label }}
@@ -51,6 +68,7 @@
                                     <div class="invalid-feedback d-block">{{ field.errors.0 }}</div>
                                 {% endif %}
                             </div>
+                            {% endif %}
                         {% endfor %}
 
                         <div class="d-flex gap-2 mt-4">
