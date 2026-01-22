@@ -1439,6 +1439,23 @@ def generate_fix(request, document_id):
         # Include the original content for diff comparison
         result['original_content'] = current_content
 
+        # If field_updates is empty, create a default based on section_type
+        if result.get('success') and not result.get('field_updates'):
+            rewritten = result.get('rewritten_content', '')
+            if rewritten:
+                # Map section types to their primary text field
+                default_field_map = {
+                    'incident_narrative': 'detailed_narrative',
+                    'incident_overview': 'incident_location',
+                    'damages': 'physical_injury_description',
+                    'rights_violated': 'fourth_amendment_details',
+                    'plaintiff_info': 'first_name',
+                    'relief_sought': 'compensatory_damages',
+                }
+                default_field = default_field_map.get(section_type)
+                if default_field:
+                    result['field_updates'] = {default_field: rewritten}
+
         return JsonResponse(result)
 
     except Exception as e:
@@ -1462,10 +1479,16 @@ def apply_fix(request, document_id):
         section_type = data.get('section_type', '')
         field_updates = data.get('field_updates', {})
 
-        if not section_type or not field_updates:
+        if not section_type:
             return JsonResponse({
                 'success': False,
-                'error': 'Missing section_type or field_updates',
+                'error': 'Missing section_type in request',
+            })
+
+        if not field_updates:
+            return JsonResponse({
+                'success': False,
+                'error': f'Missing field_updates for section: {section_type}. Try regenerating the fix.',
             })
 
         # Get the section and its model instance
