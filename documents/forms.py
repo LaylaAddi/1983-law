@@ -237,12 +237,16 @@ class DefendantForm(forms.ModelForm):
         }
 
     def clean(self):
-        """Require address_verified checkbox when address is provided."""
+        """Require address and address_verified checkbox."""
         cleaned_data = super().clean()
         address = cleaned_data.get('address', '').strip()
         address_verified = cleaned_data.get('address_verified', False)
 
-        if address and not address_verified:
+        # Address is required for serving legal documents
+        if not address:
+            self.add_error('address', 'Address is required for serving legal documents to this defendant.')
+        elif not address_verified:
+            # If address provided, must be verified
             self.add_error('address_verified', 'You must verify the address is correct before saving.')
 
         return cleaned_data
