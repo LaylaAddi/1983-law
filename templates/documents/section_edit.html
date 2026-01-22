@@ -1735,6 +1735,19 @@ function suggestSectionContent(sectionType) {
                     useDamageSuggestion(currentDamageSuggestions[index], this);
                 });
             });
+        } else if (data.limit_reached) {
+            // AI limit reached - show upgrade message
+            body.innerHTML = `
+                <div class="alert alert-warning mb-0">
+                    <div class="text-center">
+                        <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 2rem;"></i>
+                        <h6 class="mt-2">AI Limit Reached</h6>
+                        <p class="small mb-2">${escapeHtml(data.error)}</p>
+                        <a href="/documents/{{ document.id }}/checkout/" class="btn btn-primary btn-sm">
+                            <i class="bi bi-unlock me-1"></i>Upgrade Now
+                        </a>
+                    </div>
+                </div>`;
         } else if (data.error) {
             body.innerHTML = `<div class="alert alert-warning mb-0"><i class="bi bi-exclamation-triangle me-1"></i>${escapeHtml(data.error)}</div>`;
         } else {
@@ -2355,6 +2368,20 @@ function suggestAgency() {
                     acceptDefendantSuggestion(currentSuggestions[index], this);
                 });
             });
+        } else if (data.limit_reached) {
+            // AI limit reached - show upgrade message
+            suggestionsBody.innerHTML = `
+                <div class="alert alert-warning mb-0">
+                    <div class="text-center">
+                        <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 2rem;"></i>
+                        <h6 class="mt-2">AI Limit Reached</h6>
+                        <p class="small mb-2">${escapeHtml(data.error)}</p>
+                        <a href="/documents/{{ document.id }}/checkout/" class="btn btn-primary btn-sm">
+                            <i class="bi bi-unlock me-1"></i>Upgrade Now
+                        </a>
+                    </div>
+                </div>`;
+            suggestionsDiv.style.display = 'block';
         } else {
             suggestionsBody.innerHTML = `<div class="alert alert-warning mb-0">
                 <i class="bi bi-exclamation-triangle me-1"></i>

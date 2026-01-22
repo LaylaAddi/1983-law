@@ -204,6 +204,21 @@ function lookupInfo() {
             document.getElementById('foundAddress').textContent = data.address;
             document.getElementById('addressNote').textContent = data.source_note || 'Found via web search. Please verify before filing.';
             resultDiv.style.display = 'block';
+        } else if (data.limit_reached) {
+            // Show upgrade modal for AI limit reached
+            resultDiv.innerHTML = `
+                <div class="alert alert-warning">
+                    <div class="text-center">
+                        <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 2rem;"></i>
+                        <h6 class="mt-2">AI Limit Reached</h6>
+                        <p class="small mb-2">${data.error}</p>
+                        <a href="/documents/{{ document.id }}/checkout/" class="btn btn-primary btn-sm">
+                            <i class="bi bi-unlock me-1"></i>Upgrade Now
+                        </a>
+                    </div>
+                </div>
+            `;
+            resultDiv.style.display = 'block';
         } else {
             alert(data.error || 'Could not find information. Please enter the agency name manually.');
         }

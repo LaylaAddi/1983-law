@@ -237,6 +237,9 @@
                 // Results returned immediately (shouldn't happen but handle it)
                 reliefSuggestions = data.relief_suggestions || null;
                 showResults(data.sections);
+            } else if (data.limit_reached) {
+                // AI limit reached - show upgrade message
+                showLimitReachedError(data.error);
             } else {
                 showError(data.error || 'An error occurred while analyzing your story.');
             }
@@ -915,6 +918,38 @@
         resultsContent.style.display = 'none';
         resultsError.style.display = 'block';
         errorMessage.textContent = message;
+
+        // Re-enable analyze button
+        const analyzeBtn = document.getElementById('analyzeStoryBtn');
+        analyzeBtn.disabled = false;
+        analyzeBtn.innerHTML = '<i class="bi bi-stars me-1"></i>Analyze My Story';
+    }
+
+    function showLimitReachedError(message) {
+        // Stop polling and progress animation
+        stopPolling();
+        stopProgressAnimation();
+
+        const resultsLoading = document.getElementById('resultsLoading');
+        const resultsContent = document.getElementById('resultsContent');
+        const resultsError = document.getElementById('resultsError');
+
+        resultsLoading.style.display = 'none';
+        resultsContent.style.display = 'none';
+        resultsError.style.display = 'block';
+
+        // Show upgrade message with button
+        resultsError.innerHTML = `
+            <div class="text-center py-4">
+                <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3rem;"></i>
+                <h5 class="mt-3 text-warning">AI Limit Reached</h5>
+                <p class="text-muted">${escapeHtml(message)}</p>
+                <a href="/documents/${DOCUMENT_ID}/checkout/" class="btn btn-primary mt-2">
+                    <i class="bi bi-unlock me-1"></i>Upgrade Now
+                </a>
+                <p class="text-muted small mt-3">Upgrade to continue using AI features and generate your legal document.</p>
+            </div>
+        `;
 
         // Re-enable analyze button
         const analyzeBtn = document.getElementById('analyzeStoryBtn');

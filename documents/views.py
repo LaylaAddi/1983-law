@@ -1163,6 +1163,16 @@ def analyze_rights(request, document_id):
         # Get the document and verify ownership
         document = get_object_or_404(Document, id=document_id, user=request.user)
 
+        # Check AI usage limits for free users
+        if not document.can_use_ai():
+            remaining = document.user.get_free_ai_remaining()
+            return JsonResponse({
+                'success': False,
+                'error': 'You have used all 3 free AI analyses. Please upgrade your document to continue using AI features.',
+                'limit_reached': True,
+                'remaining': remaining,
+            })
+
         # Get the incident narrative section
         try:
             narrative_section = document.sections.get(section_type='incident_narrative')
@@ -1196,6 +1206,10 @@ def analyze_rights(request, document_id):
         service = OpenAIService()
         result = service.analyze_rights_violations(document_data)
 
+        # Record AI usage on success
+        if result.get('success'):
+            document.record_ai_usage()
+
         return JsonResponse(result)
 
     except ValueError as e:
@@ -1218,6 +1232,16 @@ def suggest_agency(request, document_id):
     try:
         # Verify document ownership
         document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        # Check AI usage limits for free users
+        if not document.can_use_ai():
+            remaining = document.user.get_free_ai_remaining()
+            return JsonResponse({
+                'success': False,
+                'error': 'You have used all 3 free AI analyses. Please upgrade your document to continue using AI features.',
+                'limit_reached': True,
+                'remaining': remaining,
+            })
 
         data = json.loads(request.body)
 
@@ -1268,6 +1292,10 @@ def suggest_agency(request, document_id):
         service = OpenAIService()
         result = service.suggest_agency(context)
 
+        # Record AI usage on success
+        if result.get('success'):
+            document.record_ai_usage()
+
         return JsonResponse(result)
 
     except json.JSONDecodeError:
@@ -1298,6 +1326,16 @@ def suggest_section_content(request, document_id, section_type):
 
     try:
         document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        # Check AI usage limits for free users
+        if not document.can_use_ai():
+            remaining = document.user.get_free_ai_remaining()
+            return JsonResponse({
+                'success': False,
+                'error': 'You have used all 3 free AI analyses. Please upgrade your document to continue using AI features.',
+                'limit_reached': True,
+                'remaining': remaining,
+            })
 
         # Get the story text
         story_text = document.story_text or ''
@@ -1359,6 +1397,10 @@ def suggest_section_content(request, document_id, section_type):
         service = OpenAIService()
         result = service.suggest_section_content(section_type, story_text, existing_data)
 
+        # Record AI usage on success
+        if result.get('success'):
+            document.record_ai_usage()
+
         return JsonResponse(result)
 
     except json.JSONDecodeError:
@@ -1384,6 +1426,16 @@ def ai_review_document(request, document_id):
     try:
         document = get_object_or_404(Document, id=document_id, user=request.user)
 
+        # Check AI usage limits for free users
+        if not document.can_use_ai():
+            remaining = document.user.get_free_ai_remaining()
+            return JsonResponse({
+                'success': False,
+                'error': 'You have used all 3 free AI analyses. Please upgrade your document to continue using AI features.',
+                'limit_reached': True,
+                'remaining': remaining,
+            })
+
         # Collect all document data
         document_data = _collect_document_data(document)
 
@@ -1393,6 +1445,10 @@ def ai_review_document(request, document_id):
         from .services.openai_service import OpenAIService
         service = OpenAIService()
         result = service.review_document(document_data)
+
+        # Record AI usage on success
+        if result.get('success'):
+            document.record_ai_usage()
 
         return JsonResponse(result)
 
@@ -1412,6 +1468,17 @@ def generate_fix(request, document_id):
     """
     try:
         document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        # Check AI usage limits for free users
+        if not document.can_use_ai():
+            remaining = document.user.get_free_ai_remaining()
+            return JsonResponse({
+                'success': False,
+                'error': 'You have used all 3 free AI analyses. Please upgrade your document to continue using AI features.',
+                'limit_reached': True,
+                'remaining': remaining,
+            })
+
         data = json.loads(request.body)
 
         section_type = data.get('section_type', '')
@@ -1454,6 +1521,10 @@ def generate_fix(request, document_id):
                 default_field = default_field_map.get(section_type)
                 if default_field:
                     result['field_updates'] = {default_field: rewritten}
+
+        # Record AI usage on success
+        if result.get('success'):
+            document.record_ai_usage()
 
         return JsonResponse(result)
 
@@ -1678,6 +1749,16 @@ def lookup_address(request, document_id):
         # Verify document ownership
         document = get_object_or_404(Document, id=document_id, user=request.user)
 
+        # Check AI usage limits for free users
+        if not document.can_use_ai():
+            remaining = document.user.get_free_ai_remaining()
+            return JsonResponse({
+                'success': False,
+                'error': 'You have used all 3 free AI analyses. Please upgrade your document to continue using AI features.',
+                'limit_reached': True,
+                'remaining': remaining,
+            })
+
         data = json.loads(request.body)
         agency_name = data.get('agency_name', '').strip()
         officer_name = data.get('officer_name', '').strip()
@@ -1712,6 +1793,10 @@ def lookup_address(request, document_id):
             officer_title=officer_title,
             officer_description=officer_description
         )
+
+        # Record AI usage on success
+        if result.get('success'):
+            document.record_ai_usage()
 
         return JsonResponse(result)
 
@@ -1888,6 +1973,9 @@ def _process_story_background(document_id, story_text):
             # Update story_relevance for all sections
             _update_section_relevance(document, extracted)
 
+            # Record AI usage for billing/limits
+            document.record_ai_usage()
+
             # Store successful result
             document.parsing_status = 'completed'
             document.parsing_result = result
@@ -1923,6 +2011,16 @@ def parse_story(request, document_id):
     try:
         # Verify document ownership
         document = get_object_or_404(Document, id=document_id, user=request.user)
+
+        # Check AI usage limits for free users
+        if not document.can_use_ai():
+            remaining = document.user.get_free_ai_remaining()
+            return JsonResponse({
+                'success': False,
+                'error': 'You have used all 3 free AI analyses. Please upgrade your document to continue using AI features.',
+                'limit_reached': True,
+                'remaining': remaining,
+            })
 
         data = json.loads(request.body)
         story_text = data.get('story', '').strip()

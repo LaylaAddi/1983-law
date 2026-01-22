@@ -131,6 +131,8 @@
         .then(function(data) {
             if (data.success) {
                 showResults(panel, data.violations, data.summary);
+            } else if (data.limit_reached) {
+                showLimitReachedError(panel, data.error);
             } else {
                 showError(panel, data.error || 'An unknown error occurred');
             }
@@ -493,6 +495,25 @@
 
         const errorDiv = panel.querySelector('.rights-analysis-error');
         errorDiv.querySelector('.error-message').textContent = message;
+        errorDiv.style.display = 'block';
+    }
+
+    function showLimitReachedError(panel, message) {
+        stopProgressAnimation();
+        panel.querySelector('.rights-analysis-loading').style.display = 'none';
+        panel.querySelector('.rights-analysis-content').style.display = 'none';
+
+        const errorDiv = panel.querySelector('.rights-analysis-error');
+        errorDiv.innerHTML = `
+            <div class="text-center py-3">
+                <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 2rem;"></i>
+                <h6 class="mt-2 text-warning">AI Limit Reached</h6>
+                <p class="text-muted small">${escapeHtml(message)}</p>
+                <a href="/documents/${DOCUMENT_ID}/checkout/" class="btn btn-primary btn-sm mt-1">
+                    <i class="bi bi-unlock me-1"></i>Upgrade Now
+                </a>
+            </div>
+        `;
         errorDiv.style.display = 'block';
     }
 
