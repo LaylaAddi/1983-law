@@ -2509,50 +2509,55 @@ def checkout(request, document_id):
         messages.info(request, 'This document has already been paid for.')
         return redirect('documents:document_detail', document_id=document.id)
 
-    # Check document completion before allowing checkout
-    from django.db.models import Q
-    sections = document.sections.all()
-    incomplete_sections = sections.exclude(status__in=['completed', 'not_applicable'])
+    # Check if user has exhausted free AI uses - if so, allow checkout regardless of completion
+    # This prevents a catch-22 where users can't complete sections without AI
+    ai_limit_reached = not document.user.can_use_free_ai()
 
-    # Check for defendants missing addresses
-    defendants_section = sections.filter(section_type='defendants').first()
-    defendants_missing_address = []
-    if defendants_section:
-        defendants_missing_address = list(
-            defendants_section.defendants.filter(
-                Q(address__isnull=True) | Q(address='')
-            ).values_list('name', flat=True)
-        )
+    # Check document completion before allowing checkout (skip if AI limit reached)
+    if not ai_limit_reached:
+        from django.db.models import Q
+        sections = document.sections.all()
+        incomplete_sections = sections.exclude(status__in=['completed', 'not_applicable'])
 
-    # Check for court district issues
-    court_district_issue = None
-    incident_section = sections.filter(section_type='incident_overview').first()
-    if incident_section:
-        try:
-            incident_overview = incident_section.incident_overview
-            if not incident_overview.federal_district_court:
-                court_district_issue = "Federal district court has not been looked up"
-            elif not incident_overview.court_district_confirmed:
-                court_district_issue = "Federal district court needs confirmation"
-        except Exception:
-            court_district_issue = "Incident overview incomplete"
+        # Check for defendants missing addresses
+        defendants_section = sections.filter(section_type='defendants').first()
+        defendants_missing_address = []
+        if defendants_section:
+            defendants_missing_address = list(
+                defendants_section.defendants.filter(
+                    Q(address__isnull=True) | Q(address='')
+                ).values_list('name', flat=True)
+            )
 
-    if incomplete_sections.exists() or defendants_missing_address or court_district_issue:
-        # Build error message
-        error_parts = []
-        if incomplete_sections.exists():
-            section_names = [s.get_section_type_display() for s in incomplete_sections]
-            error_parts.append(f"incomplete sections: {', '.join(section_names)}")
-        if defendants_missing_address:
-            error_parts.append(f"defendants missing address: {', '.join(defendants_missing_address)}")
-        if court_district_issue:
-            error_parts.append(court_district_issue)
+        # Check for court district issues
+        court_district_issue = None
+        incident_section = sections.filter(section_type='incident_overview').first()
+        if incident_section:
+            try:
+                incident_overview = incident_section.incident_overview
+                if not incident_overview.federal_district_court:
+                    court_district_issue = "Federal district court has not been looked up"
+                elif not incident_overview.court_district_confirmed:
+                    court_district_issue = "Federal district court needs confirmation"
+            except Exception:
+                court_district_issue = "Incident overview incomplete"
 
-        messages.error(
-            request,
-            f"Cannot proceed to checkout. Please complete all sections first. Issues: {'; '.join(error_parts)}"
-        )
-        return redirect('documents:document_detail', document_id=document.id)
+        if incomplete_sections.exists() or defendants_missing_address or court_district_issue:
+            # Build error message
+            error_parts = []
+            if incomplete_sections.exists():
+                section_names = [s.get_section_type_display() for s in incomplete_sections]
+                error_parts.append(f"incomplete sections: {', '.join(section_names)}")
+            if defendants_missing_address:
+                error_parts.append(f"defendants missing address: {', '.join(defendants_missing_address)}")
+            if court_district_issue:
+                error_parts.append(court_district_issue)
+
+            messages.error(
+                request,
+                f"Cannot proceed to checkout. Please complete all sections first. Issues: {'; '.join(error_parts)}"
+            )
+            return redirect('documents:document_detail', document_id=document.id)
 
     # Calculate prices
     base_price = Decimal(str(settings.DOCUMENT_PRICE))
