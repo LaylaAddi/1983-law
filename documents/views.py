@@ -1440,17 +1440,16 @@ def generate_fix(request, document_id):
         result['original_content'] = current_content
 
         # If field_updates is empty, create a default based on section_type
+        # Only for sections with primary text fields - NOT for boolean/structured sections
         if result.get('success') and not result.get('field_updates'):
             rewritten = result.get('rewritten_content', '')
             if rewritten:
-                # Map section types to their primary text field
+                # Map section types to their primary TEXT field only
+                # Exclude: relief_sought (booleans), plaintiff_info (structured), incident_overview (structured)
                 default_field_map = {
                     'incident_narrative': 'detailed_narrative',
-                    'incident_overview': 'incident_location',
                     'damages': 'physical_injury_description',
                     'rights_violated': 'fourth_amendment_details',
-                    'plaintiff_info': 'first_name',
-                    'relief_sought': 'compensatory_damages',
                 }
                 default_field = default_field_map.get(section_type)
                 if default_field:
