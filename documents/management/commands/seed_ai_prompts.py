@@ -555,56 +555,73 @@ Be accurate - this is for legal filings.''',
                 'description': '''Comprehensive AI review of the Section 1983 complaint document.
 
 Analyzes:
-- Legal strength of claims
-- Clarity and readability
-- Completeness of required elements
-- Factual consistency
+- Cross-document consistency (dates, times, names, locations)
+- Missing required information
+- Legal document formatting
+- Practical fixable issues
 
 Called when: User clicks "AI Review" on the document review page.''',
-                'system_message': '''You are an experienced civil rights attorney reviewing a Section 1983 complaint draft.
-Provide constructive feedback to help strengthen the complaint.
-Focus on practical improvements that would make the document more effective in court.
-Be specific about which section needs work and why.
+                'system_message': '''You are a legal document proofreader checking a Section 1983 complaint for errors and inconsistencies.
+Your job is to find PRACTICAL issues that can be fixed - not to critique legal strategy.
+Focus on: inconsistent facts, missing information, formatting problems, and unclear writing.
+Compare information ACROSS all sections to find contradictions.
 Always respond with valid JSON.''',
-                'user_prompt_template': '''Review this Section 1983 civil rights complaint and identify areas that need improvement.
+                'user_prompt_template': '''Review this Section 1983 civil rights complaint for errors, inconsistencies, and missing information.
 
 DOCUMENT DATA:
 {document_json}
 
-Analyze each section and provide specific, actionable feedback. Consider:
+PRIORITY 1 - CROSS-DOCUMENT CONSISTENCY (check these carefully):
+- Does the incident TIME match in all sections? (e.g., narrative says "9:30 AM" but damages says "2:30 PM")
+- Does the incident DATE match in all sections?
+- Does the incident LOCATION match in all sections?
+- Are defendant NAMES spelled consistently throughout?
+- Are officer BADGE NUMBERS consistent if mentioned multiple times?
+- Do the FACTS in the narrative match what's described in damages and rights violated?
 
-1. LEGAL STRENGTH:
-   - Are the constitutional violations clearly stated?
-   - Is there sufficient factual support for each claim?
-   - Are all defendants properly identified with their capacity?
+PRIORITY 2 - MISSING REQUIRED INFORMATION:
+- Is the incident date specified? (not just "on or about")
+- Is the incident time specified with AM/PM?
+- Is the incident location specific (address or clear description)?
+- Are defendants identified with name OR badge number OR physical description?
+- Is at least one constitutional right violation selected?
+- Is at least one type of damage described?
+- Is the plaintiff's county of residence stated?
 
-2. CLARITY:
-   - Is the narrative clear and easy to follow?
-   - Are dates, times, and locations specific?
-   - Is legal terminology used correctly?
+PRIORITY 3 - FORMATTING AND CLARITY:
+- Is the narrative written in third person? (should say "Plaintiff" not "I")
+- Are paragraphs properly structured for a legal document?
+- Is the chronology of events clear?
+- Are there any placeholder texts like "[insert]", "[DATE]", "[TIME]", "TBD", etc.?
 
-3. COMPLETENESS:
-   - Are all required elements of a 1983 claim present?
-   - Are damages adequately described?
-   - Is the relief requested appropriate?
+DO NOT flag these as issues:
+- Legal strategy opinions (e.g., "claims may be weak")
+- Suggestions to add more evidence (user may not have more)
+- Requests for information that isn't required for filing
 
 Return a JSON object with issues found:
 {{
-    "overall_assessment": "strong|needs_work|weak",
+    "overall_assessment": "ready|needs_fixes|has_errors",
     "issues": [
         {{
-            "section": "caption|parties|jurisdiction|facts|damages|causes_of_action|relief|signature",
-            "severity": "critical|warning|suggestion",
+            "section": "incident_overview|incident_narrative|defendants|damages|rights_violated|relief_sought|plaintiff_info",
+            "severity": "error|warning|suggestion",
             "title": "Brief issue title (5-10 words)",
-            "description": "Detailed explanation of the issue",
-            "suggestion": "Specific recommendation to fix it"
+            "description": "Specific explanation - quote the inconsistent text if applicable",
+            "suggestion": "Exact fix needed (be specific, not vague)"
         }}
     ],
-    "strengths": ["List of things done well"],
-    "summary": "2-3 sentence overall summary"
+    "consistency_check": {{
+        "times_match": true/false,
+        "dates_match": true/false,
+        "locations_match": true/false,
+        "names_match": true/false
+    }},
+    "missing_fields": ["List of required fields that are empty or missing"],
+    "summary": "1-2 sentence summary focusing on the most important fixes needed"
 }}
 
-Limit to the most important 3-6 issues. Prioritize critical issues first.''',
+Find 2-5 ACTIONABLE issues. Every issue must have a specific, concrete fix.''',
                 'available_variables': 'document_json',
                 'model_name': 'gpt-4o-mini',
                 'temperature': 0.3,
