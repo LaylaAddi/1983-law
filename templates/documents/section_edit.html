@@ -899,10 +899,24 @@
     <!-- Sidebar -->
     <div class="col-lg-4">
         <!-- Section Status -->
-        <div class="card mb-4 border-primary border-2 shadow">
-            <div class="card-header bg-primary text-white py-3">
-                <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Update Section Status</h5>
+        <div class="card mb-4 shadow {% if section.status == 'completed' or section.status == 'not_applicable' %}border-success{% else %}border-warning border-3{% endif %}">
+            <div class="card-header py-3 {% if section.status == 'completed' or section.status == 'not_applicable' %}bg-success text-white{% else %}bg-warning text-dark{% endif %}">
+                <h5 class="mb-0">
+                    {% if section.status == 'completed' or section.status == 'not_applicable' %}
+                    <i class="bi bi-check-circle me-2"></i>Section Status
+                    {% else %}
+                    <i class="bi bi-exclamation-triangle me-2"></i>Update Section Status
+                    {% endif %}
+                </h5>
             </div>
+            {% if section.status != 'completed' and section.status != 'not_applicable' %}
+            <div class="bg-warning bg-opacity-10 px-3 py-2 border-bottom">
+                <small>
+                    <i class="bi bi-info-circle me-1"></i>
+                    <strong>Action needed:</strong> Mark as "Completed" or "Not Applicable" to enable PDF generation.
+                </small>
+            </div>
+            {% endif %}
             <div class="card-body">
                 <!-- Current Status Badge -->
                 <div class="text-center mb-3 py-2 rounded" style="background-color: #f8f9fa;">
