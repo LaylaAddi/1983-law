@@ -1526,6 +1526,9 @@ def apply_fix(request, document_id):
             updated_fields = []
             for field_name, new_value in field_updates.items():
                 if hasattr(instance, field_name):
+                    # Convert time formats like "09:30 AM" to "09:30:00" for TimeField
+                    if field_name.endswith('_time') or field_name == 'incident_time':
+                        new_value = _convert_time_format(new_value)
                     setattr(instance, field_name, new_value)
                     updated_fields.append(field_name)
 
@@ -1555,6 +1558,44 @@ def apply_fix(request, document_id):
             'success': False,
             'error': f'An error occurred: {str(e)}',
         })
+
+
+def _convert_time_format(time_str):
+    """Convert time formats like '09:30 AM' or '2:30 PM' to 'HH:MM:SS' for Django TimeField."""
+    if not time_str or not isinstance(time_str, str):
+        return time_str
+
+    import re
+    from datetime import datetime
+
+    time_str = time_str.strip()
+
+    # Already in HH:MM:SS format
+    if re.match(r'^\d{2}:\d{2}:\d{2}$', time_str):
+        return time_str
+
+    # Already in HH:MM format (24-hour)
+    if re.match(r'^\d{2}:\d{2}$', time_str):
+        return time_str + ':00'
+
+    # Try parsing AM/PM formats
+    for fmt in ['%I:%M %p', '%I:%M:%S %p', '%I:%M%p', '%I %p']:
+        try:
+            parsed = datetime.strptime(time_str.upper(), fmt)
+            return parsed.strftime('%H:%M:%S')
+        except ValueError:
+            continue
+
+    # Try formats like "9:30 AM" (single digit hour)
+    for fmt in ['%I:%M %p', '%I:%M%p']:
+        try:
+            parsed = datetime.strptime(time_str.upper(), fmt)
+            return parsed.strftime('%H:%M:%S')
+        except ValueError:
+            continue
+
+    # Return original if we can't parse
+    return time_str
 
 
 def _get_section_content(document, section_type):
