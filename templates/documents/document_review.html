@@ -1177,11 +1177,58 @@ const sectionNameMap = {
 function startAIReview() {
     const btn = document.getElementById('aiReviewBtn');
     const originalText = btn.innerHTML;
+    const documentPanel = document.querySelector('.document-panel .legal-document');
+    const originalDocContent = documentPanel.innerHTML;
 
     btn.disabled = true;
     btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Analyzing...';
     btn.style.backgroundColor = '#6f42c1';
     btn.style.color = 'white';
+
+    // Show terminal animation in document panel
+    documentPanel.innerHTML = `
+        <div class="terminal-animation" style="background: #1a1a2e; border-radius: 8px; padding: 20px; min-height: 400px; font-family: 'Courier New', monospace;">
+            <div style="display: flex; gap: 6px; margin-bottom: 15px;">
+                <span style="width: 12px; height: 12px; border-radius: 50%; background: #ff5f56;"></span>
+                <span style="width: 12px; height: 12px; border-radius: 50%; background: #ffbd2e;"></span>
+                <span style="width: 12px; height: 12px; border-radius: 50%; background: #27ca40;"></span>
+            </div>
+            <div class="terminal-output" style="color: #0f0; font-size: 13px; line-height: 1.6;">
+                <div class="terminal-line">$ ai-review --document {{ document.id }}</div>
+                <div class="terminal-line" style="color: #888;">Initializing document analysis...</div>
+                <div class="terminal-line typing-line" style="color: #0ff;">
+                    <span class="typing-text"></span><span class="cursor" style="animation: blink 1s infinite;">▊</span>
+                </div>
+            </div>
+        </div>
+        <style>
+            @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+        </style>
+    `;
+
+    // Simulate terminal typing
+    const messages = [
+        'Checking cross-document consistency...',
+        'Verifying dates and times match...',
+        'Scanning for missing information...',
+        'Analyzing legal formatting...',
+        'Detecting placeholder text...',
+        'Generating recommendations...'
+    ];
+    let msgIndex = 0;
+    const typingText = documentPanel.querySelector('.typing-text');
+    const terminalOutput = documentPanel.querySelector('.terminal-output');
+
+    const typeInterval = setInterval(() => {
+        if (msgIndex < messages.length) {
+            const newLine = document.createElement('div');
+            newLine.className = 'terminal-line';
+            newLine.style.color = '#0f0';
+            newLine.textContent = '✓ ' + messages[msgIndex];
+            terminalOutput.insertBefore(newLine, terminalOutput.lastElementChild);
+            msgIndex++;
+        }
+    }, 800);
 
     // Clear previous highlights
     clearAIHighlights();
@@ -1195,10 +1242,14 @@ function startAIReview() {
     })
     .then(response => response.json())
     .then(data => {
+        clearInterval(typeInterval);
         btn.disabled = false;
         btn.innerHTML = originalText;
         btn.style.backgroundColor = '';
         btn.style.color = '#6f42c1';
+
+        // Restore document panel
+        documentPanel.innerHTML = originalDocContent;
 
         if (data.success) {
             aiReviewResults = data;
@@ -1208,10 +1259,12 @@ function startAIReview() {
         }
     })
     .catch(error => {
+        clearInterval(typeInterval);
         btn.disabled = false;
         btn.innerHTML = originalText;
         btn.style.backgroundColor = '';
         btn.style.color = '#6f42c1';
+        documentPanel.innerHTML = originalDocContent;
         console.error('Error:', error);
         alert('Error performing AI review. Please try again.');
     });
@@ -1230,14 +1283,17 @@ function displayAIReview(data) {
     const panelTitle = document.getElementById('editPanelTitle');
     const panelBody = document.getElementById('editPanelBody');
 
-    // Determine badge color based on overall assessment
+    // Determine badge color based on overall assessment (handles both old and new values)
     let assessmentBadge = '';
-    if (data.overall_assessment === 'strong') {
-        assessmentBadge = '<span class="badge bg-success ai-strength-badge">Strong</span>';
-    } else if (data.overall_assessment === 'needs_work') {
-        assessmentBadge = '<span class="badge bg-warning text-dark ai-strength-badge">Needs Work</span>';
+    const assessment = data.overall_assessment;
+    if (assessment === 'strong' || assessment === 'ready') {
+        assessmentBadge = '<span class="badge bg-success ai-strength-badge">Ready</span>';
+    } else if (assessment === 'needs_work' || assessment === 'needs_fixes') {
+        assessmentBadge = '<span class="badge bg-warning text-dark ai-strength-badge">Needs Fixes</span>';
+    } else if (assessment === 'weak' || assessment === 'has_errors') {
+        assessmentBadge = '<span class="badge bg-danger ai-strength-badge">Has Errors</span>';
     } else {
-        assessmentBadge = '<span class="badge bg-danger ai-strength-badge">Weak</span>';
+        assessmentBadge = '<span class="badge bg-secondary ai-strength-badge">Reviewed</span>';
     }
 
     panelTitle.innerHTML = `<i class="bi bi-robot me-2"></i>AI Review ${assessmentBadge}`;
@@ -1262,9 +1318,11 @@ function displayAIReview(data) {
     if (data.issues && data.issues.length > 0) {
         html += '<div class="mb-3"><h6><i class="bi bi-exclamation-circle me-1"></i>Issues to Address</h6>';
         data.issues.forEach((issue, index) => {
-            const severityClass = issue.severity || 'suggestion';
-            const severityIcon = severityClass === 'critical' ? 'x-circle text-danger' :
-                                 severityClass === 'warning' ? 'exclamation-triangle text-warning' :
+            const severity = issue.severity || 'suggestion';
+            // Handle both old (critical) and new (error) severity values
+            const severityClass = (severity === 'critical' || severity === 'error') ? 'error' : severity;
+            const severityIcon = (severity === 'critical' || severity === 'error') ? 'x-circle text-danger' :
+                                 severity === 'warning' ? 'exclamation-triangle text-warning' :
                                  'lightbulb text-info';
 
             html += `
@@ -1306,8 +1364,9 @@ function highlightSection(sectionName, severity, issueIndex) {
 
     const sections = document.querySelectorAll(`[data-section="${mappedSection}"]`);
     sections.forEach(el => {
-        // Add the highest severity class (critical > warning > suggestion)
-        if (severity === 'critical') {
+        // Add the highest severity class (error/critical > warning > suggestion)
+        // Handle both old (critical) and new (error) severity values
+        if (severity === 'critical' || severity === 'error') {
             el.classList.remove('ai-issue-warning', 'ai-issue-suggestion');
             el.classList.add('ai-issue-critical');
         } else if (severity === 'warning' && !el.classList.contains('ai-issue-critical')) {
