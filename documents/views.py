@@ -1613,6 +1613,9 @@ def apply_fix(request, document_id):
                     # Convert time formats like "09:30 AM" to "09:30:00" for TimeField
                     if field_name.endswith('_time') or field_name == 'incident_time':
                         new_value = _convert_time_format(new_value)
+                    # Convert date formats like "August 24, 2025" to "2025-08-24" for DateField
+                    if field_name.endswith('_date') or field_name == 'incident_date':
+                        new_value = _convert_date_format(new_value)
                     setattr(instance, field_name, new_value)
                     updated_fields.append(field_name)
 
@@ -1680,6 +1683,44 @@ def _convert_time_format(time_str):
 
     # Return original if we can't parse
     return time_str
+
+
+def _convert_date_format(date_str):
+    """Convert date formats like 'August 24, 2025' or 'Aug 24 2025' to 'YYYY-MM-DD' for Django DateField."""
+    if not date_str or not isinstance(date_str, str):
+        return date_str
+
+    import re
+    from datetime import datetime
+
+    date_str = date_str.strip()
+
+    # Already in YYYY-MM-DD format
+    if re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+        return date_str
+
+    # Try various date formats
+    date_formats = [
+        '%B %d, %Y',      # August 24, 2025
+        '%B %d %Y',       # August 24 2025
+        '%b %d, %Y',      # Aug 24, 2025
+        '%b %d %Y',       # Aug 24 2025
+        '%m/%d/%Y',       # 08/24/2025
+        '%m-%d-%Y',       # 08-24-2025
+        '%d %B %Y',       # 24 August 2025
+        '%d %b %Y',       # 24 Aug 2025
+        '%Y/%m/%d',       # 2025/08/24
+    ]
+
+    for fmt in date_formats:
+        try:
+            parsed = datetime.strptime(date_str, fmt)
+            return parsed.strftime('%Y-%m-%d')
+        except ValueError:
+            continue
+
+    # Return original if we can't parse
+    return date_str
 
 
 def _get_section_content(document, section_type):
