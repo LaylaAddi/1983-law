@@ -1411,18 +1411,21 @@ function disableComparisonMode() {
 function updateComparisonView(sectionType, newContent) {
     // Update the "updated" panel with new content and highlight it
     const updatedDoc = document.getElementById('updatedDocument');
+    if (!updatedDoc) return;
+
     const sections = updatedDoc.querySelectorAll(`[data-section="${sectionType}"]`);
 
     sections.forEach(el => {
         // Remove previous change highlights
         el.classList.remove('section-changed');
 
-        // Find the paragraph element(s) inside and update the text
-        const paragraphs = el.querySelectorAll('p:not(.no-indent)');
+        // Find ALL paragraph elements inside and update the first one with content
+        const paragraphs = el.querySelectorAll('p');
         if (paragraphs.length > 0 && newContent) {
             const mainP = paragraphs[0];
             const strongEl = mainP.querySelector('strong');
             if (strongEl) {
+                // Preserve the paragraph number, update the rest
                 const numberText = strongEl.outerHTML;
                 mainP.innerHTML = numberText + ' ' + escapeHtml(newContent);
             } else {
@@ -1436,10 +1439,12 @@ function updateComparisonView(sectionType, newContent) {
 
     // Also highlight the corresponding section in the original as changed
     const originalDoc = document.getElementById('originalDocument');
-    const originalSections = originalDoc.querySelectorAll(`[data-section="${sectionType}"]`);
-    originalSections.forEach(el => {
-        el.classList.add('section-original');
-    });
+    if (originalDoc) {
+        const originalSections = originalDoc.querySelectorAll(`[data-section="${sectionType}"]`);
+        originalSections.forEach(el => {
+            el.classList.add('section-original');
+        });
+    }
 
     // Scroll both panels to show the changed section
     if (sections.length > 0) {
@@ -1464,18 +1469,21 @@ function highlightCurrentFixSection(sectionName) {
 
 function updateSectionContent(sectionType, newContent) {
     // Find the section in the document and update it visually
-    const mappedSection = sectionType;
-    const sections = document.querySelectorAll(`[data-section="${mappedSection}"]`);
+    // Only update the main document panel, not comparison panels
+    const documentPanel = document.querySelector('.document-panel .legal-document');
+    if (!documentPanel) return;
+
+    const sections = documentPanel.querySelectorAll(`[data-section="${sectionType}"]`);
 
     sections.forEach(el => {
         // Remove fixing-now class and add just-updated class
         el.classList.remove('fixing-now', 'ai-issue-critical', 'ai-issue-warning', 'ai-issue-suggestion');
         el.classList.add('just-updated');
 
-        // Find the paragraph element(s) inside and update the text
-        const paragraphs = el.querySelectorAll('p:not(.no-indent)');
+        // Find ALL paragraph elements inside and update the first one with content
+        const paragraphs = el.querySelectorAll('p');
         if (paragraphs.length > 0 && newContent) {
-            // Update the main paragraph content (skip the strong number prefix)
+            // Update the main paragraph content (preserve the strong number prefix)
             const mainP = paragraphs[0];
             const strongEl = mainP.querySelector('strong');
             if (strongEl) {
