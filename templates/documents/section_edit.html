@@ -7,6 +7,9 @@
 {% if section.section_type == 'rights_violated' %}
 <link rel="stylesheet" href="{% static 'css/rights-analyze.css' %}">
 {% endif %}
+{% if section.section_type in 'damages,rights_violated,evidence' %}
+<link rel="stylesheet" href="{% static 'css/tell-story.css' %}">
+{% endif %}
 <style>
     .section-status-badge {
         font-size: 0.9rem;
@@ -1404,16 +1407,125 @@ let currentWitnessSuggestions = [];
 let currentEvidenceSuggestions = [];
 let currentDamageSuggestions = [];
 
+// Terminal animation commands for AI analysis
+const AI_ANALYSIS_COMMANDS = [
+    { cmd: 'parse-narrative --extract-facts', out: 'Extracting factual claims...' },
+    { cmd: 'analyze-impact --type=' + '{{ section.section_type }}', out: 'Analyzing impact on plaintiff...' },
+    { cmd: 'cross-ref --case-law --damages', out: 'Cross-referencing case law...' },
+    { cmd: 'compute-categories --standard=1983', out: 'Computing damage categories...' },
+    { cmd: 'validate-claims --legal-basis', out: 'Validating legal basis...' },
+    { cmd: 'generate-suggestions --format=json', out: 'Generating suggestions...' }
+];
+let terminalAnimationInterval = null;
+let terminalCommandIndex = 0;
+
+function startAITerminalAnimation() {
+    terminalCommandIndex = 0;
+    const commands = [...AI_ANALYSIS_COMMANDS];
+
+    terminalAnimationInterval = setInterval(() => {
+        const terminalBody = document.getElementById('aiTerminalBody');
+        const progressBar = document.getElementById('aiTerminalProgress');
+        const statusText = document.getElementById('aiTerminalStatus');
+        const percentText = document.getElementById('aiTerminalPercent');
+
+        if (!terminalBody) {
+            stopAITerminalAnimation();
+            return;
+        }
+
+        if (terminalCommandIndex < commands.length) {
+            const cmd = commands[terminalCommandIndex];
+            const percent = Math.round(((terminalCommandIndex + 1) / commands.length) * 90);
+
+            // Add command line
+            const cmdLine = document.createElement('div');
+            cmdLine.className = 'terminal-line';
+            cmdLine.innerHTML = `<span class="terminal-prompt">❯</span> <span class="terminal-path">~/analyze</span> <span class="terminal-command">${cmd.cmd}</span>`;
+            terminalBody.appendChild(cmdLine);
+
+            // Add output after small delay
+            setTimeout(() => {
+                const outLine = document.createElement('div');
+                outLine.className = 'terminal-line';
+                outLine.innerHTML = `<span class="terminal-output">→ ${cmd.out}</span>`;
+                terminalBody.appendChild(outLine);
+                terminalBody.scrollTop = terminalBody.scrollHeight;
+            }, 150);
+
+            // Update progress
+            if (progressBar) progressBar.style.width = percent + '%';
+            if (percentText) percentText.textContent = percent + '%';
+            if (statusText) statusText.textContent = cmd.out;
+
+            terminalCommandIndex++;
+        } else {
+            // Keep showing waiting state
+            if (statusText) statusText.textContent = 'Waiting for AI response...';
+        }
+    }, 600);
+}
+
+function stopAITerminalAnimation() {
+    if (terminalAnimationInterval) {
+        clearInterval(terminalAnimationInterval);
+        terminalAnimationInterval = null;
+    }
+
+    // Show completion
+    const progressBar = document.getElementById('aiTerminalProgress');
+    const percentText = document.getElementById('aiTerminalPercent');
+    const statusText = document.getElementById('aiTerminalStatus');
+    const terminalBody = document.getElementById('aiTerminalBody');
+
+    if (progressBar) progressBar.style.width = '100%';
+    if (percentText) percentText.textContent = '100%';
+    if (statusText) statusText.textContent = 'Analysis complete';
+
+    if (terminalBody) {
+        const doneLine = document.createElement('div');
+        doneLine.className = 'terminal-line';
+        doneLine.innerHTML = '<span class="terminal-success">✓ Analysis complete</span>';
+        terminalBody.appendChild(doneLine);
+    }
+}
+
 function suggestSectionContent(sectionType) {
     const btn = document.getElementById('aiSuggestBtn');
     const container = document.getElementById('aiSuggestionsContainer');
     const body = document.getElementById('aiSuggestionsBody');
 
-    // Show loading state
+    // Show terminal-style loading
     btn.disabled = true;
-    btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Analyzing...';
+    btn.innerHTML = '<i class="bi bi-terminal me-1"></i>Analyzing...';
     container.style.display = 'block';
-    body.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-info" role="status"></div><p class="mt-2 mb-0">AI is analyzing your story...</p></div>';
+
+    // Build terminal HTML
+    body.innerHTML = `
+        <div class="terminal-container">
+            <div class="terminal-header">
+                <div class="terminal-buttons">
+                    <span class="terminal-btn close"></span>
+                    <span class="terminal-btn minimize"></span>
+                    <span class="terminal-btn maximize"></span>
+                </div>
+                <div class="terminal-title">1983law — analyzing ${sectionType}</div>
+            </div>
+            <div class="terminal-body" id="aiTerminalBody" style="max-height: 200px;">
+                <div class="terminal-line"><span class="terminal-comment"># Analyzing your story for ${sectionType}...</span></div>
+            </div>
+            <div class="terminal-progress-bar">
+                <div class="terminal-progress-fill" id="aiTerminalProgress" style="width: 0%"></div>
+            </div>
+            <div class="terminal-status">
+                <span class="terminal-status-text" id="aiTerminalStatus">Initializing...</span>
+                <span class="terminal-percentage" id="aiTerminalPercent">0%</span>
+            </div>
+        </div>
+    `;
+
+    // Start terminal animation
+    startAITerminalAnimation();
 
     fetch(`/documents/{{ document.id }}/suggest-section/${sectionType}/`, {
         method: 'POST',
@@ -1425,6 +1537,9 @@ function suggestSectionContent(sectionType) {
     })
     .then(response => response.json())
     .then(data => {
+        // Stop terminal animation
+        stopAITerminalAnimation();
+
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-magic me-1"></i>Analyze Story & Suggest';
 
@@ -1627,6 +1742,7 @@ function suggestSectionContent(sectionType) {
         }
     })
     .catch(error => {
+        stopAITerminalAnimation();
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-magic me-1"></i>Analyze Story & Suggest';
         body.innerHTML = `<div class="alert alert-danger mb-0"><i class="bi bi-x-circle me-1"></i>Error: ${escapeHtml(error.message)}</div>`;
