@@ -223,9 +223,14 @@
                         <i class="bi bi-file-earmark-pdf me-1"></i>{% if user.has_unlimited_access and document.get_completion_percentage < 100 %}Preview PDF (Admin){% else %}Finalize & Generate PDF{% endif %}
                     </a>
                     {% else %}
-                    <button class="btn btn-secondary" disabled title="Complete all sections first">
-                        <i class="bi bi-file-earmark-pdf me-1"></i>Generate PDF
-                    </button>
+                    <div class="text-end">
+                        <button class="btn btn-secondary" disabled title="Complete all sections first">
+                            <i class="bi bi-file-earmark-pdf me-1"></i>Generate PDF
+                        </button>
+                        <div class="small text-muted mt-1">
+                            <i class="bi bi-lock me-1"></i>{{ document.get_completion_percentage }}% complete — finish all sections to unlock
+                        </div>
+                    </div>
                     {% endif %}
                 {% else %}
                     {% if document.get_completion_percentage == 100 %}
@@ -233,9 +238,14 @@
                         <i class="bi bi-credit-card me-1"></i>Pay & Generate PDF
                     </a>
                     {% else %}
-                    <button class="btn btn-secondary" disabled title="Complete all sections first">
-                        <i class="bi bi-file-earmark-pdf me-1"></i>Generate PDF
-                    </button>
+                    <div class="text-end">
+                        <button class="btn btn-secondary" disabled title="Complete all sections first">
+                            <i class="bi bi-file-earmark-pdf me-1"></i>Generate PDF
+                        </button>
+                        <div class="small text-muted mt-1">
+                            <i class="bi bi-lock me-1"></i>{{ document.get_completion_percentage }}% complete — finish all sections to unlock
+                        </div>
+                    </div>
                     {% endif %}
                 {% endif %}
             </div>
