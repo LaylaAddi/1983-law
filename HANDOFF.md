@@ -117,7 +117,7 @@ The app is functional with the following features complete:
 - **When:** When user submits their story
 - **Fields auto-applied:**
   - `incident_date` (**REQUIRED** - form validation enforces this)
-  - `incident_time` (**REQUIRED** - form validation enforces this)
+  - `incident_time` (**REQUIRED** - form validation enforces this, AM/PM must be specified)
   - `incident_location`
   - `city`
   - `state`
@@ -291,23 +291,34 @@ python manage.py seed_ai_prompts
 5. `lookup_federal_court(city, state)` - Uses GPT web search to find federal district court
 6. `review_document(document_data)` - Comprehensive AI review of the complete document
 
-### AI Document Review (NEW)
+### AI Document Review (ENHANCED)
 Comprehensive AI review of Section 1983 complaints on the Review & Edit page.
 
 **How It Works:**
 1. User clicks "AI Review" button on `/documents/{id}/review/`
-2. All document data is sent to GPT for analysis
-3. AI returns structured feedback with issues by section
-4. Issues are highlighted inline with severity colors
-5. User clicks issue in sidebar to scroll to problem area
+2. Terminal-style animation shows in document panel during analysis
+3. All document data is sent to GPT for analysis
+4. AI returns structured feedback with issues by section
+5. Issues are highlighted inline with severity colors
+6. User clicks issue in sidebar to scroll to problem area
 
-**What AI Reviews:**
-- **Legal Strength** - Are constitutional violations clearly stated? Sufficient factual support?
-- **Clarity** - Is narrative clear? Are dates/times/locations specific?
-- **Completeness** - All required 1983 elements present? Damages described? Relief appropriate?
+**What AI Reviews (Priority Order):**
+1. **Cross-Document Consistency** - Does time/date/location/names match across ALL sections?
+2. **Missing Required Info** - Date, time with AM/PM, location, defendants, rights, damages
+3. **Formatting Issues** - Third person writing, placeholder text like "[insert]"
+
+**Does NOT flag:**
+- Legal strategy opinions (e.g., "claims may be weak")
+- Suggestions to add more evidence
+- Information not required for filing
+
+**Overall Assessment:**
+- **Ready** (green) - Document is ready for filing
+- **Needs Fixes** (yellow) - Has issues to address
+- **Has Errors** (red) - Has critical errors
 
 **Issue Severities:**
-- **Critical** (red) - Must fix before filing
+- **Error** (red) - Must fix before filing
 - **Warning** (yellow) - Should address
 - **Suggestion** (blue) - Nice to have improvements
 
@@ -342,8 +353,13 @@ After AI review, users can step through issues one-by-one and apply AI-generated
 - Shows added words with green highlight
 - Unchanged words shown in gray
 
+**Time Format Conversion:**
+- AI suggests times in "09:30 AM" format
+- Django TimeField requires "HH:MM:SS" format
+- `_convert_time_format()` helper automatically converts AM/PM times to 24-hour format
+
 **Files:**
-- `documents/views.py` - `generate_fix`, `apply_fix`, `_get_section_content` functions
+- `documents/views.py` - `generate_fix`, `apply_fix`, `_get_section_content`, `_convert_time_format` functions
 - `documents/services/openai_service.py` - `rewrite_section()` method
 - `documents/management/commands/seed_ai_prompts.py` - `rewrite_section` prompt
 - `templates/documents/document_review.html` - Step-through UI and diff display
@@ -380,7 +396,7 @@ Automatically finds the correct federal district court for any US location.
 - evidence: type, description (includes deleted/seized recordings, potential body cam footage)
 - damages: physical_injuries, emotional_distress (including lost memories/photos), financial_losses, other_damages (destroyed data)
 - rights_violated: suggested_violations with amendment and reason
-- questions_to_ask: follow-up questions for missing info (**ALWAYS asks for date/time if missing** - these are mandatory for legal filings)
+- questions_to_ask: follow-up questions for missing info (**ALWAYS asks for date/time if missing, ALWAYS asks AM/PM if time is ambiguous** - these are mandatory for legal filings)
 
 ### Relief Suggestions (Separate AI Prompt)
 After story parsing completes, a second AI call analyzes the extracted data and recommends relief:
