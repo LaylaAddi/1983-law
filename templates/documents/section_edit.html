@@ -415,6 +415,32 @@
 
 
                 {% if section.section_type == 'rights_violated' %}
+                <!-- First-time user guide (dismissible) -->
+                <div class="alert alert-info alert-dismissible mb-4" id="rightsGuide" style="display: none; border-left: 4px solid #0d6efd;">
+                    <button type="button" class="btn-close" aria-label="Close" onclick="dismissRightsGuide()"></button>
+                    <h6 class="alert-heading"><i class="bi bi-lightbulb-fill me-2"></i>How This Works</h6>
+                    <ol class="mb-2 small">
+                        <li><strong>Click "Analyze My Case"</strong> below to let AI identify which constitutional rights may have been violated based on your story.</li>
+                        <li><strong>Review the suggestions</strong> — AI will explain why each amendment might apply to your situation.</li>
+                        <li><strong>Check the boxes</strong> for rights that apply, and add details in the text fields.</li>
+                        <li><strong>Pro tip:</strong> If AI's explanation is helpful, you can copy key phrases back into your "Tell Your Story" section to strengthen your narrative!</li>
+                    </ol>
+                    <p class="mb-0 small text-muted"><i class="bi bi-info-circle me-1"></i>This guide won't show again after you dismiss it.</p>
+                </div>
+                <script>
+                (function() {
+                    const guideKey = 'rightsGuide_dismissed_{{ document.id }}';
+                    const guide = document.getElementById('rightsGuide');
+                    if (guide && !localStorage.getItem(guideKey)) {
+                        guide.style.display = 'block';
+                    }
+                    window.dismissRightsGuide = function() {
+                        localStorage.setItem(guideKey, 'true');
+                        guide.style.display = 'none';
+                    };
+                })();
+                </script>
+
                 <!-- AI Analysis for Rights Violated -->
                 {% if section.status == 'completed' or section.status == 'in_progress' %}
                 <div class="alert alert-success mb-4">
