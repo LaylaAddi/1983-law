@@ -416,16 +416,17 @@
 
                 {% if section.section_type == 'rights_violated' %}
                 <!-- First-time user guide (dismissible) -->
-                <div class="alert alert-info alert-dismissible mb-4" id="rightsGuide" style="display: none; border-left: 4px solid #0d6efd;">
+                <div class="alert alert-light alert-dismissible mb-4" id="rightsGuide" style="display: none; border-left: 4px solid #0d6efd; background-color: #f8f9fa; border: 1px solid #dee2e6;">
                     <button type="button" class="btn-close" aria-label="Close" onclick="dismissRightsGuide()"></button>
-                    <h6 class="alert-heading"><i class="bi bi-lightbulb-fill me-2"></i>How This Works</h6>
-                    <ol class="mb-2 small">
-                        <li><strong>Click "Analyze My Case"</strong> below to let AI identify which constitutional rights may have been violated based on your story.</li>
-                        <li><strong>Review the suggestions</strong> — AI will explain why each amendment might apply to your situation.</li>
-                        <li><strong>Check the boxes</strong> for rights that apply, and add details in the text fields.</li>
-                        <li><strong>Pro tip:</strong> If AI's explanation is helpful, you can copy key phrases back into your "Tell Your Story" section to strengthen your narrative!</li>
+                    <h6 class="alert-heading text-dark"><i class="bi bi-lightbulb-fill text-warning me-2"></i><strong>Please Read:</strong> How This Works</h6>
+                    <ol class="mb-3" style="color: #212529; font-size: 0.95rem; line-height: 1.6;">
+                        <li class="mb-2"><strong>Click "Analyze My Case"</strong> below to let AI identify which constitutional rights may have been violated based on your story.</li>
+                        <li class="mb-2"><strong>Review the suggestions</strong> — AI will explain why each amendment might apply to your situation.</li>
+                        <li class="mb-2"><strong>Check the boxes</strong> for rights that apply, and add details in the text fields.</li>
+                        <li class="mb-2" style="background-color: #d4edda; padding: 8px 12px; border-radius: 4px; margin-left: -12px; padding-left: 24px;"><strong style="color: #155724;">Pro tip:</strong> <span style="color: #155724;">Click <strong>"Copy to Details"</strong> to automatically copy AI's explanation into the details field — then edit it to match your specific situation!</span></li>
                     </ol>
-                    <p class="mb-0 small text-muted"><i class="bi bi-info-circle me-1"></i>This guide won't show again after you dismiss it.</p>
+                    <hr class="my-2">
+                    <p class="mb-0 small" style="color: #6c757d;"><i class="bi bi-info-circle me-1"></i>This guide won't show again after you dismiss it.</p>
                 </div>
                 <script>
                 (function() {
