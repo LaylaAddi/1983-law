@@ -1548,6 +1548,11 @@ function suggestSectionContent(sectionType) {
         const hasNewEvidenceFormat = (data.evidence_you_have && data.evidence_you_have.length > 0) ||
                                      (data.evidence_to_obtain && data.evidence_to_obtain.length > 0);
 
+        // Update AI usage banner if info provided
+        if (data.ai_usage_display) {
+            updateAIUsageBanner(data.ai_usage_display);
+        }
+
         if (data.success && (hasOldSuggestions || hasNewEvidenceFormat)) {
             let html = '';
 
@@ -1760,6 +1765,14 @@ function suggestSectionContent(sectionType) {
         btn.innerHTML = '<i class="bi bi-magic me-1"></i>Analyze Story & Suggest';
         body.innerHTML = `<div class="alert alert-danger mb-0"><i class="bi bi-x-circle me-1"></i>Error: ${escapeHtml(error.message)}</div>`;
     });
+}
+
+function updateAIUsageBanner(displayText) {
+    // Update the AI usage display in the status banner
+    const aiUsageDisplay = document.getElementById('aiUsageDisplay');
+    if (aiUsageDisplay && displayText) {
+        aiUsageDisplay.textContent = displayText;
+    }
 }
 
 function escapeHtml(text) {
@@ -2300,6 +2313,11 @@ function suggestAgency() {
         btn.innerHTML = '<i class="bi bi-search me-1"></i>Suggest Agency';
 
         if (data.success && data.suggestions && data.suggestions.length > 0) {
+            // Update AI usage banner if info provided
+            if (data.ai_usage_display) {
+                updateAIUsageBanner(data.ai_usage_display);
+            }
+
             // Store suggestions globally
             currentSuggestions = data.suggestions;
 

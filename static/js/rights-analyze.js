@@ -130,6 +130,7 @@
         })
         .then(function(data) {
             if (data.success) {
+                updateAIUsageBanner(data.ai_usage_display);
                 showResults(panel, data.violations, data.summary);
             } else if (data.limit_reached) {
                 showLimitReachedError(panel, data.error);
@@ -515,6 +516,14 @@
             </div>
         `;
         errorDiv.style.display = 'block';
+    }
+
+    function updateAIUsageBanner(displayText) {
+        // Update the AI usage display in the status banner
+        const aiUsageDisplay = document.getElementById('aiUsageDisplay');
+        if (aiUsageDisplay && displayText) {
+            aiUsageDisplay.textContent = displayText;
+        }
     }
 
     function escapeHtml(text) {

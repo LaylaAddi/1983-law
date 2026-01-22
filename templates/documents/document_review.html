@@ -1252,6 +1252,10 @@ function startAIReview() {
         documentPanel.innerHTML = originalDocContent;
 
         if (data.success) {
+            // Update AI usage banner if info provided
+            if (data.ai_usage_display) {
+                updateAIUsageBanner(data.ai_usage_display);
+            }
             aiReviewResults = data;
             displayAIReview(data);
         } else if (data.limit_reached) {
@@ -1416,6 +1420,14 @@ function clearAIReview() {
     panelCard.classList.remove('ai-review-panel');
 
     cancelEdit();
+}
+
+function updateAIUsageBanner(displayText) {
+    // Update the AI usage display in the status banner
+    const aiUsageDisplay = document.getElementById('aiUsageDisplay');
+    if (aiUsageDisplay && displayText) {
+        aiUsageDisplay.textContent = displayText;
+    }
 }
 
 function escapeHtml(text) {
@@ -1681,6 +1693,11 @@ async function generateFix(issueIndex) {
         const data = await response.json();
 
         if (data.success) {
+            // Update AI usage banner if info provided
+            if (data.ai_usage_display) {
+                updateAIUsageBanner(data.ai_usage_display);
+            }
+
             pendingFix = {
                 issue: issue,
                 section_type: mappedSection,

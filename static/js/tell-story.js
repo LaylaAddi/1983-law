@@ -269,6 +269,8 @@
                 if (data.status === 'completed') {
                     // Stop polling
                     stopPolling();
+                    // Update AI usage display in banner
+                    updateAIUsageBanner(data.ai_usage_display);
                     // Show results
                     reliefSuggestions = data.relief_suggestions || null;
                     showResults(data.sections);
@@ -1078,6 +1080,14 @@
             applyBtn.disabled = false;
             applyBtn.innerHTML = '<i class="bi bi-arrow-right me-1"></i>Continue to Document';
         });
+    }
+
+    function updateAIUsageBanner(displayText) {
+        // Update the AI usage display in the status banner
+        const aiUsageDisplay = document.getElementById('aiUsageDisplay');
+        if (aiUsageDisplay && displayText) {
+            aiUsageDisplay.textContent = displayText;
+        }
     }
 
     function escapeHtml(text) {

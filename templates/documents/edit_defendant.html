@@ -190,6 +190,14 @@ function lookupInfo() {
         btn.innerHTML = '<i class="bi bi-search me-1"></i>Find Agency & Address';
 
         if (data.success && data.address) {
+            // Update AI usage banner if info provided
+            if (data.ai_usage_display) {
+                const aiUsageDisplay = document.getElementById('aiUsageDisplay');
+                if (aiUsageDisplay) {
+                    aiUsageDisplay.textContent = data.ai_usage_display;
+                }
+            }
+
             foundAddressValue = data.address;
             foundAgencyValue = data.suggested_agency || '';
 

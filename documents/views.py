@@ -26,6 +26,14 @@ from .models import (
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
+def get_ai_usage_info(document):
+    """Get AI usage info for including in API responses."""
+    return {
+        'ai_remaining': document.user.get_free_ai_remaining(),
+        'ai_usage_display': document.get_ai_usage_display(),
+    }
+
+
 def check_section_complete(section, obj):
     """
     Check if a section has enough data to be auto-marked as complete.
@@ -1206,9 +1214,10 @@ def analyze_rights(request, document_id):
         service = OpenAIService()
         result = service.analyze_rights_violations(document_data)
 
-        # Record AI usage on success
+        # Record AI usage on success and include updated usage info
         if result.get('success'):
             document.record_ai_usage()
+            result.update(get_ai_usage_info(document))
 
         return JsonResponse(result)
 
@@ -1292,9 +1301,10 @@ def suggest_agency(request, document_id):
         service = OpenAIService()
         result = service.suggest_agency(context)
 
-        # Record AI usage on success
+        # Record AI usage on success and include updated usage info
         if result.get('success'):
             document.record_ai_usage()
+            result.update(get_ai_usage_info(document))
 
         return JsonResponse(result)
 
@@ -1397,9 +1407,10 @@ def suggest_section_content(request, document_id, section_type):
         service = OpenAIService()
         result = service.suggest_section_content(section_type, story_text, existing_data)
 
-        # Record AI usage on success
+        # Record AI usage on success and include updated usage info
         if result.get('success'):
             document.record_ai_usage()
+            result.update(get_ai_usage_info(document))
 
         return JsonResponse(result)
 
@@ -1446,9 +1457,10 @@ def ai_review_document(request, document_id):
         service = OpenAIService()
         result = service.review_document(document_data)
 
-        # Record AI usage on success
+        # Record AI usage on success and include updated usage info
         if result.get('success'):
             document.record_ai_usage()
+            result.update(get_ai_usage_info(document))
 
         return JsonResponse(result)
 
@@ -1522,9 +1534,10 @@ def generate_fix(request, document_id):
                 if default_field:
                     result['field_updates'] = {default_field: rewritten}
 
-        # Record AI usage on success
+        # Record AI usage on success and include updated usage info
         if result.get('success'):
             document.record_ai_usage()
+            result.update(get_ai_usage_info(document))
 
         return JsonResponse(result)
 
@@ -1794,9 +1807,10 @@ def lookup_address(request, document_id):
             officer_description=officer_description
         )
 
-        # Record AI usage on success
+        # Record AI usage on success and include updated usage info
         if result.get('success'):
             document.record_ai_usage()
+            result.update(get_ai_usage_info(document))
 
         return JsonResponse(result)
 
@@ -1975,6 +1989,10 @@ def _process_story_background(document_id, story_text):
 
             # Record AI usage for billing/limits
             document.record_ai_usage()
+
+            # Add updated AI usage info to result
+            result['ai_remaining'] = document.user.get_free_ai_remaining()
+            result['ai_usage_display'] = document.get_ai_usage_display()
 
             # Store successful result
             document.parsing_status = 'completed'

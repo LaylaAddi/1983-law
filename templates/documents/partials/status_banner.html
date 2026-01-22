@@ -8,7 +8,7 @@
         <i class="bi bi-clock me-2"></i>
         <strong>DRAFT</strong> - {{ document.get_time_remaining_display }} remaining
         <span class="mx-2">|</span>
-        <i class="bi bi-robot me-1"></i>{{ document.get_ai_usage_display }}
+        <i class="bi bi-robot me-1"></i><span id="aiUsageDisplay">{{ document.get_ai_usage_display }}</span>
     </div>
     <a href="{% url 'documents:checkout' document.id %}" class="btn btn-primary btn-sm">
         <i class="bi bi-credit-card me-1"></i>Upgrade Now - $79
