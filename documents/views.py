@@ -1484,10 +1484,13 @@ def apply_fix(request, document_id):
                 'error': 'Missing section_type in request',
             })
 
+        # If no field_updates, still return success so the UI can update
+        # Some sections (like relief_sought with booleans) can't be auto-updated
         if not field_updates:
             return JsonResponse({
-                'success': False,
-                'error': f'Missing field_updates for section: {section_type}. Try regenerating the fix.',
+                'success': True,
+                'message': 'No automatic updates available for this section. Please review and edit manually.',
+                'updated_fields': [],
             })
 
         # Get the section and its model instance

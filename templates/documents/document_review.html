@@ -452,6 +452,129 @@
             opacity: 1;
         }
     }
+
+    /* ========================================
+       SIDE-BY-SIDE COMPARISON MODE
+       ======================================== */
+    .comparison-mode .review-container {
+        max-width: 100%;
+    }
+
+    .comparison-mode .document-panel {
+        display: none;
+    }
+
+    .comparison-mode .edit-panel {
+        width: 320px;
+        flex-shrink: 0;
+    }
+
+    .comparison-wrapper {
+        display: none;
+        flex: 1;
+        gap: 1rem;
+    }
+
+    .comparison-mode .comparison-wrapper {
+        display: flex;
+    }
+
+    .comparison-panel {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .comparison-panel .legal-document {
+        font-size: 12px;
+        padding: 25px 30px;
+    }
+
+    .comparison-header {
+        text-align: center;
+        padding: 0.5rem;
+        font-weight: bold;
+        font-size: 0.85rem;
+        border-radius: 4px 4px 0 0;
+        margin-bottom: 0;
+    }
+
+    .comparison-header.original {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+        border-bottom: none;
+    }
+
+    .comparison-header.updated {
+        background: #f0fdf4;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+        border-bottom: none;
+    }
+
+    .comparison-panel .legal-document {
+        border-radius: 0 0 4px 4px;
+    }
+
+    .comparison-panel.original-panel .legal-document {
+        border: 1px solid #fecaca;
+        background: #fffbfb;
+    }
+
+    .comparison-panel.updated-panel .legal-document {
+        border: 1px solid #bbf7d0;
+        background: #fbfffc;
+    }
+
+    /* Highlight changed sections in comparison */
+    .comparison-panel.updated-panel .section-changed {
+        background: rgba(16, 185, 129, 0.15);
+        border-left: 3px solid #10b981;
+        margin-left: -3px;
+        padding-left: 0.5rem;
+    }
+
+    .comparison-panel.original-panel .section-original {
+        background: rgba(220, 53, 69, 0.08);
+        border-left: 3px solid #dc3545;
+        margin-left: -3px;
+        padding-left: 0.5rem;
+    }
+
+    /* Current section being edited in comparison */
+    .comparison-panel .fixing-now {
+        outline: 2px solid #6f42c1;
+        outline-offset: 1px;
+    }
+
+    /* Toggle button for comparison */
+    .comparison-toggle {
+        display: none;
+    }
+
+    .fix-mode-active .comparison-toggle {
+        display: inline-flex;
+    }
+
+    /* Responsive for comparison */
+    @media (max-width: 1400px) {
+        .comparison-mode .edit-panel {
+            width: 280px;
+        }
+        .comparison-panel .legal-document {
+            font-size: 11px;
+            padding: 20px 25px;
+        }
+    }
+
+    @media (max-width: 1200px) {
+        .comparison-mode .comparison-wrapper {
+            flex-direction: column;
+        }
+        .comparison-panel .legal-document {
+            font-size: 12px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -762,6 +885,29 @@
                     <p class="no-indent">Dated: ____________________</p>
                 </div>
 
+            </div>
+        </div>
+
+        <!-- Side-by-Side Comparison Wrapper (hidden by default, shown in fix mode) -->
+        <div class="comparison-wrapper" id="comparisonWrapper">
+            <!-- Original Document (Left) -->
+            <div class="comparison-panel original-panel">
+                <div class="comparison-header original">
+                    <i class="bi bi-file-earmark-text me-1"></i>ORIGINAL DOCUMENT
+                </div>
+                <div class="legal-document" id="originalDocument">
+                    <!-- Cloned from document-panel when fix mode starts -->
+                </div>
+            </div>
+
+            <!-- Updated Document (Right) -->
+            <div class="comparison-panel updated-panel">
+                <div class="comparison-header updated">
+                    <i class="bi bi-file-earmark-check me-1"></i>UPDATED DOCUMENT (Changes Highlighted)
+                </div>
+                <div class="legal-document" id="updatedDocument">
+                    <!-- Live version that gets updated -->
+                </div>
             </div>
         </div>
 
@@ -1212,6 +1358,7 @@ let fixModeActive = false;
 let currentIssueIndex = 0;
 let appliedChanges = [];
 let pendingFix = null;
+let originalDocumentHtml = null;
 
 function startFixMode() {
     if (!aiReviewResults || !aiReviewResults.issues || aiReviewResults.issues.length === 0) {
@@ -1224,7 +1371,80 @@ function startFixMode() {
     appliedChanges = [];
     pendingFix = null;
 
+    // Enable comparison mode
+    enableComparisonMode();
+
     showCurrentIssue();
+}
+
+function enableComparisonMode() {
+    const container = document.querySelector('.container-fluid.py-3');
+    const documentPanel = document.querySelector('.document-panel .legal-document');
+    const originalDoc = document.getElementById('originalDocument');
+    const updatedDoc = document.getElementById('updatedDocument');
+
+    // Store and clone the original document
+    originalDocumentHtml = documentPanel.innerHTML;
+    originalDoc.innerHTML = originalDocumentHtml;
+    updatedDoc.innerHTML = originalDocumentHtml;
+
+    // Remove edit buttons from comparison panels (they should use the main panel)
+    originalDoc.querySelectorAll('.edit-btn').forEach(btn => btn.remove());
+    updatedDoc.querySelectorAll('.edit-btn').forEach(btn => btn.remove());
+
+    // Add class to enable comparison layout
+    container.classList.add('comparison-mode');
+    document.body.classList.add('fix-mode-active');
+}
+
+function disableComparisonMode() {
+    const container = document.querySelector('.container-fluid.py-3');
+    container.classList.remove('comparison-mode');
+    document.body.classList.remove('fix-mode-active');
+
+    // Clear the comparison panels
+    document.getElementById('originalDocument').innerHTML = '';
+    document.getElementById('updatedDocument').innerHTML = '';
+    originalDocumentHtml = null;
+}
+
+function updateComparisonView(sectionType, newContent) {
+    // Update the "updated" panel with new content and highlight it
+    const updatedDoc = document.getElementById('updatedDocument');
+    const sections = updatedDoc.querySelectorAll(`[data-section="${sectionType}"]`);
+
+    sections.forEach(el => {
+        // Remove previous change highlights
+        el.classList.remove('section-changed');
+
+        // Find the paragraph element(s) inside and update the text
+        const paragraphs = el.querySelectorAll('p:not(.no-indent)');
+        if (paragraphs.length > 0 && newContent) {
+            const mainP = paragraphs[0];
+            const strongEl = mainP.querySelector('strong');
+            if (strongEl) {
+                const numberText = strongEl.outerHTML;
+                mainP.innerHTML = numberText + ' ' + escapeHtml(newContent);
+            } else {
+                mainP.innerHTML = escapeHtml(newContent);
+            }
+        }
+
+        // Add change highlight
+        el.classList.add('section-changed');
+    });
+
+    // Also highlight the corresponding section in the original as changed
+    const originalDoc = document.getElementById('originalDocument');
+    const originalSections = originalDoc.querySelectorAll(`[data-section="${sectionType}"]`);
+    originalSections.forEach(el => {
+        el.classList.add('section-original');
+    });
+
+    // Scroll both panels to show the changed section
+    if (sections.length > 0) {
+        sections[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 }
 
 function clearFixingHighlight() {
@@ -1529,8 +1749,11 @@ async function applyFix() {
                 applied: true,
             });
 
-            // Update the document section visually
+            // Update the main document section visually
             updateSectionContent(sectionType, newContent);
+
+            // Update the side-by-side comparison view
+            updateComparisonView(sectionType, newContent);
 
             pendingFix = null;
             currentIssueIndex++;
@@ -1596,6 +1819,9 @@ function exitFixMode() {
     appliedChanges = [];
     pendingFix = null;
 
+    // Disable comparison mode
+    disableComparisonMode();
+
     // Clear the fixing highlight
     clearFixingHighlight();
 
@@ -1609,6 +1835,8 @@ function exitFixMode() {
 
 function showFinalComparison() {
     fixModeActive = false;
+    clearFixingHighlight();
+
     const panelTitle = document.getElementById('editPanelTitle');
     const panelBody = document.getElementById('editPanelBody');
 
