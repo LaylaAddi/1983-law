@@ -90,6 +90,10 @@ CRITICAL - DATE AND TIME ARE REQUIRED:
 - Date and time of the incident are MANDATORY for legal filings
 - If date is NOT clearly stated, you MUST include a question asking for the exact date in questions_to_ask
 - If time is NOT clearly stated, you MUST include a question asking for the approximate time in questions_to_ask
+- TIME MUST INCLUDE AM/PM - If user provides time WITHOUT AM/PM (e.g., "930", "9:30", "2:30"), you MUST:
+  1. Ask for clarification: "You mentioned the incident happened at [time]. Was that AM or PM?"
+  2. Do NOT guess or assume AM or PM - this is legally critical
+  3. Do NOT use the ambiguous time anywhere in the document until clarified
 - These questions should be the FIRST questions in the list
 
 AGENCY INFERENCE RULES - CRITICAL:
@@ -110,7 +114,7 @@ Extract information for the following sections. Fill in as many fields as possib
 {{
     "incident_overview": {{
         "incident_date": "YYYY-MM-DD format or partial date, null if not mentioned",
-        "incident_time": "HH:MM format or description like 'afternoon', null if not mentioned",
+        "incident_time": "HH:MM AM/PM format ONLY if AM/PM is clear, description like 'afternoon' if general, null if not mentioned or if AM/PM is ambiguous",
         "incident_location": "address or location name like 'City Hall', 'Main Street', etc.",
         "city": "city name - extract from context",
         "state": "two-letter state code - infer from city if possible",
@@ -164,9 +168,11 @@ QUESTIONS TO ASK - Generate follow-up questions for CRITICAL missing information
 
 1. ALWAYS ask for date if not explicitly stated (e.g., "What was the exact date of this incident?")
 2. ALWAYS ask for time if not explicitly stated (e.g., "What time did this incident occur?")
-3. Then add 2-6 other relevant questions for missing details
+3. If time is given WITHOUT AM/PM (e.g., "930", "9:30", "2 o'clock"), ALWAYS ask: "You mentioned the incident happened at [time]. Was that AM or PM?"
+4. Then add 2-6 other relevant questions for missing details
 
 Date and time questions MUST come first if those are missing.
+AM/PM clarification MUST be asked if time is ambiguous - do NOT guess.
 
 Respond with ONLY the JSON object.''',
                 'available_variables': 'story_text',
