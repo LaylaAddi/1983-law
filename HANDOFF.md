@@ -1425,7 +1425,7 @@ The app now has a public-facing landing page with civil rights information, Amer
 1. **Hero** - "Know Your Rights. Protect Your Freedom." with CTAs
 2. **Stats Bar** - 42 U.S.C., 1871, 150+ years, "You Have Rights"
 3. **Know Your Rights** - 4 amendment cards (1st, 4th, 5th, 14th)
-4. **Featured Articles** - 4 article cards (placeholder for CMS)
+4. **Featured Articles** - 4 article cards (from CMS)
 5. **News Widget** - 5 sample items (placeholder for News API)
 6. **Resources** - Links to ACLU, EFF, Flex Your Rights, Cornell Law
 7. **What is Section 1983** - Educational explainer
@@ -1435,6 +1435,26 @@ The app now has a public-facing landing page with civil rights information, Amer
 - **Anonymous users**: See landing page with civil rights info
 - **Authenticated users**: Automatically redirected to `/documents/` (document list)
 
+### Animated American Flag (Footer)
+The footer includes a subtle animated American flag with waving effect.
+
+**Features:**
+- SVG flag with accurate stars and stripes
+- CSS animation creates waving motion
+- Shine/ripple effect overlay
+- Speeds up on hover
+- Text: "Protecting American Freedoms"
+
+**CSS Classes:**
+- `.flag-container` - Contains the SVG flag
+- `.footer-flag` - Wrapper with text
+- `@keyframes flag-wave` - Waving animation
+- `@keyframes flag-shine` - Shine overlay effect
+
+**Files:**
+- `templates/base.html` - SVG flag markup in footer
+- `static/css/app-theme.css` - Animation CSS (lines 429-505)
+
 ### Files
 | File | Purpose |
 |------|---------|
@@ -1442,15 +1462,115 @@ The app now has a public-facing landing page with civil rights information, Amer
 | `public_pages/apps.py` | App config |
 | `public_pages/views.py` | Landing page view with redirect logic |
 | `public_pages/urls.py` | URL routing (name='home') |
+| `public_pages/models.py` | CMS models (CivilRightsPage, PageSection) |
+| `public_pages/admin.py` | Admin config for CMS |
 | `static/css/public-pages.css` | Landing page specific styles |
-| `static/css/app-theme.css` | App-wide patriot theme |
+| `static/css/app-theme.css` | App-wide patriot theme + flag animation |
 | `templates/public_pages/landing.html` | Landing page template |
+| `templates/public_pages/cms_page.html` | CMS page template |
 
-### Future: CMS Integration
-The landing page currently uses hardcoded sample data. Planned additions:
-- CMS model for editable articles/pages
-- News API integration (NewsAPI.org) for civil rights news
-- Dynamic content management via Django admin
+---
+
+## Section-Based CMS (NEW)
+
+### Overview
+A flexible CMS system for creating civil rights content pages with multiple section types.
+
+### CivilRightsPage Model
+Each page has:
+| Field | Purpose |
+|-------|---------|
+| `title` | Page title |
+| `slug` | URL slug (unique) |
+| `hero_title` | Override title for hero section |
+| `hero_subtitle` | Subtitle in hero |
+| `meta_description` | SEO description (max 160 chars) |
+| `meta_keywords` | SEO keywords (comma-separated) |
+| `is_published` | Show/hide page |
+| `is_featured` | Show on homepage |
+| `order` | Sort order |
+| `show_in_nav` | Include in navigation |
+| `nav_title` | Short nav title |
+| `category` | rights, legal, action, resources, auditors |
+| `icon` | Bootstrap icon class |
+
+### PageSection Model
+Each page can have multiple sections:
+
+**Section Types:**
+| Type | Description |
+|------|-------------|
+| `hero` | Hero section with title, subtitle, CTAs |
+| `content` | Rich text content (CKEditor) |
+| `cards` | Card grid layout |
+| `rights_cards` | Cards with amendment badge |
+| `article_cards` | Cards with category badge |
+| `quote` | Blockquote with source |
+| `cta` | Call to action banner |
+| `resources` | Resource links list |
+| `stats` | Statistics row |
+| `two_column` | Two column layout |
+| `checklist` | Do/Don't checklist |
+| `alert` | Notice/alert box |
+| `accordion` | FAQ accordion |
+
+**Common Section Fields:**
+- `title`, `subtitle` - Section headings
+- `content` - Rich text (CKEditor)
+- `content_secondary` - For two-column layouts
+- `data` - JSON for structured content (cards, resources, etc.)
+- `background` - light, cream, blue, dark
+- `css_class` - Additional CSS classes
+- `cta_text`, `cta_url`, `cta_icon` - CTA button
+- `order`, `is_visible` - Display control
+
+### Admin Interface
+- **Page list:** Shows published status, category, featured
+- **Inline sections:** Add/edit sections directly on page edit
+- **Rich text editor:** CKEditor for content fields
+- **JSON editor:** For structured data (cards, resources)
+
+### URLs
+| URL | Purpose |
+|-----|---------|
+| `/rights/<slug>/` | View CMS page |
+| `/admin/public_pages/civilrightspage/` | Manage pages |
+
+### Pre-built Content Pages
+The following pages are created with comprehensive content:
+
+1. **First Amendment** (`/rights/first-amendment/`)
+   - Right to record police
+   - Free speech, press, assembly protections
+   - Real case examples
+
+2. **Fourth Amendment** (`/rights/fourth-amendment/`)
+   - Unreasonable search and seizure
+   - Warrant requirements
+   - Stop and frisk rules
+
+3. **Fifth Amendment** (`/rights/fifth-amendment/`)
+   - Right to remain silent
+   - Miranda rights
+   - Self-incrimination protection
+
+4. **Fourteenth Amendment** (`/rights/fourteenth-amendment/`)
+   - Due process
+   - Equal protection
+   - Incorporation doctrine
+
+### Migration Required
+After pulling code, create and run migrations:
+```bash
+docker-compose exec web python manage.py makemigrations public_pages
+docker-compose exec web python manage.py migrate
+```
+
+### Future: News API Integration
+The landing page has placeholder news items. Planned additions:
+- NewsAPI.org integration for civil rights news
+- NewsItem model for caching
+- Management command for daily fetch
 
 ---
 
