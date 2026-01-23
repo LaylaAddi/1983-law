@@ -1,7 +1,6 @@
 import os
 from django.contrib import admin
 from django.urls import path, include
-from django.views.generic import TemplateView
 
 # Admin URL path - can be rotated via environment variable for security
 # Default is a random-looking path, NOT /admin/
@@ -12,5 +11,5 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('documents/', include('documents.urls')),
     path('legal/', include('accounts.legal_urls')),
-    path('', TemplateView.as_view(template_name='home.html'), name='home'),
+    path('', include('public_pages.urls')),  # Public landing page
 ]

@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     # Local apps
     'accounts',
     'documents',
+    'public_pages',
 ]
 
 MIDDLEWARE = [
