@@ -112,24 +112,28 @@ def landing_page(request):
             'title': 'Freedom of Speech & Press',
             'description': 'You have the right to record police, attend public meetings, and speak freely on matters of public concern.',
             'icon': 'bi-megaphone',
+            'url': 'right_to_record',
         },
         {
             'amendment': '4th',
             'title': 'Protection from Unreasonable Search',
             'description': 'Police generally need a warrant to search you or your property. You can refuse consent to searches.',
             'icon': 'bi-shield-lock',
+            'url': 'fourth_amendment',
         },
         {
             'amendment': '5th',
             'title': 'Right to Remain Silent',
             'description': 'You cannot be forced to incriminate yourself. You have the right to remain silent during police encounters.',
             'icon': 'bi-chat-square-dots',
+            'url': 'fifth_amendment',
         },
         {
             'amendment': '14th',
             'title': 'Equal Protection & Due Process',
             'description': 'Government must treat you fairly and cannot discriminate. You have the right to due process of law.',
             'icon': 'bi-balance-scale',
+            'url': 'section_1983',
         },
     ]
 

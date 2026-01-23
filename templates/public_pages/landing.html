@@ -81,14 +81,19 @@
         <div class="row g-4">
             {% for right in key_rights %}
             <div class="col-md-6 col-lg-3">
-                <div class="rights-card">
-                    <span class="amendment-badge">{{ right.amendment }} Amendment</span>
-                    <div class="card-icon">
-                        <i class="bi {{ right.icon }}"></i>
+                <a href="{% url right.url %}" class="text-decoration-none">
+                    <div class="rights-card h-100">
+                        <span class="amendment-badge">{{ right.amendment }} Amendment</span>
+                        <div class="card-icon">
+                            <i class="bi {{ right.icon }}"></i>
+                        </div>
+                        <h4>{{ right.title }}</h4>
+                        <p>{{ right.description }}</p>
+                        <span class="read-more">
+                            Learn More <i class="bi bi-arrow-right"></i>
+                        </span>
                     </div>
-                    <h4>{{ right.title }}</h4>
-                    <p>{{ right.description }}</p>
-                </div>
+                </a>
             </div>
             {% endfor %}
         </div>
@@ -122,7 +127,7 @@
                     </div>
                     <h5>{{ article.title }}</h5>
                     <p>{{ article.summary }}</p>
-                    <a href="#" class="read-more">
+                    <a href="{% url article.url %}" class="read-more">
                         Read More <i class="bi bi-arrow-right"></i>
                     </a>
                 </div>
@@ -148,7 +153,7 @@
                     </div>
                     {% for news in news_items %}
                     <div class="news-item">
-                        <a href="{{ news.url }}">
+                        <a href="{{ news.url }}" target="_blank" rel="noopener">
                             <h6>{{ news.title }}</h6>
                         </a>
                         <div class="news-meta">

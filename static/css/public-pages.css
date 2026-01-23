@@ -177,7 +177,28 @@
     color: var(--patriot-gray);
     font-size: 0.95rem;
     line-height: 1.6;
-    margin-bottom: 0;
+    margin-bottom: 1rem;
+}
+
+.rights-card .read-more {
+    color: var(--patriot-blue);
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.rights-card:hover .read-more {
+    color: var(--patriot-red);
+}
+
+.rights-card .read-more i {
+    transition: transform 0.3s ease;
+}
+
+.rights-card:hover .read-more i {
+    transform: translateX(4px);
 }
 
 /* =========================================
