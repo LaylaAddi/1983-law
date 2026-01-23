@@ -1594,8 +1594,97 @@ The landing page has placeholder news items. Planned additions:
 ### CSS Files
 | File | Purpose |
 |------|---------|
-| `static/css/app-theme.css` | App-wide theme (navbar, footer, buttons, cards, forms) |
+| `static/css/app-theme.css` | App-wide theme (navbar, footer, buttons, cards, forms, dark theme) |
 | `static/css/public-pages.css` | Landing page specific (hero, sections, widgets) |
+
+---
+
+## Hero Section Flag Background (NEW)
+
+### Overview
+The landing page hero section features a subtle transparent American flag positioned on the right side with a gradient overlay to ensure text readability.
+
+### Features
+- SVG American flag embedded as CSS background-image (data URI)
+- Positioned on right side at 8% opacity
+- Gradient overlay fades from solid blue on left to transparent on right
+- Text remains fully readable against the gradient
+- Responsive - flag scales with section
+
+### CSS Implementation
+Located in `static/css/public-pages.css`:
+
+**`.hero-section::before`** - The flag background
+- SVG data URI with stars and stripes
+- 55% width, 120% height
+- 8% opacity
+- Positioned right side, vertically centered
+
+**`.hero-section::after`** - Gradient overlay
+- Linear gradient from solid patriot-blue to transparent
+- Ensures left-side text is always readable
+
+---
+
+## Dark Theme Toggle (NEW)
+
+### Overview
+A moon/sun toggle button in the navbar allows users to switch between light and dark modes. The preference is saved to localStorage and persists across visits.
+
+### Features
+- **Toggle button**: Moon icon (light mode) / Sun icon (dark mode)
+- **localStorage persistence**: Saves preference as `1983law_theme`
+- **System preference detection**: Auto-detects `prefers-color-scheme: dark`
+- **Instant apply**: No flash of wrong theme on page load
+- **System change listener**: Updates if user changes OS theme (unless manually set)
+
+### Toggle Button Styling
+- Circular button (38px) in navbar
+- Semi-transparent background
+- Rotates 15° on hover
+- Located next to login buttons (for all users)
+
+### Dark Theme Color Scheme
+| Variable | Value | Usage |
+|----------|-------|-------|
+| `--dark-bg` | `#1a1a2e` | Main background |
+| `--dark-bg-secondary` | `#16213e` | Cards, modals |
+| `--dark-bg-card` | `#0f3460` | Headers, accents |
+| `--dark-text` | `#e4e4e4` | Primary text |
+| `--dark-text-muted` | `#a0a0a0` | Secondary text |
+| `--dark-border` | `#2d3748` | Borders |
+
+### Components Styled for Dark Mode
+- Navbar & footer (darker gradients)
+- Cards, modals, accordions
+- Forms (inputs, selects, labels)
+- Tables (headers, rows, hover states)
+- Alerts (info, success, warning, danger)
+- Public page sections (rights cards, news widget, resources)
+- Auth pages (login, register cards)
+- Dropdowns, pagination, tooltips
+- Code blocks, scrollbars
+
+### Files
+| File | Purpose |
+|------|---------|
+| `templates/base.html` | Toggle button HTML + JavaScript |
+| `static/css/app-theme.css` | Theme toggle button + all dark theme styles |
+
+### JavaScript (in base.html)
+```javascript
+// Key functions:
+getPreferredTheme()  // Check localStorage or system preference
+setTheme(theme)      // Apply theme + save to localStorage
+updateIcon(theme)    // Switch moon/sun icon
+toggleTheme()        // Switch between light/dark
+```
+
+### Testing Dark Mode
+1. Click the moon icon in navbar to switch to dark mode
+2. Icon changes to sun
+3. Refresh page - dark mode persists
+4. Clear localStorage or click sun to return to light mode
 
 ---
 
