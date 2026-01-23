@@ -1407,11 +1407,116 @@ When attorneys become involved:
 
 ---
 
+## Public Pages & Landing Page (NEW)
+
+### Overview
+The app now has a public-facing landing page with civil rights information, American flag themed design, and SEO optimization.
+
+### Color Scheme (American Flag Theme)
+| Color | Hex | Usage |
+|-------|-----|-------|
+| Patriot Blue | `#002868` | Primary - headers, buttons, links |
+| Patriot Red | `#BF0A30` | Accent - CTAs, alerts, emphasis |
+| White | `#FFFFFF` | Backgrounds |
+| Cream | `#F8F9FA` | Alternate section backgrounds |
+| Light Blue | `#E8EEF5` | Card backgrounds, highlights |
+
+### Landing Page Sections
+1. **Hero** - "Know Your Rights. Protect Your Freedom." with CTAs
+2. **Stats Bar** - 42 U.S.C., 1871, 150+ years, "You Have Rights"
+3. **Know Your Rights** - 4 amendment cards (1st, 4th, 5th, 14th)
+4. **Featured Articles** - 4 article cards (placeholder for CMS)
+5. **News Widget** - 5 sample items (placeholder for News API)
+6. **Resources** - Links to ACLU, EFF, Flex Your Rights, Cornell Law
+7. **What is Section 1983** - Educational explainer
+8. **CTA Section** - Red banner with action button
+
+### User Routing
+- **Anonymous users**: See landing page with civil rights info
+- **Authenticated users**: Automatically redirected to `/documents/` (document list)
+
+### Files
+| File | Purpose |
+|------|---------|
+| `public_pages/__init__.py` | App init |
+| `public_pages/apps.py` | App config |
+| `public_pages/views.py` | Landing page view with redirect logic |
+| `public_pages/urls.py` | URL routing (name='home') |
+| `static/css/public-pages.css` | Landing page specific styles |
+| `static/css/app-theme.css` | App-wide patriot theme |
+| `templates/public_pages/landing.html` | Landing page template |
+
+### Future: CMS Integration
+The landing page currently uses hardcoded sample data. Planned additions:
+- CMS model for editable articles/pages
+- News API integration (NewsAPI.org) for civil rights news
+- Dynamic content management via Django admin
+
+---
+
+## App-Wide Theme & Navbar (NEW)
+
+### Navbar Features
+- **Gradient background**: Navy blue gradient
+- **Brand icon**: Shield with check in white box
+- **User avatar**: Circle with first initial
+- **Pill-shaped buttons**: Login (outline), Get Started (red)
+- **Authenticated nav**: My Documents, New Case links
+- **User dropdown**: Email display, organized sections, admin links
+- **Mobile-responsive**: Collapsible with proper styling
+
+### Footer Features
+- **Multi-column layout**: About, Resources, Legal, Get Started
+- **Gradient background**: Matching navbar
+- **CTA button**: "Create Free Account" for anonymous users
+- **Legal disclaimer**: Standard not-legal-advice notice
+
+### CSS Files
+| File | Purpose |
+|------|---------|
+| `static/css/app-theme.css` | App-wide theme (navbar, footer, buttons, cards, forms) |
+| `static/css/public-pages.css` | Landing page specific (hero, sections, widgets) |
+
+---
+
+## SEO Optimization (NEW)
+
+### Meta Tags (in base.html)
+- `<title>` - Dynamic with blocks
+- `<meta name="description">` - Customizable per page
+- `<meta name="keywords">` - Customizable per page
+- `<meta name="robots">` - index, follow
+- `<link rel="canonical">` - Auto-generated from request URL
+
+### Open Graph (Social Sharing)
+- `og:type`, `og:title`, `og:description`, `og:site_name`, `og:image`
+- All customizable via template blocks
+
+### Twitter Cards
+- `twitter:card`, `twitter:title`, `twitter:description`
+- All customizable via template blocks
+
+### Structured Data (JSON-LD)
+- WebSite schema with search action
+- Customizable via `{% block structured_data %}`
+
+### Template Blocks for SEO
+```django
+{% block meta_description %}Custom description{% endblock %}
+{% block meta_keywords %}custom, keywords{% endblock %}
+{% block og_title %}Custom OG Title{% endblock %}
+{% block og_description %}Custom OG description{% endblock %}
+{% block structured_data %}<!-- Additional JSON-LD -->{% endblock %}
+```
+
+---
+
 ## What's NOT Built Yet
 
 - E-filing integration
 - Video extraction
-- **Home page with 1983 civil rights information** (NEXT PRIORITY)
+- **News API integration** (placeholder content on landing page)
+- **CMS for article management** (planned)
 - **Membership/subscription system** (under consideration)
 
 ---
@@ -1533,15 +1638,30 @@ The main mobile feature request is to allow users to record their story by speak
 - Options: PWA (Progressive Web App), Capacitor wrapper, or wrapper services
 - PWA is simplest (add to home screen, works offline)
 
-### Home Page Design (NEXT PRIORITY)
-Current state: No dedicated home/landing page - users go straight to login/documents.
+### News API Integration (NEXT PRIORITY)
+Landing page has placeholder news items. Need to integrate real news.
 
-**Planned features:**
-- Information about Section 1983 civil rights law
-- What Section 1983 is and when it applies
-- How the app helps users create complaints
-- Clear call-to-action to get started
-- Professional styling and branding
+**Planned Implementation:**
+- NewsAPI.org integration for civil rights news
+- Search queries: "civil rights", "police accountability", "Section 1983"
+- Django management command to fetch/cache news daily
+- NewsItem model for storage
+- Display latest 5 on landing page, full archive at /news/
+
+**Files to create:**
+- `public_pages/models.py` - NewsItem model
+- `public_pages/management/commands/fetch_news.py` - Fetch command
+- Add cron job or Celery task for daily fetch
+
+### CMS for Articles (Planned)
+Landing page has placeholder articles. Need editable content.
+
+**Planned Implementation:**
+- CivilRightsArticle model with CKEditor
+- Admin-editable articles
+- Category system (Know Your Rights, Legal Basics, Take Action)
+- Featured flag for homepage display
+- URL: `/rights/<slug>/` for individual articles
 
 ### User Purchase System / Membership (Under Consideration)
 Current model: Pay-per-document ($79 per complaint)
