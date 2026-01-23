@@ -1,5 +1,31 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import Http404
 from datetime import datetime, timedelta
+
+from .models import CivilRightsPage, PageSection
+
+
+def cms_page(request, slug):
+    """
+    Dynamic CMS page view.
+    Renders a page with all its sections based on the slug.
+    """
+    page = get_object_or_404(CivilRightsPage, slug=slug, is_published=True)
+    sections = page.sections.filter(is_visible=True).order_by('order')
+
+    context = {
+        'page': page,
+        'sections': sections,
+    }
+    return render(request, 'public_pages/cms_page.html', context)
+
+
+def get_nav_pages():
+    """Get pages that should appear in navigation."""
+    return CivilRightsPage.objects.filter(
+        is_published=True,
+        show_in_nav=True
+    ).order_by('order')
 
 
 def landing_page(request):

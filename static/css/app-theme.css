@@ -423,3 +423,83 @@ a:hover {
 .bg-patriot-light {
     background-color: var(--patriot-light-blue) !important;
 }
+
+/* =========================================
+   Animated American Flag
+   ========================================= */
+.flag-container {
+    display: inline-block;
+    width: 32px;
+    height: 20px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    animation: flag-wave 3s ease-in-out infinite;
+    transform-origin: left center;
+}
+
+.flag-container svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Waving animation */
+@keyframes flag-wave {
+    0%, 100% {
+        transform: perspective(100px) rotateY(0deg) skewY(0deg);
+    }
+    25% {
+        transform: perspective(100px) rotateY(2deg) skewY(0.5deg);
+    }
+    50% {
+        transform: perspective(100px) rotateY(0deg) skewY(0deg);
+    }
+    75% {
+        transform: perspective(100px) rotateY(-2deg) skewY(-0.5deg);
+    }
+}
+
+/* Add subtle ripple effect */
+.flag-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 100%
+    );
+    animation: flag-shine 3s ease-in-out infinite;
+}
+
+@keyframes flag-shine {
+    0%, 100% {
+        transform: translateX(-100%);
+    }
+    50% {
+        transform: translateX(100%);
+    }
+}
+
+/* Footer flag specific styling */
+.footer-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    opacity: 0.9;
+}
+
+.footer-flag:hover .flag-container {
+    animation-duration: 1.5s;
+}
+
+.footer-flag span {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+}

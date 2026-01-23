@@ -5,6 +5,8 @@ from . import views
 
 urlpatterns = [
     path('', views.landing_page, name='home'),
+
+    # Static pages (kept for backward compatibility, can be migrated to CMS later)
     path('rights/', views.know_your_rights, name='know_your_rights'),
     path('rights/record-police/', views.right_to_record, name='right_to_record'),
     path('rights/section-1983/', views.section_1983, name='section_1983'),
@@ -12,4 +14,8 @@ urlpatterns = [
     path('rights/first-amendment-auditors/', views.first_amendment_auditors, name='first_amendment_auditors'),
     path('rights/fourth-amendment/', views.fourth_amendment, name='fourth_amendment'),
     path('rights/fifth-amendment/', views.fifth_amendment, name='fifth_amendment'),
+
+    # CMS pages (dynamic content from database)
+    # This should be last to avoid catching other routes
+    path('page/<slug:slug>/', views.cms_page, name='cms_page'),
 ]
