@@ -1,13 +1,17 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from datetime import datetime, timedelta
-import random
 
 
 def landing_page(request):
     """
     Main public landing page with civil rights information.
     For now, uses hardcoded sample data. Will be replaced with CMS + News API later.
+
+    Authenticated users are redirected to their documents list.
     """
+    # Redirect authenticated users to their documents
+    if request.user.is_authenticated:
+        return redirect('documents:document_list')
 
     # Sample featured articles (will come from CMS later)
     featured_articles = [

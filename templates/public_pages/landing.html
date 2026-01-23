@@ -3,12 +3,17 @@
 
 {% block title %}Know Your Rights - {{ header_app_name }}{% endblock %}
 
+{% block meta_description %}Know your constitutional rights under Section 1983. Learn about First Amendment recording rights, Fourth Amendment protections, and how to document civil rights violations.{% endblock %}
+
+{% block meta_keywords %}Section 1983, civil rights, constitutional rights, police misconduct, right to record police, First Amendment, Fourth Amendment, civil rights complaint, police accountability, know your rights{% endblock %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/public-pages.css' %}">
 {% endblock %}
 
+{% block main_class %}{% endblock %}
+
 {% block content %}
-</div><!-- Close container from base.html to go full-width -->
 
 <!-- Hero Section -->
 <section class="hero-section">
@@ -270,6 +275,4 @@
         </div>
     </div>
 </section>
-
-<div class="container"><!-- Re-open container for base.html footer -->
 {% endblock %}

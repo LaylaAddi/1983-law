@@ -3,7 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- SEO Meta Tags -->
     <title>{% block title %}{{ header_app_name }}{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Document and build your Section 1983 civil rights complaint. Know your constitutional rights and hold government officials accountable when they violate them.{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}Section 1983, civil rights, constitutional rights, police misconduct, excessive force, unlawful arrest, First Amendment, Fourth Amendment, civil rights complaint, police accountability{% endblock %}">
+    <meta name="author" content="{{ app_name }}">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{% block og_title %}{{ header_app_name }} - Know Your Rights{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Document and build your Section 1983 civil rights complaint. Know your constitutional rights and hold government officials accountable.{% endblock %}">
+    <meta property="og:site_name" content="{{ app_name }}">
+    {% block og_image %}<meta property="og:image" content="">{% endblock %}
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}{{ header_app_name }} - Know Your Rights{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Document and build your Section 1983 civil rights complaint.{% endblock %}">
+
+    <!-- Canonical URL -->
+    {% block canonical %}<link rel="canonical" href="{{ request.build_absolute_uri }}">{% endblock %}
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -11,51 +32,80 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-        main {
-            flex: 1;
-        }
-        .auth-card {
-            max-width: 450px;
-            margin: 2rem auto;
-        }
-    </style>
+    <!-- App Theme CSS -->
+    <link rel="stylesheet" href="{% load static %}{% static 'css/app-theme.css' %}">
 
     {% block extra_css %}{% endblock %}
+
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "{{ header_app_name }}",
+        "url": "{{ request.scheme }}://{{ request.get_host }}",
+        "description": "Section 1983 civil rights complaint builder. Know your constitutional rights and document violations.",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "{{ request.scheme }}://{{ request.get_host }}/search?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
+    }
+    </script>
+    {% block structured_data %}{% endblock %}
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-patriot">
         <div class="container">
             <a class="navbar-brand" href="{% url 'home' %}">
-                <i class="bi bi-briefcase me-2"></i>{{ header_app_name }}
+                <span class="brand-icon">
+                    <i class="bi bi-shield-check"></i>
+                </span>
+                {{ header_app_name }}
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'home' %}">Home</a>
+                        <a class="nav-link" href="{% url 'home' %}">
+                            <i class="bi bi-house-door me-1"></i>Home
+                        </a>
                     </li>
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'documents:document_list' %}">
+                            <i class="bi bi-folder me-1"></i>My Documents
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'documents:document_create' %}">
+                            <i class="bi bi-plus-circle me-1"></i>New Case
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
-                <ul class="navbar-nav">
+                <ul class="navbar-nav align-items-center">
                     {% if user.is_authenticated %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle me-1"></i>{{ user.get_short_name }}
+                            <a class="nav-link dropdown-toggle user-dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="user-avatar">
+                                    {{ user.get_short_name|slice:":1"|upper }}
+                                </span>
+                                <span class="d-none d-md-inline">{{ user.get_short_name }}</span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
+                                <li class="px-3 py-2 text-muted small">
+                                    Signed in as<br><strong>{{ user.email }}</strong>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{% url 'documents:document_list' %}">
                                     <i class="bi bi-folder me-2"></i>My Documents
                                 </a></li>
                                 <li><a class="dropdown-item" href="{% url 'documents:my_referral_code' %}">
-                                    <i class="bi bi-share me-2"></i>Referrals
+                                    <i class="bi bi-gift me-2"></i>Referral Program
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
@@ -66,25 +116,30 @@
                                 </a></li>
                                 {% if user.is_staff %}
                                 <li><hr class="dropdown-divider"></li>
+                                <li class="px-3 py-1 text-muted small">Admin</li>
                                 <li><a class="dropdown-item" href="{% url 'documents:admin_referrals' %}">
-                                    <i class="bi bi-people me-2"></i>Admin: Referrals
+                                    <i class="bi bi-people me-2"></i>Referral Management
                                 </a></li>
                                 <li><a class="dropdown-item" href="{% url 'admin:index' %}">
-                                    <i class="bi bi-gear me-2"></i>Admin: Django
+                                    <i class="bi bi-gear me-2"></i>Django Admin
                                 </a></li>
                                 {% endif %}
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">
+                                <li><a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}">
                                     <i class="bi bi-box-arrow-right me-2"></i>Logout
                                 </a></li>
                             </ul>
                         </li>
                     {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'accounts:login' %}">Login</a>
+                        <li class="nav-item me-2">
+                            <a class="nav-link btn-login" href="{% url 'accounts:login' %}">
+                                Login
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link btn btn-outline-light btn-sm ms-2" href="{% url 'accounts:register' %}">Register</a>
+                            <a class="nav-link btn-get-started" href="{% url 'accounts:register' %}">
+                                <i class="bi bi-shield-plus me-1"></i>Get Started
+                            </a>
                         </li>
                     {% endif %}
                 </ul>
@@ -96,32 +151,72 @@
     {% if messages %}
     <div class="container mt-3">
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {% if message.tags == 'success' %}
+                <i class="bi bi-check-circle me-2"></i>
+                {% elif message.tags == 'error' or message.tags == 'danger' %}
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                {% elif message.tags == 'warning' %}
+                <i class="bi bi-exclamation-circle me-2"></i>
+                {% else %}
+                <i class="bi bi-info-circle me-2"></i>
+                {% endif %}
                 {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         {% endfor %}
     </div>
     {% endif %}
 
     <!-- Main Content -->
-    <main class="container mt-4">
+    <main class="{% block main_class %}container mt-4{% endblock %}">
         {% block content %}{% endblock %}
     </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-light py-4 mt-5">
+    <footer class="footer-patriot mt-5">
         <div class="container">
             <div class="row">
-                <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
-                    <p class="mb-0">&copy; {% now "Y" %} {{ app_name }}. All rights reserved.</p>
+                <div class="col-lg-4 mb-4 mb-lg-0">
+                    <h6><i class="bi bi-shield-check me-2"></i>{{ header_app_name }}</h6>
+                    <p class="small text-light text-opacity-75">
+                        Helping Americans understand their constitutional rights and document
+                        violations under Section 1983 of the Civil Rights Act.
+                    </p>
                 </div>
-                <div class="col-md-6 text-center text-md-end">
-                    <a href="{% url 'legal:terms' %}" class="text-light text-decoration-none me-3">Terms of Service</a>
-                    <a href="{% url 'legal:privacy' %}" class="text-light text-decoration-none me-3">Privacy Policy</a>
-                    <a href="{% url 'legal:disclaimer' %}" class="text-light text-decoration-none me-3">Legal Disclaimer</a>
-                    <a href="{% url 'legal:cookies' %}" class="text-light text-decoration-none">Cookie Policy</a>
+                <div class="col-6 col-lg-2 mb-4 mb-lg-0">
+                    <h6>Resources</h6>
+                    <div class="footer-links">
+                        <a href="{% url 'home' %}">Know Your Rights</a>
+                        <a href="{% url 'legal:disclaimer' %}">Legal Disclaimer</a>
+                    </div>
                 </div>
+                <div class="col-6 col-lg-2 mb-4 mb-lg-0">
+                    <h6>Legal</h6>
+                    <div class="footer-links">
+                        <a href="{% url 'legal:terms' %}">Terms of Service</a>
+                        <a href="{% url 'legal:privacy' %}">Privacy Policy</a>
+                        <a href="{% url 'legal:cookies' %}">Cookie Policy</a>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <h6>Get Started</h6>
+                    <p class="small text-light text-opacity-75">
+                        Ready to document a civil rights violation? Our guided tool helps you
+                        build your Section 1983 complaint step by step.
+                    </p>
+                    {% if not user.is_authenticated %}
+                    <a href="{% url 'accounts:register' %}" class="btn btn-sm" style="background: var(--patriot-red); color: white;">
+                        <i class="bi bi-shield-plus me-1"></i>Create Free Account
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="footer-bottom text-center">
+                <p>&copy; {% now "Y" %} {{ app_name }}. All rights reserved.</p>
+                <p class="small text-light text-opacity-50 mt-2">
+                    This website provides general information about civil rights law. It is not a substitute for professional legal advice.
+                </p>
             </div>
         </div>
     </footer>

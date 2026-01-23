@@ -1,0 +1,425 @@
+/* =========================================
+   App-Wide Theme - American Flag Colors
+   Applies to all pages (auth, documents, etc.)
+   ========================================= */
+
+/* Color Variables (same as public-pages.css for consistency) */
+:root {
+    --patriot-blue: #002868;
+    --patriot-blue-light: #003d99;
+    --patriot-blue-dark: #001a4d;
+    --patriot-red: #BF0A30;
+    --patriot-red-light: #d4213f;
+    --patriot-red-dark: #8c0723;
+    --patriot-white: #FFFFFF;
+    --patriot-cream: #F8F9FA;
+    --patriot-gray: #6c757d;
+    --patriot-dark: #212529;
+    --patriot-light-blue: #E8EEF5;
+    --patriot-gold: #B8860B;
+}
+
+/* =========================================
+   Body & Layout
+   ========================================= */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+main {
+    flex: 1;
+}
+
+/* =========================================
+   Navbar Styling
+   ========================================= */
+.navbar-patriot {
+    background: linear-gradient(135deg, var(--patriot-blue) 0%, var(--patriot-blue-dark) 100%);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    padding: 0.75rem 0;
+}
+
+.navbar-patriot .navbar-brand {
+    font-weight: 700;
+    font-size: 1.35rem;
+    color: var(--patriot-white) !important;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.navbar-patriot .navbar-brand:hover {
+    color: var(--patriot-cream) !important;
+}
+
+.navbar-patriot .navbar-brand .brand-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--patriot-white);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--patriot-blue);
+    font-size: 1.1rem;
+}
+
+.navbar-patriot .nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-weight: 500;
+    padding: 0.5rem 1rem !important;
+    transition: all 0.2s ease;
+    border-radius: 6px;
+    margin: 0 0.1rem;
+}
+
+.navbar-patriot .nav-link:hover {
+    color: var(--patriot-white) !important;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.navbar-patriot .nav-link.active {
+    color: var(--patriot-white) !important;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.navbar-patriot .dropdown-menu {
+    border: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.navbar-patriot .dropdown-item {
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    color: var(--patriot-dark);
+}
+
+.navbar-patriot .dropdown-item:hover {
+    background: var(--patriot-light-blue);
+    color: var(--patriot-blue);
+}
+
+.navbar-patriot .dropdown-item i {
+    color: var(--patriot-blue);
+    width: 20px;
+}
+
+.navbar-patriot .dropdown-divider {
+    margin: 0.5rem 0;
+}
+
+.navbar-patriot .btn-get-started {
+    background: var(--patriot-red);
+    color: var(--patriot-white) !important;
+    border: none;
+    padding: 0.5rem 1.25rem !important;
+    border-radius: 50px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.navbar-patriot .btn-get-started:hover {
+    background: var(--patriot-red-light);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(191, 10, 48, 0.3);
+}
+
+.navbar-patriot .btn-login {
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    color: var(--patriot-white) !important;
+    padding: 0.4rem 1rem !important;
+    border-radius: 50px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.navbar-patriot .btn-login:hover {
+    border-color: var(--patriot-white);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* User dropdown trigger */
+.navbar-patriot .user-dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.4rem 0.75rem 0.4rem 0.5rem !important;
+    border-radius: 50px;
+}
+
+.navbar-patriot .user-avatar {
+    width: 32px;
+    height: 32px;
+    background: var(--patriot-white);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--patriot-blue);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Mobile navbar */
+.navbar-patriot .navbar-toggler {
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    padding: 0.4rem 0.6rem;
+}
+
+.navbar-patriot .navbar-toggler:focus {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
+}
+
+@media (max-width: 991px) {
+    .navbar-patriot .navbar-collapse {
+        background: var(--patriot-blue-dark);
+        margin: 1rem -1rem -0.75rem;
+        padding: 1rem;
+        border-radius: 0 0 12px 12px;
+    }
+
+    .navbar-patriot .nav-link {
+        padding: 0.75rem 1rem !important;
+    }
+
+    .navbar-patriot .btn-get-started,
+    .navbar-patriot .btn-login {
+        display: block;
+        text-align: center;
+        margin: 0.5rem 0;
+    }
+}
+
+/* =========================================
+   Footer Styling
+   ========================================= */
+.footer-patriot {
+    background: linear-gradient(135deg, var(--patriot-blue-dark) 0%, var(--patriot-blue) 100%);
+    color: var(--patriot-white);
+    padding: 3rem 0 2rem;
+}
+
+.footer-patriot h6 {
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--patriot-white);
+}
+
+.footer-patriot a {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.footer-patriot a:hover {
+    color: var(--patriot-white);
+}
+
+.footer-patriot .footer-links a {
+    display: block;
+    padding: 0.3rem 0;
+    font-size: 0.95rem;
+}
+
+.footer-patriot .footer-bottom {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+}
+
+.footer-patriot .footer-bottom p {
+    margin-bottom: 0;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* =========================================
+   Buttons
+   ========================================= */
+.btn-primary {
+    background-color: var(--patriot-blue);
+    border-color: var(--patriot-blue);
+}
+
+.btn-primary:hover {
+    background-color: var(--patriot-blue-light);
+    border-color: var(--patriot-blue-light);
+}
+
+.btn-primary:focus {
+    background-color: var(--patriot-blue);
+    border-color: var(--patriot-blue);
+    box-shadow: 0 0 0 0.25rem rgba(0, 40, 104, 0.25);
+}
+
+.btn-outline-primary {
+    color: var(--patriot-blue);
+    border-color: var(--patriot-blue);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--patriot-blue);
+    border-color: var(--patriot-blue);
+}
+
+.btn-danger {
+    background-color: var(--patriot-red);
+    border-color: var(--patriot-red);
+}
+
+.btn-danger:hover {
+    background-color: var(--patriot-red-light);
+    border-color: var(--patriot-red-light);
+}
+
+/* =========================================
+   Cards
+   ========================================= */
+.card {
+    border: 1px solid rgba(0, 40, 104, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.card-header {
+    background: var(--patriot-light-blue);
+    border-bottom: 1px solid rgba(0, 40, 104, 0.1);
+    font-weight: 600;
+    color: var(--patriot-blue);
+}
+
+/* =========================================
+   Forms
+   ========================================= */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--patriot-blue);
+    box-shadow: 0 0 0 0.25rem rgba(0, 40, 104, 0.15);
+}
+
+.form-check-input:checked {
+    background-color: var(--patriot-blue);
+    border-color: var(--patriot-blue);
+}
+
+/* =========================================
+   Alerts
+   ========================================= */
+.alert-info {
+    background-color: var(--patriot-light-blue);
+    border-color: var(--patriot-blue);
+    color: var(--patriot-blue-dark);
+}
+
+.alert-danger {
+    border-color: var(--patriot-red);
+}
+
+/* =========================================
+   Auth Cards (Login, Register, etc.)
+   ========================================= */
+.auth-card {
+    max-width: 450px;
+    margin: 2rem auto;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.auth-card .card-header {
+    background: var(--patriot-blue);
+    color: var(--patriot-white);
+    border-radius: 16px 16px 0 0;
+    padding: 1.25rem;
+    text-align: center;
+}
+
+.auth-card .card-header h4 {
+    margin-bottom: 0;
+    font-weight: 600;
+}
+
+.auth-card .card-body {
+    padding: 2rem;
+}
+
+/* =========================================
+   Links
+   ========================================= */
+a {
+    color: var(--patriot-blue);
+}
+
+a:hover {
+    color: var(--patriot-blue-light);
+}
+
+/* =========================================
+   Breadcrumbs
+   ========================================= */
+.breadcrumb-item a {
+    color: var(--patriot-blue);
+    text-decoration: none;
+}
+
+.breadcrumb-item.active {
+    color: var(--patriot-gray);
+}
+
+/* =========================================
+   Progress bars
+   ========================================= */
+.progress-bar {
+    background-color: var(--patriot-blue);
+}
+
+/* =========================================
+   Badges
+   ========================================= */
+.badge.bg-primary {
+    background-color: var(--patriot-blue) !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--patriot-red) !important;
+}
+
+/* =========================================
+   Tables
+   ========================================= */
+.table thead th {
+    background: var(--patriot-light-blue);
+    color: var(--patriot-blue);
+    font-weight: 600;
+    border-bottom: 2px solid var(--patriot-blue);
+}
+
+/* =========================================
+   Utility Classes
+   ========================================= */
+.text-patriot-blue {
+    color: var(--patriot-blue) !important;
+}
+
+.text-patriot-red {
+    color: var(--patriot-red) !important;
+}
+
+.bg-patriot-blue {
+    background-color: var(--patriot-blue) !important;
+}
+
+.bg-patriot-red {
+    background-color: var(--patriot-red) !important;
+}
+
+.bg-patriot-light {
+    background-color: var(--patriot-light-blue) !important;
+}
