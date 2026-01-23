@@ -69,6 +69,7 @@ The app is functional with the following features complete:
      - **Evidence**: Distinguishes between evidence user HAS vs. evidence to OBTAIN (see below)
      - **Rights Violated**: Identifies constitutional violations with strength assessment
    - **Context-aware Rights Section** - Shows different messages based on section status
+   - **Rights Section First-Time Guide** - Dismissible guide explaining how to use AI suggestions and "Copy to Details" feature
    - **AI Document Review** (NEW) - Comprehensive review of the complete document:
      - Legal strength analysis
      - Clarity and readability suggestions
@@ -357,6 +358,11 @@ After AI review, users can step through issues one-by-one and apply AI-generated
 - AI suggests times in "09:30 AM" format
 - Django TimeField requires "HH:MM:SS" format
 - `_convert_time_format()` helper automatically converts AM/PM times to 24-hour format
+
+**Date Format Conversion:**
+- AI suggests dates in "August 24, 2025" format
+- Django DateField requires "YYYY-MM-DD" format
+- `_convert_date_format()` helper automatically converts various date formats to ISO format
 
 **Files:**
 - `documents/views.py` - `generate_fix`, `apply_fix`, `_get_section_content`, `_convert_time_format` functions
@@ -954,11 +960,14 @@ The Generate PDF button on document detail page adapts based on payment status:
 
 ### Key Features
 1. **User-Level AI Tracking** - Free AI uses tracked across ALL user documents (prevents abuse)
-2. **Admin Unlimited Access** - `is_staff` or `is_superuser` users bypass all limits
-3. **Promo Codes** - Users create their own referral code, earn $15 per use
-4. **Stripe Checkout** - Secure payment with promo code validation
-5. **Document Finalization** - Confirmation required before locking document
-6. **Status Banner** - Shows time remaining, AI usage, and action buttons on all document pages
+2. **AI Limit Enforcement** - All 7 AI endpoints check limits BEFORE making API calls and record usage AFTER success
+3. **Dynamic AI Usage Banner** - Status banner updates in real-time after each AI call (no page refresh needed)
+4. **Admin Unlimited Access** - `is_staff` or `is_superuser` users bypass all limits
+5. **Promo Codes** - Users create their own referral code, earn $15 per use
+6. **Stripe Checkout** - Secure payment with promo code validation
+7. **Document Finalization** - Confirmation required before locking document
+8. **Status Banner** - Shows time remaining, AI usage, and action buttons on all document pages
+9. **Checkout When AI Exhausted** - Users who hit AI limit can still proceed to checkout (bypasses section completion validation)
 
 ### Database Models
 | Model | Purpose |
@@ -983,6 +992,50 @@ The Generate PDF button on document detail page adapts based on payment status:
 - `get_total_referral_earnings()` - Total earnings from all codes
 - `get_pending_referral_earnings()` - Pending (unpaid) earnings
 - `get_paid_referral_earnings()` - Already paid earnings
+
+### AI Limit Enforcement (IMPORTANT)
+All 7 AI endpoints now enforce limits BEFORE making OpenAI API calls:
+
+| Endpoint | URL | Feature |
+|----------|-----|---------|
+| `parse_story` | `/documents/{id}/parse-story/` | Tell Your Story analysis |
+| `analyze_rights` | `/documents/{id}/analyze-rights/` | Rights Violated analysis |
+| `suggest_section_content` | `/documents/{id}/suggest-section-content/` | Damages/Evidence/Witnesses suggestions |
+| `ai_review_document` | `/documents/{id}/ai-review/` | Document review |
+| `generate_fix` | `/documents/{id}/generate-fix/` | Generate AI fix for issues |
+| `suggest_agency` | `/documents/{id}/suggest-agency/` | Suggest agency for defendants |
+| `lookup_address` | `/documents/{id}/lookup-address/` | Lookup agency address |
+
+**How It Works:**
+1. Each endpoint calls `document.can_use_ai()` BEFORE making any API calls
+2. If limit reached, returns `{success: false, limit_reached: true, error: "...upgrade message..."}`
+3. Frontend shows upgrade prompt with button linking to checkout
+4. On success, endpoint calls `document.record_ai_usage()` to increment counter
+5. Response includes `ai_usage_display` for dynamic banner update
+
+**JavaScript Updates:**
+- All JS files have `showLimitReachedError()` function with upgrade button
+- All JS files have `updateAIUsageBanner()` function to update status banner
+- Banner updates without page refresh after each AI call
+
+**Files Modified:**
+- `documents/views.py` - Added limit checks to all 7 endpoints + `get_ai_usage_info()` helper
+- `static/js/tell-story.js` - Added limit handling and banner update
+- `static/js/rights-analyze.js` - Added limit handling and banner update
+- `templates/documents/section_edit.html` - Added limit handling and banner update
+- `templates/documents/document_review.html` - Added limit handling and banner update
+- `templates/documents/edit_defendant.html` - Added limit handling
+- `templates/documents/partials/status_banner.html` - Added `id="aiUsageDisplay"` for JS targeting
+
+**Testing AI Limits:**
+```python
+# In Django shell - reset a user's AI usage
+from accounts.models import User
+u = User.objects.get(email='user@email.com')
+for doc in u.documents.filter(payment_status='draft'):
+    doc.ai_generations_used = 0
+    doc.save()
+```
 
 ### URLs (Payment)
 - `/documents/{id}/checkout/` - Checkout page with promo code
@@ -1358,6 +1411,8 @@ When attorneys become involved:
 
 - E-filing integration
 - Video extraction
+- **Home page with 1983 civil rights information** (NEXT PRIORITY)
+- **Membership/subscription system** (under consideration)
 
 ---
 
@@ -1477,6 +1532,27 @@ The main mobile feature request is to allow users to record their story by speak
 - Tell Your Story with voice input will be key feature
 - Options: PWA (Progressive Web App), Capacitor wrapper, or wrapper services
 - PWA is simplest (add to home screen, works offline)
+
+### Home Page Design (NEXT PRIORITY)
+Current state: No dedicated home/landing page - users go straight to login/documents.
+
+**Planned features:**
+- Information about Section 1983 civil rights law
+- What Section 1983 is and when it applies
+- How the app helps users create complaints
+- Clear call-to-action to get started
+- Professional styling and branding
+
+### User Purchase System / Membership (Under Consideration)
+Current model: Pay-per-document ($79 per complaint)
+
+**Potential future options being considered:**
+- Membership/subscription tiers
+- Bundle pricing for multiple documents
+- Different pricing for different case types
+- Non-profit/reduced pricing options
+
+**Note:** No decision made yet - this is exploratory
 
 ---
 
