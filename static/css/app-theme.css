@@ -76,6 +76,9 @@ main {
 
 .navbar-patriot .navbar-brand .brand-text {
     color: var(--patriot-white);
+    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
 .navbar-patriot .nav-link {
