@@ -20,24 +20,28 @@ def landing_page(request):
             'summary': 'The First Amendment protects your right to record police officers performing their duties in public. Learn what the courts have said and how to protect yourself.',
             'icon': 'bi-camera-video',
             'category': 'First Amendment',
+            'url': 'right_to_record',
         },
         {
             'title': 'Understanding Section 1983',
             'summary': 'Section 1983 is the federal law that allows you to sue government officials who violate your constitutional rights. Here\'s how it works.',
             'icon': 'bi-journal-text',
             'category': 'Legal Basics',
+            'url': 'section_1983',
         },
         {
             'title': 'What to Do If Your Rights Are Violated',
             'summary': 'Step-by-step guide on documenting incidents, preserving evidence, and understanding your options when police or government officials violate your rights.',
             'icon': 'bi-shield-check',
             'category': 'Take Action',
+            'url': 'rights_violated',
         },
         {
-            'title': 'Know Your Fourth Amendment Rights',
-            'summary': 'Protection against unreasonable searches and seizures is fundamental to American freedom. Learn when police can and cannot search you or your property.',
-            'icon': 'bi-search',
-            'category': 'Fourth Amendment',
+            'title': 'First Amendment Auditors',
+            'summary': 'Meet the everyday Americans who test and protect our constitutional rights through peaceful First Amendment audits.',
+            'icon': 'bi-camera-video',
+            'category': 'Freedom Fighters',
+            'url': 'first_amendment_auditors',
         },
     ]
 
@@ -135,3 +139,38 @@ def landing_page(request):
     }
 
     return render(request, 'public_pages/landing.html', context)
+
+
+def know_your_rights(request):
+    """Comprehensive Know Your Rights page with detailed information."""
+    return render(request, 'public_pages/know_your_rights.html')
+
+
+def right_to_record(request):
+    """Detailed page about the right to record police and government officials."""
+    return render(request, 'public_pages/right_to_record.html')
+
+
+def section_1983(request):
+    """Detailed page explaining Section 1983 and how to use it."""
+    return render(request, 'public_pages/section_1983.html')
+
+
+def rights_violated(request):
+    """Guide for what to do when your rights have been violated."""
+    return render(request, 'public_pages/rights_violated.html')
+
+
+def first_amendment_auditors(request):
+    """Tribute page to First Amendment auditors protecting our freedoms."""
+    return render(request, 'public_pages/first_amendment_auditors.html')
+
+
+def fourth_amendment(request):
+    """Detailed page about Fourth Amendment rights."""
+    return render(request, 'public_pages/fourth_amendment.html')
+
+
+def fifth_amendment(request):
+    """Detailed page about Fifth Amendment rights."""
+    return render(request, 'public_pages/fifth_amendment.html')
