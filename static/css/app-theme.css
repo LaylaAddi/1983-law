@@ -46,16 +46,10 @@ main {
     opacity: 0.9;
 }
 
-.navbar-patriot .navbar-brand:hover .brand-text {
-    background: linear-gradient(90deg, var(--patriot-cream) 0%, var(--patriot-cream) 40%, var(--patriot-red-light) 40%, var(--patriot-red-light) 60%, var(--patriot-cream) 60%);
-    -webkit-background-clip: text;
-    background-clip: text;
-}
-
 .navbar-patriot .navbar-brand .brand-icon {
     width: 36px;
     height: 36px;
-    background: linear-gradient(180deg, var(--patriot-blue) 0%, var(--patriot-blue) 40%, var(--patriot-red) 40%, var(--patriot-white) 55%, var(--patriot-red) 55%, var(--patriot-white) 70%, var(--patriot-red) 70%, var(--patriot-white) 85%, var(--patriot-red) 85%);
+    background: linear-gradient(135deg, var(--patriot-blue) 0%, var(--patriot-red) 50%, var(--patriot-blue-dark) 100%);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -66,21 +60,22 @@ main {
     border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
-/* Brand text with American flag gradient */
+/* Brand text - clean white */
 .navbar-patriot .navbar-brand {
     font-weight: 700;
     font-size: 1.35rem;
+    color: var(--patriot-white) !important;
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
+.navbar-patriot .navbar-brand:hover {
+    color: var(--patriot-cream) !important;
+}
+
 .navbar-patriot .navbar-brand .brand-text {
-    background: linear-gradient(90deg, var(--patriot-white) 0%, var(--patriot-white) 40%, var(--patriot-red) 40%, var(--patriot-red) 60%, var(--patriot-white) 60%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-shadow: none;
+    color: var(--patriot-white);
 }
 
 .navbar-patriot .nav-link {
