@@ -50,7 +50,7 @@ class CivilRightsPageAdmin(admin.ModelAdmin):
         'title',
         'slug',
         'category',
-        'is_published_display',
+        'is_published',
         'is_featured_display',
         'show_in_nav',
         'order',
