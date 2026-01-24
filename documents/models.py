@@ -207,6 +207,9 @@ class Document(models.Model):
         # Admin/staff have unlimited access
         if self.user.has_unlimited_access():
             return True
+        # Subscribers get AI based on their plan
+        if self.user.can_use_subscription_ai():
+            return True
         if self.payment_status == 'draft':
             # Check USER-level free AI limit (across all documents)
             return self.user.can_use_free_ai()
@@ -218,6 +221,13 @@ class Document(models.Model):
         """Get AI usage display string."""
         if self.user.has_unlimited_access():
             return "AI: Unlimited (Admin)"
+        # Show subscription AI info for subscribers
+        if self.user.has_active_subscription():
+            remaining = self.user.get_subscription_ai_remaining()
+            subscription = self.user.get_subscription()
+            if subscription and subscription.plan == 'annual':
+                return "AI: Unlimited (Pro Annual)"
+            return f"AI: {remaining} uses remaining this month (Pro)"
         if self.payment_status == 'draft':
             remaining = self.user.get_free_ai_remaining()
             return f"{remaining} of {settings.FREE_AI_GENERATIONS} free AI uses remaining"
@@ -228,7 +238,13 @@ class Document(models.Model):
         return "AI unavailable"
 
     def record_ai_usage(self, cost=None):
-        """Record AI usage. For draft: increment count. For paid: add cost."""
+        """Record AI usage. For subscribers: use subscription tracking. For draft: increment count. For paid: add cost."""
+        # Subscribers track usage on their subscription
+        if self.user.has_active_subscription():
+            subscription = self.user.get_subscription()
+            if subscription:
+                subscription.record_ai_use()
+            return
         if self.payment_status == 'draft':
             self.ai_generations_used += 1
             self.save(update_fields=['ai_generations_used'])
