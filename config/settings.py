@@ -19,6 +19,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',      # Required for sitemap
+    'django.contrib.sitemaps',   # XML sitemap for SEO
     # Third-party apps
     'ckeditor',
     # Local apps
@@ -26,6 +28,9 @@ INSTALLED_APPS = [
     'documents',
     'public_pages',
 ]
+
+# Site ID for django.contrib.sites (required for sitemap)
+SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -133,8 +138,8 @@ AUTH_USER_MODEL = 'accounts.User'
 
 # Authentication
 LOGIN_URL = 'accounts:login'
-LOGIN_REDIRECT_URL = 'home'
-LOGOUT_REDIRECT_URL = 'home'
+LOGIN_REDIRECT_URL = 'public_pages:home'
+LOGOUT_REDIRECT_URL = 'public_pages:home'
 
 # Email Configuration
 # For development: uses console backend (prints to terminal)

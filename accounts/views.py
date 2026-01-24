@@ -34,7 +34,7 @@ class CustomLoginView(LoginView):
     redirect_authenticated_user = True
 
     def get_success_url(self):
-        return reverse_lazy('home')
+        return reverse_lazy('public_pages:home')
 
     def form_valid(self, form):
         messages.success(self.request, f'Welcome back, {form.get_user().get_short_name()}!')
@@ -44,7 +44,7 @@ class CustomLoginView(LoginView):
 class CustomLogoutView(LogoutView):
     """Logout view."""
 
-    next_page = reverse_lazy('home')
+    next_page = reverse_lazy('public_pages:home')
 
     def dispatch(self, request, *args, **kwargs):
         messages.info(request, 'You have been logged out.')
@@ -60,7 +60,7 @@ class RegisterView(CreateView):
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            return redirect('home')
+            return redirect('public_pages:home')
         return super().dispatch(request, *args, **kwargs)
 
     def get_client_ip(self):
@@ -166,7 +166,7 @@ def profile_complete(request):
         messages.info(request, 'Your profile is already complete.')
         if next_url:
             return redirect(next_url)
-        return redirect('home')
+        return redirect('public_pages:home')
 
     if request.method == 'POST':
         form = ProfileCompleteForm(request.POST, instance=request.user)
@@ -175,7 +175,7 @@ def profile_complete(request):
             messages.success(request, 'Profile completed! You can now create documents.')
             if next_url:
                 return redirect(next_url)
-            return redirect('home')
+            return redirect('public_pages:home')
     else:
         form = ProfileCompleteForm(instance=request.user)
 

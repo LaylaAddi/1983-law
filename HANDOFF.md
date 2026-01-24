@@ -1809,6 +1809,37 @@ The gavel SVG uses the original detailed court gavel paths:
 {% block structured_data %}<!-- Additional JSON-LD -->{% endblock %}
 ```
 
+### XML Sitemap (NEW)
+An XML sitemap helps search engines discover and index all public pages.
+
+**URLs:**
+| URL | Purpose |
+|-----|---------|
+| `/sitemap.xml` | XML sitemap for search engines |
+| `/robots.txt` | Crawler directives pointing to sitemap |
+
+**What's Included:**
+- Home page
+- Legal pages (Terms, Privacy, Disclaimer, Cookies)
+- CMS pages (CivilRightsPage with `is_published=True`)
+
+**What's Excluded:**
+- Admin URLs (dynamic path for security)
+- User accounts/profile pages
+- Document builder pages (require authentication)
+
+**Files:**
+- `config/sitemaps.py` - Sitemap definitions
+- `config/urls.py` - Sitemap URL configuration
+- `public_pages/views.py` - robots.txt view
+- `config/settings.py` - `django.contrib.sites` and `django.contrib.sitemaps` added
+
+**After Deployment:**
+Submit sitemap to Google Search Console:
+1. Go to https://search.google.com/search-console
+2. Add property for 1983law.org
+3. Submit sitemap URL: `https://1983law.org/sitemap.xml`
+
 ---
 
 ## What's NOT Built Yet

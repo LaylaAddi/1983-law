@@ -1,8 +1,32 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from datetime import datetime, timedelta
 
 from .models import CivilRightsPage, PageSection
+
+
+def robots_txt(request):
+    """
+    Serve robots.txt for search engine crawlers.
+    Points to sitemap.xml and disallows private areas.
+    """
+    # Build the sitemap URL dynamically
+    protocol = 'https' if request.is_secure() else 'http'
+    host = request.get_host()
+    sitemap_url = f"{protocol}://{host}/sitemap.xml"
+
+    lines = [
+        "User-agent: *",
+        "Allow: /",
+        "",
+        "# Disallow private/user-specific areas",
+        "Disallow: /accounts/",
+        "Disallow: /documents/",
+        "",
+        "# Sitemap location",
+        f"Sitemap: {sitemap_url}",
+    ]
+    return HttpResponse("\n".join(lines), content_type="text/plain")
 
 
 def cms_page(request, slug):

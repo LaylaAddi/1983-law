@@ -1,10 +1,11 @@
 from django.urls import path
 from . import views
 
-# Note: No app_name so 'home' URL name is globally accessible (used in base.html)
+app_name = 'public_pages'
 
 urlpatterns = [
     path('', views.landing_page, name='home'),
+    path('robots.txt', views.robots_txt, name='robots_txt'),
 
     # Static pages (kept for backward compatibility, can be migrated to CMS later)
     path('rights/', views.know_your_rights, name='know_your_rights'),
