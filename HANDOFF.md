@@ -2255,6 +2255,19 @@ if period_start:
 - `accounts/views.py` - Both `subscription_success` and `subscription_webhook` views updated
 - Added debug logging to help troubleshoot future subscription issues
 
+### Subscribers Blocked by Free AI Limit (RESOLVED)
+Users with active subscriptions were seeing "AI Limit Reached - You have used all 3 free AI analyses" and being blocked from using AI features.
+
+**Root cause:** The `Document.can_use_ai()` method only checked admin access, free tier, and paid document status - it never checked if the user had an active subscription.
+
+**Solution:** Updated three methods in `documents/models.py`:
+1. `can_use_ai()` - Now checks `user.can_use_subscription_ai()` before falling back to free tier
+2. `get_ai_usage_display()` - Shows subscription AI remaining (e.g., "AI: 50 uses remaining this month (Pro)")
+3. `record_ai_usage()` - Records usage on subscription instead of document for subscribers
+
+**Files modified:**
+- `documents/models.py` - All three methods updated
+
 ---
 
 ## Instructions for Next Claude Session
