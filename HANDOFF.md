@@ -2278,6 +2278,19 @@ Subscribers were still seeing "Upgrade Now - $79" in the status banner even with
 - Show "PRO - Draft Document" instead of "DRAFT - X hours remaining"
 - Hide "Unlock Now" button for subscribers on expired docs
 
+### Dark Mode Text Readability in Document Builder (RESOLVED)
+Text in AI results, accordions, and various document builder elements was hard to read in dark mode.
+
+**Solution:** Added comprehensive dark mode styles to `static/css/app-theme.css`:
+- Field items and field values in AI results
+- bg-light backgrounds
+- Card headers with colored backgrounds (success, warning, info, etc.)
+- Results panel and questions section
+- Section edit page elements (defendants, witnesses, evidence cards)
+- Document detail and review pages
+- Accordion buttons and arrows
+- Various text elements, badges, borders, and list items
+
 ---
 
 ## Instructions for Next Claude Session
