@@ -237,3 +237,370 @@ def legal_disclaimer(request):
 def cookie_policy(request):
     """Cookie Policy page."""
     return _render_legal_page(request, 'cookies', 'legal/cookies.html')
+
+
+# =============================================================================
+# SUBSCRIPTION VIEWS
+# =============================================================================
+
+import stripe
+from django.conf import settings as django_settings
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from decimal import Decimal
+
+stripe.api_key = django_settings.STRIPE_SECRET_KEY
+
+
+def pricing(request):
+    """Display pricing page with all options."""
+    from .models import Subscription
+
+    context = {
+        # One-time prices
+        'price_single': django_settings.DOCUMENT_PRICE_SINGLE,
+        'price_3pack': django_settings.DOCUMENT_PRICE_3PACK,
+        'price_single_per': django_settings.DOCUMENT_PRICE_SINGLE,
+        'price_3pack_per': round(django_settings.DOCUMENT_PRICE_3PACK / 3, 2),
+
+        # Subscription prices
+        'price_monthly': django_settings.SUBSCRIPTION_PRICE_MONTHLY,
+        'price_annual': django_settings.SUBSCRIPTION_PRICE_ANNUAL,
+        'price_annual_per_month': round(django_settings.SUBSCRIPTION_PRICE_ANNUAL / 12, 2),
+
+        # AI limits
+        'monthly_ai_uses': django_settings.SUBSCRIPTION_MONTHLY_AI_USES,
+        'annual_ai_uses': django_settings.SUBSCRIPTION_ANNUAL_AI_USES,
+        'free_ai_uses': django_settings.FREE_AI_GENERATIONS,
+
+        # Discount
+        'promo_discount': django_settings.PROMO_DISCOUNT_PERCENT,
+
+        # User subscription status
+        'has_subscription': False,
+        'subscription': None,
+    }
+
+    if request.user.is_authenticated:
+        try:
+            context['subscription'] = request.user.subscription
+            context['has_subscription'] = request.user.subscription.is_active()
+        except Subscription.DoesNotExist:
+            pass
+
+    return render(request, 'accounts/pricing.html', context)
+
+
+@login_required
+def subscribe(request, plan):
+    """Start subscription checkout process."""
+    from .models import Subscription
+    from documents.models import PromoCode
+
+    if plan not in ['monthly', 'annual']:
+        messages.error(request, 'Invalid subscription plan.')
+        return redirect('accounts:pricing')
+
+    # Check if user already has active subscription
+    try:
+        if request.user.subscription.is_active():
+            messages.info(request, 'You already have an active subscription.')
+            return redirect('accounts:subscription_manage')
+    except Subscription.DoesNotExist:
+        pass
+
+    # Get price ID based on plan
+    if plan == 'monthly':
+        price_id = django_settings.STRIPE_PRICE_MONTHLY
+        price_amount = django_settings.SUBSCRIPTION_PRICE_MONTHLY
+    else:
+        price_id = django_settings.STRIPE_PRICE_ANNUAL
+        price_amount = django_settings.SUBSCRIPTION_PRICE_ANNUAL
+
+    if not price_id:
+        messages.error(request, 'Subscription not configured. Please contact support.')
+        return redirect('accounts:pricing')
+
+    # Handle promo code
+    promo_code = None
+    promo_code_str = request.GET.get('promo') or request.POST.get('promo_code', '').strip().upper()
+
+    if promo_code_str:
+        try:
+            promo_code = PromoCode.objects.get(code=promo_code_str, is_active=True)
+            if promo_code.owner == request.user:
+                messages.error(request, 'You cannot use your own referral code.')
+                promo_code = None
+        except PromoCode.DoesNotExist:
+            messages.error(request, 'Invalid promo code.')
+
+    # Create or get Stripe customer
+    try:
+        # Check if user already has a Stripe customer ID
+        existing_sub = Subscription.objects.filter(user=request.user).first()
+        if existing_sub and existing_sub.stripe_customer_id:
+            customer_id = existing_sub.stripe_customer_id
+        else:
+            # Create new customer
+            customer = stripe.Customer.create(
+                email=request.user.email,
+                metadata={'user_id': str(request.user.id)}
+            )
+            customer_id = customer.id
+
+        # Build checkout session params
+        checkout_params = {
+            'customer': customer_id,
+            'payment_method_types': ['card'],
+            'line_items': [{
+                'price': price_id,
+                'quantity': 1,
+            }],
+            'mode': 'subscription',
+            'success_url': request.build_absolute_uri(
+                reverse_lazy('accounts:subscription_success')
+            ) + '?session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url': request.build_absolute_uri(
+                reverse_lazy('accounts:pricing')
+            ),
+            'metadata': {
+                'user_id': str(request.user.id),
+                'plan': plan,
+                'promo_code': promo_code.code if promo_code else '',
+            },
+        }
+
+        # Apply promo discount if provided
+        if promo_code:
+            # Create a coupon for the discount
+            checkout_params['discounts'] = [{
+                'coupon': _get_or_create_promo_coupon(),
+            }]
+            request.session['subscription_promo_code'] = promo_code.code
+
+        checkout_session = stripe.checkout.Session.create(**checkout_params)
+        return redirect(checkout_session.url)
+
+    except stripe.error.StripeError as e:
+        messages.error(request, f'Payment error: {str(e)}')
+        return redirect('accounts:pricing')
+
+
+def _get_or_create_promo_coupon():
+    """Get or create a Stripe coupon for promo discounts."""
+    coupon_id = f"PROMO_{django_settings.PROMO_DISCOUNT_PERCENT}OFF"
+    try:
+        coupon = stripe.Coupon.retrieve(coupon_id)
+    except stripe.error.InvalidRequestError:
+        # Create the coupon
+        coupon = stripe.Coupon.create(
+            id=coupon_id,
+            percent_off=django_settings.PROMO_DISCOUNT_PERCENT,
+            duration='once',  # First payment only
+            name=f'{django_settings.PROMO_DISCOUNT_PERCENT}% Off First Payment'
+        )
+    return coupon.id
+
+
+@login_required
+def subscription_success(request):
+    """Handle successful subscription signup."""
+    from .models import Subscription, SubscriptionReferral
+    from documents.models import PromoCode
+
+    session_id = request.GET.get('session_id')
+    if not session_id:
+        messages.error(request, 'Invalid checkout session.')
+        return redirect('accounts:pricing')
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        subscription_id = session.subscription
+
+        if subscription_id:
+            # Get subscription details from Stripe
+            stripe_sub = stripe.Subscription.retrieve(subscription_id)
+
+            plan = session.metadata.get('plan', 'monthly')
+
+            # Create or update subscription record
+            subscription, created = Subscription.objects.update_or_create(
+                user=request.user,
+                defaults={
+                    'plan': plan,
+                    'status': stripe_sub.status,
+                    'stripe_subscription_id': subscription_id,
+                    'stripe_customer_id': stripe_sub.customer,
+                    'current_period_start': _timestamp_to_datetime(stripe_sub.current_period_start),
+                    'current_period_end': _timestamp_to_datetime(stripe_sub.current_period_end),
+                }
+            )
+
+            # Handle promo code referral
+            promo_code_str = request.session.pop('subscription_promo_code', None) or session.metadata.get('promo_code')
+            if promo_code_str and created:
+                try:
+                    promo_code = PromoCode.objects.get(code=promo_code_str, is_active=True)
+                    referral_amount = (
+                        django_settings.REFERRAL_PAYOUT_ANNUAL if plan == 'annual'
+                        else django_settings.REFERRAL_PAYOUT_MONTHLY
+                    )
+
+                    # Create subscription referral
+                    SubscriptionReferral.objects.create(
+                        promo_code=promo_code,
+                        subscription=subscription,
+                        subscriber=request.user,
+                        plan_type=plan,
+                        first_payment_amount=Decimal(str(session.amount_total / 100)),
+                        referral_amount=referral_amount,
+                    )
+
+                    # Update promo code stats
+                    promo_code.record_usage(referral_amount)
+                    subscription.promo_code_used = promo_code
+                    subscription.save(update_fields=['promo_code_used'])
+
+                except PromoCode.DoesNotExist:
+                    pass
+
+            messages.success(
+                request,
+                f'Welcome to Pro! Your {plan} subscription is now active.'
+            )
+            return redirect('accounts:subscription_manage')
+
+    except stripe.error.StripeError as e:
+        messages.error(request, f'Error confirming subscription: {str(e)}')
+
+    return redirect('accounts:pricing')
+
+
+def _timestamp_to_datetime(timestamp):
+    """Convert Unix timestamp to datetime."""
+    from django.utils import timezone
+    from datetime import datetime
+    return timezone.make_aware(datetime.fromtimestamp(timestamp))
+
+
+@login_required
+def subscription_manage(request):
+    """Manage subscription - view status, cancel, etc."""
+    from .models import Subscription
+
+    try:
+        subscription = request.user.subscription
+    except Subscription.DoesNotExist:
+        messages.info(request, 'You do not have an active subscription.')
+        return redirect('accounts:pricing')
+
+    # Handle cancellation
+    if request.method == 'POST' and request.POST.get('action') == 'cancel':
+        try:
+            # Cancel at period end (don't cancel immediately)
+            stripe.Subscription.modify(
+                subscription.stripe_subscription_id,
+                cancel_at_period_end=True
+            )
+            subscription.cancel_at_period_end = True
+            subscription.save(update_fields=['cancel_at_period_end'])
+            messages.success(
+                request,
+                'Your subscription will be canceled at the end of the current billing period.'
+            )
+        except stripe.error.StripeError as e:
+            messages.error(request, f'Error canceling subscription: {str(e)}')
+
+    # Handle reactivation
+    if request.method == 'POST' and request.POST.get('action') == 'reactivate':
+        try:
+            stripe.Subscription.modify(
+                subscription.stripe_subscription_id,
+                cancel_at_period_end=False
+            )
+            subscription.cancel_at_period_end = False
+            subscription.save(update_fields=['cancel_at_period_end'])
+            messages.success(request, 'Your subscription has been reactivated.')
+        except stripe.error.StripeError as e:
+            messages.error(request, f'Error reactivating subscription: {str(e)}')
+
+    context = {
+        'subscription': subscription,
+        'ai_remaining': subscription.get_ai_remaining(),
+        'ai_limit': subscription.get_ai_limit(),
+        'ai_used': subscription.ai_uses_this_period,
+    }
+
+    return render(request, 'accounts/subscription_manage.html', context)
+
+
+@csrf_exempt
+@require_POST
+def subscription_webhook(request):
+    """Handle Stripe webhook events for subscriptions."""
+    from .models import Subscription
+
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, django_settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError:
+        return HttpResponse(status=400)
+
+    # Handle subscription events
+    if event['type'] == 'customer.subscription.updated':
+        stripe_sub = event['data']['object']
+        try:
+            subscription = Subscription.objects.get(
+                stripe_subscription_id=stripe_sub['id']
+            )
+            subscription.status = stripe_sub['status']
+            subscription.current_period_start = _timestamp_to_datetime(stripe_sub['current_period_start'])
+            subscription.current_period_end = _timestamp_to_datetime(stripe_sub['current_period_end'])
+            subscription.cancel_at_period_end = stripe_sub.get('cancel_at_period_end', False)
+            subscription.save()
+
+            # Reset AI usage on new billing period
+            if stripe_sub['status'] == 'active':
+                # Check if this is a new period
+                old_period_end = subscription.current_period_end
+                new_period_start = _timestamp_to_datetime(stripe_sub['current_period_start'])
+                if new_period_start >= old_period_end:
+                    subscription.reset_ai_usage()
+
+        except Subscription.DoesNotExist:
+            pass
+
+    elif event['type'] == 'customer.subscription.deleted':
+        stripe_sub = event['data']['object']
+        try:
+            subscription = Subscription.objects.get(
+                stripe_subscription_id=stripe_sub['id']
+            )
+            subscription.status = 'canceled'
+            from django.utils import timezone
+            subscription.canceled_at = timezone.now()
+            subscription.save()
+        except Subscription.DoesNotExist:
+            pass
+
+    elif event['type'] == 'invoice.payment_failed':
+        invoice = event['data']['object']
+        subscription_id = invoice.get('subscription')
+        if subscription_id:
+            try:
+                subscription = Subscription.objects.get(
+                    stripe_subscription_id=subscription_id
+                )
+                subscription.status = 'past_due'
+                subscription.save(update_fields=['status'])
+            except Subscription.DoesNotExist:
+                pass
+
+    return HttpResponse(status=200)

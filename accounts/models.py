@@ -159,7 +159,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         )['total'] or 0
 
     def get_paid_referral_earnings(self):
-        """Get total paid referral earnings."""
+        """Get total paid referral earnings from document purchases."""
         from documents.models import PromoCodeUsage
         return PromoCodeUsage.objects.filter(
             promo_code__owner=self,
@@ -167,6 +167,87 @@ class User(AbstractBaseUser, PermissionsMixin):
         ).aggregate(
             total=models.Sum('referral_amount')
         )['total'] or 0
+
+    def get_subscription_referral_earnings(self):
+        """Get total earnings from subscription referrals."""
+        return SubscriptionReferral.objects.filter(
+            promo_code__owner=self
+        ).aggregate(
+            total=models.Sum('referral_amount')
+        )['total'] or 0
+
+    def get_pending_subscription_referral_earnings(self):
+        """Get pending subscription referral earnings."""
+        return SubscriptionReferral.objects.filter(
+            promo_code__owner=self,
+            payout_status='pending'
+        ).aggregate(
+            total=models.Sum('referral_amount')
+        )['total'] or 0
+
+    def get_all_referral_earnings(self):
+        """Get total earnings from all referral types."""
+        doc_earnings = self.get_total_referral_earnings() or 0
+        sub_earnings = self.get_subscription_referral_earnings() or 0
+        return doc_earnings + sub_earnings
+
+    def get_all_pending_referral_earnings(self):
+        """Get total pending earnings from all referral types."""
+        doc_pending = self.get_pending_referral_earnings() or 0
+        sub_pending = self.get_pending_subscription_referral_earnings() or 0
+        return doc_pending + sub_pending
+
+    # Subscription methods
+
+    def has_active_subscription(self):
+        """Check if user has an active subscription."""
+        try:
+            return self.subscription.is_active()
+        except Subscription.DoesNotExist:
+            return False
+
+    def get_subscription(self):
+        """Get user's subscription or None."""
+        try:
+            return self.subscription
+        except Subscription.DoesNotExist:
+            return None
+
+    def get_document_credits(self):
+        """Get total remaining document credits from packs."""
+        return sum(
+            pack.documents_remaining()
+            for pack in self.document_packs.all()
+        )
+
+    def use_document_credit(self):
+        """Use a document credit from oldest pack. Returns True if successful."""
+        for pack in self.document_packs.order_by('created_at'):
+            if pack.use_document():
+                return True
+        return False
+
+    def can_create_document(self):
+        """Check if user can create a new document (subscription or credits)."""
+        if self.has_unlimited_access():
+            return True
+        if self.has_active_subscription():
+            return True
+        if self.get_document_credits() > 0:
+            return True
+        return False
+
+    def get_subscription_ai_remaining(self):
+        """Get remaining AI uses from subscription."""
+        if self.has_active_subscription():
+            return self.subscription.get_ai_remaining()
+        return 0
+
+    def can_use_subscription_ai(self):
+        """Check if user can use AI via subscription."""
+        if self.has_active_subscription():
+            return self.subscription.can_use_ai()
+        return False
 
 
 class SiteSettings(models.Model):
@@ -492,3 +573,230 @@ class LegalDocument(models.Model):
             return cls.objects.get(document_type=doc_type, is_active=True)
         except cls.DoesNotExist:
             return None
+
+
+class Subscription(models.Model):
+    """
+    User subscription for unlimited document access.
+    Tracks Stripe subscription lifecycle.
+    """
+
+    PLAN_CHOICES = [
+        ('monthly', 'Monthly ($29/mo)'),
+        ('annual', 'Annual ($249/yr)'),
+    ]
+
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('past_due', 'Past Due'),
+        ('canceled', 'Canceled'),
+        ('unpaid', 'Unpaid'),
+        ('trialing', 'Trialing'),
+        ('incomplete', 'Incomplete'),
+        ('incomplete_expired', 'Incomplete Expired'),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='subscription'
+    )
+    plan = models.CharField(max_length=20, choices=PLAN_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='incomplete')
+
+    # Stripe IDs
+    stripe_subscription_id = models.CharField(
+        max_length=255,
+        unique=True,
+        help_text='Stripe Subscription ID (sub_xxx)'
+    )
+    stripe_customer_id = models.CharField(
+        max_length=255,
+        help_text='Stripe Customer ID (cus_xxx)'
+    )
+
+    # Billing cycle
+    current_period_start = models.DateTimeField(null=True, blank=True)
+    current_period_end = models.DateTimeField(null=True, blank=True)
+    cancel_at_period_end = models.BooleanField(
+        default=False,
+        help_text='If true, subscription will cancel at period end'
+    )
+
+    # AI usage tracking (resets each billing period)
+    ai_uses_this_period = models.IntegerField(default=0)
+    ai_period_reset_at = models.DateTimeField(null=True, blank=True)
+
+    # Promo code used for signup
+    promo_code_used = models.ForeignKey(
+        'documents.PromoCode',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='subscriptions'
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    canceled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Subscription'
+        verbose_name_plural = 'Subscriptions'
+
+    def __str__(self):
+        return f"{self.user.email} - {self.get_plan_display()} ({self.status})"
+
+    def is_active(self):
+        """Check if subscription is currently active."""
+        return self.status in ['active', 'trialing']
+
+    def get_ai_limit(self):
+        """Get AI usage limit based on plan."""
+        if self.plan == 'annual':
+            return settings.SUBSCRIPTION_ANNUAL_AI_USES
+        return settings.SUBSCRIPTION_MONTHLY_AI_USES
+
+    def get_ai_remaining(self):
+        """Get remaining AI uses for this period."""
+        return max(0, self.get_ai_limit() - self.ai_uses_this_period)
+
+    def can_use_ai(self):
+        """Check if subscriber can use AI."""
+        if not self.is_active():
+            return False
+        return self.ai_uses_this_period < self.get_ai_limit()
+
+    def record_ai_use(self):
+        """Record an AI use."""
+        self.ai_uses_this_period += 1
+        self.save(update_fields=['ai_uses_this_period'])
+
+    def reset_ai_usage(self):
+        """Reset AI usage for new billing period."""
+        from django.utils import timezone
+        self.ai_uses_this_period = 0
+        self.ai_period_reset_at = timezone.now()
+        self.save(update_fields=['ai_uses_this_period', 'ai_period_reset_at'])
+
+
+class DocumentPack(models.Model):
+    """
+    Track document pack purchases (e.g., 3-pack).
+    Each pack gives the user a certain number of document credits.
+    """
+
+    PACK_TYPES = [
+        ('single', 'Single Document'),
+        ('3pack', '3-Document Pack'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='document_packs'
+    )
+    pack_type = models.CharField(max_length=20, choices=PACK_TYPES)
+    documents_included = models.IntegerField(help_text='Number of documents included')
+    documents_used = models.IntegerField(default=0, help_text='Number of documents used')
+
+    # Payment info
+    stripe_payment_id = models.CharField(max_length=255, help_text='Stripe Payment Intent ID')
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
+
+    # Promo code
+    promo_code_used = models.ForeignKey(
+        'documents.PromoCode',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='document_packs'
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.email} - {self.get_pack_type_display()} ({self.documents_remaining()} remaining)"
+
+    def documents_remaining(self):
+        """Get number of documents remaining in pack."""
+        return max(0, self.documents_included - self.documents_used)
+
+    def has_documents_available(self):
+        """Check if pack has available documents."""
+        return self.documents_remaining() > 0
+
+    def use_document(self):
+        """Use one document from the pack."""
+        if self.has_documents_available():
+            self.documents_used += 1
+            self.save(update_fields=['documents_used'])
+            return True
+        return False
+
+
+class SubscriptionReferral(models.Model):
+    """
+    Track referrals for subscription signups.
+    Referrer gets payout on first payment only.
+    """
+
+    PAYOUT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+    ]
+
+    promo_code = models.ForeignKey(
+        'documents.PromoCode',
+        on_delete=models.CASCADE,
+        related_name='subscription_referrals'
+    )
+    subscription = models.OneToOneField(
+        Subscription,
+        on_delete=models.CASCADE,
+        related_name='referral'
+    )
+    subscriber = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='subscription_referrals_received'
+    )
+
+    # Payment details
+    plan_type = models.CharField(max_length=20)  # 'monthly' or 'annual'
+    first_payment_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    referral_amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    # Payout tracking
+    payout_status = models.CharField(
+        max_length=20,
+        choices=PAYOUT_STATUS_CHOICES,
+        default='pending'
+    )
+    payout_reference = models.CharField(max_length=255, blank=True)
+    payout_date = models.DateTimeField(null=True, blank=True)
+    payout_notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Subscription Referral'
+        verbose_name_plural = 'Subscription Referrals'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.promo_code.code} → {self.subscriber.email} ({self.plan_type})"
+
+    def mark_paid(self, reference, notes=''):
+        """Mark this referral as paid out."""
+        from django.utils import timezone
+        self.payout_status = 'paid'
+        self.payout_reference = reference
+        self.payout_date = timezone.now()
+        self.payout_notes = notes
+        self.save()
