@@ -70,13 +70,18 @@
             <a class="navbar-brand" href="{% url 'home' %}">
                 <span class="brand-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="24" height="24">
-                        <!-- Angled gavel - rotated 45 degrees for recognition -->
-                        <g transform="rotate(-35, 16, 16)">
-                            <!-- Gavel head - barrel shape -->
-                            <rect x="4" y="12" width="24" height="8" rx="4" ry="4" fill="#FFFFFF"/>
-                            <!-- Handle - extends from center of head -->
-                            <rect x="13" y="18" width="6" height="16" rx="2" fill="#FFFFFF"/>
+                        <!-- Judge's Gavel in striking pose -->
+                        <g transform="rotate(-45, 16, 14)">
+                            <!-- Cylindrical head - side view -->
+                            <rect x="4" y="8" width="24" height="8" rx="4" ry="4" fill="#FFFFFF"/>
+                            <!-- Head end caps (show cylinder) -->
+                            <ellipse cx="6" cy="12" rx="2" ry="4" fill="rgba(255,255,255,0.8)"/>
+                            <ellipse cx="26" cy="12" rx="2" ry="4" fill="rgba(255,255,255,0.8)"/>
+                            <!-- Handle through center of head -->
+                            <rect x="14" y="12" width="4" height="16" rx="1" fill="#FFFFFF"/>
                         </g>
+                        <!-- Sound block -->
+                        <rect x="18" y="25" width="12" height="5" rx="1" fill="rgba(255,255,255,0.7)"/>
                     </svg>
                 </span>
                 <span class="brand-text">{{ header_app_name }}</span>
