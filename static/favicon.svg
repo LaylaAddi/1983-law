@@ -17,14 +17,17 @@
         stroke="rgba(255,255,255,0.3)"
         stroke-width="1"/>
 
-  <!-- Judge's Gavel - proper cylindrical head with handle through center -->
-  <g fill="#FFFFFF" transform="rotate(-45, 16, 13)">
-    <!-- Cylindrical head -->
-    <rect x="5" y="9" width="22" height="7" rx="3.5" ry="3.5"/>
-    <!-- End caps to show cylinder depth -->
-    <ellipse cx="7" cy="12.5" rx="2" ry="3.5" fill="rgba(255,255,255,0.85)"/>
-    <ellipse cx="25" cy="12.5" rx="2" ry="3.5" fill="rgba(255,255,255,0.85)"/>
-    <!-- Handle through center -->
-    <rect x="14" y="13" width="4" height="13" rx="1"/>
+  <!-- Judge's Gavel - proper design with horizontal handle -->
+  <g fill="#FFFFFF" transform="rotate(-30, 16, 14)">
+    <!-- Cylindrical head with bands -->
+    <rect x="4" y="9" width="12" height="8" rx="4" ry="4"/>
+    <!-- Decorative grooves -->
+    <line x1="7" y1="9" x2="7" y2="17" stroke="rgba(0,40,104,0.3)" stroke-width="1"/>
+    <line x1="10" y1="9" x2="10" y2="17" stroke="rgba(0,40,104,0.3)" stroke-width="1"/>
+    <line x1="13" y1="9" x2="13" y2="17" stroke="rgba(0,40,104,0.3)" stroke-width="1"/>
+    <!-- Handle extending horizontally -->
+    <rect x="14" y="11" width="12" height="4" rx="1"/>
+    <!-- Handle end knob -->
+    <ellipse cx="27" cy="13" rx="2" ry="2.5"/>
   </g>
 </svg>
