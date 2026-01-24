@@ -69,24 +69,7 @@
         <div class="container">
             <a class="navbar-brand" href="{% url 'home' %}">
                 <span class="brand-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="24" height="24">
-                        <!-- Judge's Gavel - matching reference image -->
-                        <g transform="rotate(-30, 16, 16)">
-                            <!-- Cylindrical head with bands -->
-                            <rect x="2" y="8" width="14" height="10" rx="5" ry="5" fill="#FFFFFF"/>
-                            <!-- Decorative grooves on head -->
-                            <line x1="5" y1="8" x2="5" y2="18" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>
-                            <line x1="9" y1="8" x2="9" y2="18" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>
-                            <line x1="13" y1="8" x2="13" y2="18" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>
-                            <!-- Handle extending horizontally from head -->
-                            <rect x="14" y="11" width="14" height="4" rx="1" fill="#FFFFFF"/>
-                            <!-- Handle end knob -->
-                            <ellipse cx="29" cy="13" rx="2.5" ry="3" fill="#FFFFFF"/>
-                        </g>
-                        <!-- Sound block base -->
-                        <rect x="2" y="26" width="16" height="4" rx="1" fill="rgba(255,255,255,0.8)"/>
-                        <rect x="0" y="28" width="20" height="3" rx="1" fill="rgba(255,255,255,0.6)"/>
-                    </svg>
+                    <img src="{% static 'gavel-icon.svg' %}" alt="Gavel" width="24" height="24">
                 </span>
                 <span class="brand-text">{{ header_app_name }}</span>
             </a>
