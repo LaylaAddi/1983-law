@@ -432,6 +432,8 @@ def subscription_success(request):
     """Handle successful subscription signup."""
     from .models import Subscription, SubscriptionReferral
     from documents.models import PromoCode
+    import logging
+    logger = logging.getLogger(__name__)
 
     session_id = request.GET.get('session_id')
     if not session_id:
@@ -496,7 +498,11 @@ def subscription_success(request):
             return redirect('accounts:subscription_manage')
 
     except stripe.error.StripeError as e:
+        logger.error(f'Stripe error in subscription_success: {str(e)}')
         messages.error(request, f'Error confirming subscription: {str(e)}')
+    except Exception as e:
+        logger.error(f'Unexpected error in subscription_success: {str(e)}', exc_info=True)
+        raise  # Re-raise to see full traceback in logs
 
     return redirect('accounts:pricing')
 
