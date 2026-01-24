@@ -162,13 +162,13 @@ function lookupInfo() {
     let officerDescription = '';
 
     if (typeField && typeField.value === 'agency') {
-        agencyName = nameField ? nameField.value.trim() : '';
+        agencyName = nameField && nameField.value ? nameField.value.trim() : '';
     } else {
         // Individual officer
-        agencyName = agencyField ? agencyField.value.trim() : '';
-        officerName = nameField ? nameField.value.trim() : '';
-        officerTitle = titleField ? titleField.value.trim() : '';
-        officerDescription = descriptionField ? descriptionField.value.trim() : '';
+        agencyName = agencyField && agencyField.value ? agencyField.value.trim() : '';
+        officerName = nameField && nameField.value ? nameField.value.trim() : '';
+        officerTitle = titleField && titleField.value ? titleField.value.trim() : '';
+        officerDescription = descriptionField && descriptionField.value ? descriptionField.value.trim() : '';
     }
 
     console.log('Data to send:', { agencyName, officerName, officerTitle, officerDescription });
