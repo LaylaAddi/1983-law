@@ -157,6 +157,25 @@ The app is functional with the following features complete:
 ### Email Configuration
 Password reset and payout notifications require SMTP email. See Environment Variables section for Namecheap Private Email setup.
 
+### Profile Page - My Plan Section (NEW)
+The profile page now shows subscription/purchase status with:
+- **Active subscription**: Plan type, AI uses this period, renewal date, manage link
+- **Document packs**: Table showing packs with remaining credits
+- **Free trial**: Shows remaining free AI uses with upgrade prompt
+- **No plan**: Shows prompt to view pricing
+- **Purchase history**: Table of paid/finalized documents with amounts
+
+### Document Creation Soft Gate (NEW)
+When a user has exhausted all free options (no subscription, no pack credits, no free AI remaining), attempting to create a document shows an interstitial page with:
+- Pricing options for subscriptions and one-time purchases
+- "Continue with limited access" button (sets session flag to bypass)
+- Feature highlights (AI writing, court-ready PDF, rights analysis)
+
+**Files:**
+- `templates/documents/purchase_required.html` - Interstitial template
+- `documents/views.py` - `document_create` checks `user.needs_purchase_prompt()`
+- `accounts/models.py` - `needs_purchase_prompt()` and `get_access_summary()` methods
+
 ---
 
 ## User Model Fields (accounts/models.py)
@@ -174,6 +193,10 @@ Password reset and payout notifications require SMTP email. See Environment Vari
 | is_superuser | Django superuser status (grants unlimited AI access) |
 | has_complete_profile() | Method to check if profile is complete |
 | has_unlimited_access() | Method: returns True if is_staff OR is_superuser |
+| has_active_subscription() | Method: returns True if user has active subscription |
+| get_document_credits() | Method: returns total remaining document credits from packs |
+| needs_purchase_prompt() | Method: returns True if user should see purchase interstitial |
+| get_access_summary() | Method: returns dict with subscription, credits, free AI status |
 
 ---
 
