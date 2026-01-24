@@ -1001,3 +1001,246 @@ a:hover {
 [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
     background: var(--patriot-blue);
 }
+
+/* ========================================
+   DOCUMENT BUILDER DARK MODE STYLES
+   ======================================== */
+
+/* Field items in AI results */
+[data-theme="dark"] .field-item {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border) !important;
+}
+
+[data-theme="dark"] .field-item:hover {
+    background: var(--dark-bg-card);
+    border-color: var(--patriot-blue) !important;
+}
+
+[data-theme="dark"] .field-item .form-check-label {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .field-value {
+    background: var(--dark-bg);
+    color: var(--dark-text);
+    border-left-color: #6ea8fe;
+}
+
+[data-theme="dark"] .field-item:has(.form-check-input:checked) {
+    background: #1a3d2e;
+    border-color: #198754 !important;
+}
+
+[data-theme="dark"] .field-item:has(.form-check-input:checked) .field-value {
+    border-left-color: #198754;
+}
+
+/* bg-light backgrounds */
+[data-theme="dark"] .bg-light,
+[data-theme="dark"] .accordion-body > .mb-3.p-3.bg-light {
+    background: var(--dark-bg) !important;
+    color: var(--dark-text);
+    border-color: var(--dark-border) !important;
+}
+
+/* Card headers with colored backgrounds */
+[data-theme="dark"] .card-header.bg-success {
+    background: #146c43 !important;
+}
+
+[data-theme="dark"] .card-header.bg-warning {
+    background: #997404 !important;
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .card-header.bg-info {
+    background: #087990 !important;
+}
+
+[data-theme="dark"] .card-header.bg-primary {
+    background: var(--patriot-blue) !important;
+}
+
+[data-theme="dark"] .card-header.bg-danger {
+    background: #842029 !important;
+}
+
+/* Results panel text */
+[data-theme="dark"] #resultsPanel .card-body,
+[data-theme="dark"] #resultsContent {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] #resultsPanel h6,
+[data-theme="dark"] #resultsPanel .h6 {
+    color: var(--dark-text);
+}
+
+/* Questions section */
+[data-theme="dark"] #questionsSection .card {
+    background: var(--dark-bg-secondary);
+}
+
+[data-theme="dark"] #questionsList label {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] #questionsList .form-control {
+    background: var(--dark-bg);
+    color: var(--dark-text);
+    border-color: var(--dark-border);
+}
+
+/* AI suggestion boxes */
+[data-theme="dark"] .suggestion-box,
+[data-theme="dark"] .ai-suggestion {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+/* Section edit page elements */
+[data-theme="dark"] .section-content {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .item-card,
+[data-theme="dark"] .defendant-card,
+[data-theme="dark"] .witness-card,
+[data-theme="dark"] .evidence-card {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .item-card h6,
+[data-theme="dark"] .defendant-card h6,
+[data-theme="dark"] .witness-card h6,
+[data-theme="dark"] .evidence-card h6 {
+    color: var(--dark-text);
+}
+
+/* Document detail cards */
+[data-theme="dark"] .section-card {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .section-card .card-title {
+    color: var(--dark-text);
+}
+
+/* AI limit reached box */
+[data-theme="dark"] .ai-limit-box {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+/* Help text and small text */
+[data-theme="dark"] .form-text,
+[data-theme="dark"] small.text-muted,
+[data-theme="dark"] .help-text {
+    color: var(--dark-text-muted) !important;
+}
+
+/* Strong/bold text in cards */
+[data-theme="dark"] .card-body strong {
+    color: var(--dark-text);
+}
+
+/* List items in document sections */
+[data-theme="dark"] .list-group-flush .list-group-item {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+/* Badge improvements */
+[data-theme="dark"] .badge.bg-light {
+    background: var(--dark-bg) !important;
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .badge.bg-secondary {
+    background: #4a5568 !important;
+}
+
+/* Border utilities */
+[data-theme="dark"] .border-warning {
+    border-color: #997404 !important;
+}
+
+[data-theme="dark"] .border-info {
+    border-color: #087990 !important;
+}
+
+[data-theme="dark"] .border-success {
+    border-color: #146c43 !important;
+}
+
+/* P tags in cards */
+[data-theme="dark"] .card-body p {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .card-body p.text-muted {
+    color: var(--dark-text-muted) !important;
+}
+
+/* Accordion button arrow fix */
+[data-theme="dark"] .accordion-button::after {
+    filter: invert(1);
+}
+
+/* Tips card list items */
+[data-theme="dark"] .card-body ul li {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .card-body ul li strong {
+    color: #6ea8fe;
+}
+
+/* Status banner text */
+[data-theme="dark"] .alert strong {
+    color: inherit;
+}
+
+/* Input group text */
+[data-theme="dark"] .input-group-text {
+    background: var(--dark-bg);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+/* Inline editable fields */
+[data-theme="dark"] .editable-field {
+    background: var(--dark-bg-secondary);
+    color: var(--dark-text);
+}
+
+/* Document review page */
+[data-theme="dark"] .review-section {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .issue-item {
+    background: var(--dark-bg);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .issue-item:hover {
+    background: var(--dark-bg-card);
+}
+
+/* Preview document styles */
+[data-theme="dark"] .legal-document {
+    background: var(--dark-bg-secondary);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .document-section {
+    border-color: var(--dark-border);
+}
+
