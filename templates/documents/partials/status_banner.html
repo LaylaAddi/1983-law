@@ -3,16 +3,23 @@
 {# Document Status Banner - shows time remaining, AI usage, and actions #}
 
 {% if document.payment_status == 'draft' %}
-<div class="alert alert-warning d-flex justify-content-between align-items-center mb-4">
+<div class="alert {% if user.has_active_subscription %}alert-info{% else %}alert-warning{% endif %} d-flex justify-content-between align-items-center mb-4">
     <div>
+        {% if user.has_active_subscription %}
+        <i class="bi bi-star-fill me-2"></i>
+        <strong>PRO</strong> - Draft Document
+        {% else %}
         <i class="bi bi-clock me-2"></i>
         <strong>DRAFT</strong> - {{ document.get_time_remaining_display }} remaining
+        {% endif %}
         <span class="mx-2">|</span>
         <i class="bi bi-robot me-1"></i><span id="aiUsageDisplay">{{ document.get_ai_usage_display }}</span>
     </div>
+    {% if not user.has_active_subscription %}
     <a href="{% url 'documents:checkout' document.id %}" class="btn btn-primary btn-sm">
         <i class="bi bi-credit-card me-1"></i>Upgrade Now - $79
     </a>
+    {% endif %}
 </div>
 
 {% elif document.payment_status == 'expired' %}
@@ -21,9 +28,11 @@
         <i class="bi bi-exclamation-triangle me-2"></i>
         <strong>EXPIRED</strong> - Document is locked
     </div>
+    {% if not user.has_active_subscription %}
     <a href="{% url 'documents:checkout' document.id %}" class="btn btn-danger btn-sm">
         <i class="bi bi-unlock me-1"></i>Unlock Now - $79
     </a>
+    {% endif %}
 </div>
 
 {% elif document.payment_status == 'paid' %}
