@@ -448,19 +448,35 @@ def subscription_success(request):
             # Get subscription details from Stripe
             stripe_sub = stripe.Subscription.retrieve(subscription_id)
 
+            # Log subscription data for debugging
+            logger.info(f'Subscription retrieved: status={stripe_sub.status}, '
+                       f'has_period_start={stripe_sub.get("current_period_start") is not None}, '
+                       f'has_period_end={stripe_sub.get("current_period_end") is not None}')
+
             plan = session.metadata.get('plan', 'monthly')
+
+            # Safely get period dates (may not be present for all subscription states)
+            period_start = stripe_sub.get('current_period_start')
+            period_end = stripe_sub.get('current_period_end')
+
+            # Build defaults dict
+            defaults = {
+                'plan': plan,
+                'status': stripe_sub.status,
+                'stripe_subscription_id': subscription_id,
+                'stripe_customer_id': stripe_sub.customer,
+            }
+
+            # Only set period dates if available
+            if period_start:
+                defaults['current_period_start'] = _timestamp_to_datetime(period_start)
+            if period_end:
+                defaults['current_period_end'] = _timestamp_to_datetime(period_end)
 
             # Create or update subscription record
             subscription, created = Subscription.objects.update_or_create(
                 user=request.user,
-                defaults={
-                    'plan': plan,
-                    'status': stripe_sub.status,
-                    'stripe_subscription_id': subscription_id,
-                    'stripe_customer_id': stripe_sub.customer,
-                    'current_period_start': _timestamp_to_datetime(stripe_sub.current_period_start),
-                    'current_period_end': _timestamp_to_datetime(stripe_sub.current_period_end),
-                }
+                defaults=defaults
             )
 
             # Handle promo code referral
@@ -591,17 +607,25 @@ def subscription_webhook(request):
                 stripe_subscription_id=stripe_sub['id']
             )
             subscription.status = stripe_sub['status']
-            subscription.current_period_start = _timestamp_to_datetime(stripe_sub['current_period_start'])
-            subscription.current_period_end = _timestamp_to_datetime(stripe_sub['current_period_end'])
+
+            # Safely get period dates (may not be present for all subscription states)
+            period_start = stripe_sub.get('current_period_start')
+            period_end = stripe_sub.get('current_period_end')
+
+            if period_start:
+                subscription.current_period_start = _timestamp_to_datetime(period_start)
+            if period_end:
+                subscription.current_period_end = _timestamp_to_datetime(period_end)
+
             subscription.cancel_at_period_end = stripe_sub.get('cancel_at_period_end', False)
             subscription.save()
 
             # Reset AI usage on new billing period
-            if stripe_sub['status'] == 'active':
+            if stripe_sub['status'] == 'active' and period_start:
                 # Check if this is a new period
                 old_period_end = subscription.current_period_end
-                new_period_start = _timestamp_to_datetime(stripe_sub['current_period_start'])
-                if new_period_start >= old_period_end:
+                new_period_start = _timestamp_to_datetime(period_start)
+                if old_period_end and new_period_start >= old_period_end:
                     subscription.reset_ai_usage()
 
         except Subscription.DoesNotExist:
