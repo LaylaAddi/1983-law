@@ -214,7 +214,29 @@
                         <a href="{% url 'legal:cookies' %}">Cookie Policy</a>
                     </div>
                 </div>
-                <div class="col-lg-4">
+                {% if site_settings.show_footer_contact %}
+                <div class="col-6 col-lg-2 mb-4 mb-lg-0">
+                    <h6>Contact</h6>
+                    <div class="footer-links">
+                        {% if site_settings.show_footer_address and site_settings.footer_address %}
+                        <span class="d-block small text-light text-opacity-75 mb-2">
+                            <i class="bi bi-geo-alt me-1"></i>{{ site_settings.footer_address|linebreaksbr }}
+                        </span>
+                        {% endif %}
+                        {% if site_settings.show_footer_phone and site_settings.footer_phone %}
+                        <a href="tel:{{ site_settings.footer_phone|urlencode }}">
+                            <i class="bi bi-telephone me-1"></i>{{ site_settings.footer_phone }}
+                        </a>
+                        {% endif %}
+                        {% if site_settings.show_footer_email and site_settings.footer_email %}
+                        <a href="mailto:{{ site_settings.footer_email }}">
+                            <i class="bi bi-envelope me-1"></i>{{ site_settings.footer_email }}
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                <div class="col-lg-{% if site_settings.show_footer_contact %}2{% else %}4{% endif %}">
                     <h6>Get Started</h6>
                     <p class="small text-light text-opacity-75">
                         Ready to document a civil rights violation? Our guided tool helps you

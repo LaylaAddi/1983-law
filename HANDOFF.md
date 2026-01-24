@@ -1330,6 +1330,33 @@ Located at `/admin/accounts/sitesettings/`:
 | hosting_provider | Render | Hosting provider name |
 | terms_effective_date | (blank) | TOS effective date |
 | privacy_effective_date | (blank) | Privacy effective date |
+| footer_address | 123 Liberty Avenue... | Address for footer (fake default) |
+| footer_phone | 585-204-7416 | Phone for footer |
+| footer_email | info@1983law.org | Email for footer |
+| show_footer_contact | True | Master toggle for contact section |
+| show_footer_address | False | Toggle for address display |
+| show_footer_phone | True | Toggle for phone display |
+| show_footer_email | True | Toggle for email display |
+
+### Footer Contact Information (NEW)
+The website footer displays contact information with individual show/hide toggles.
+
+**Features:**
+- Master toggle (`show_footer_contact`) to show/hide entire contact section
+- Individual toggles for address, phone, and email
+- Address hidden by default (fake placeholder address)
+- Phone and email visible by default
+- Icons for each contact type (geo-alt, telephone, envelope)
+- Clickable phone (tel:) and email (mailto:) links
+
+**Admin Location:** `/admin/accounts/sitesettings/` → "Footer Contact Information" fieldset
+
+**Files:**
+- `accounts/models.py` - SiteSettings model with footer fields
+- `accounts/admin.py` - Admin fieldset for footer contact
+- `config/context_processors.py` - Makes site_settings available in templates
+- `templates/base.html` - Footer display with conditional rendering
+- `accounts/migrations/0002_footer_contact_info.py` - Migration
 
 ### Legal Documents (Full Content Editing)
 Located at `/admin/accounts/legaldocument/`:

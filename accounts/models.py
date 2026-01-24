@@ -265,6 +265,40 @@ class SiteSettings(models.Model):
         help_text='Effective date of Privacy Policy'
     )
 
+    # Footer Contact Information
+    footer_address = models.TextField(
+        blank=True,
+        default='123 Liberty Avenue, Suite 1983\nNew York, NY 10001',
+        help_text='Address to display in footer (use line breaks for formatting)'
+    )
+    footer_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        default='585-204-7416',
+        help_text='Phone number to display in footer'
+    )
+    footer_email = models.EmailField(
+        blank=True,
+        default='info@1983law.org',
+        help_text='Email address to display in footer'
+    )
+    show_footer_contact = models.BooleanField(
+        default=True,
+        help_text='Show contact section in footer'
+    )
+    show_footer_address = models.BooleanField(
+        default=False,
+        help_text='Show address in footer contact section'
+    )
+    show_footer_phone = models.BooleanField(
+        default=True,
+        help_text='Show phone number in footer contact section'
+    )
+    show_footer_email = models.BooleanField(
+        default=True,
+        help_text='Show email in footer contact section'
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -45,6 +45,15 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         ('Company Information', {
             'fields': ('company_name', 'company_type', 'company_state', 'company_address', 'contact_email', 'website_url')
         }),
+        ('Footer Contact Information', {
+            'fields': (
+                'show_footer_contact',
+                ('footer_address', 'show_footer_address'),
+                ('footer_phone', 'show_footer_phone'),
+                ('footer_email', 'show_footer_email'),
+            ),
+            'description': 'Contact information displayed in the website footer. Use toggles to show/hide each field.'
+        }),
         ('Legal Settings', {
             'fields': ('minimum_age', 'governing_law_state', 'has_attorneys', 'attorney_states')
         }),
