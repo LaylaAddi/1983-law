@@ -2291,6 +2291,15 @@ Text in AI results, accordions, and various document builder elements was hard t
 - Accordion buttons and arrows
 - Various text elements, badges, borders, and list items
 
+**Additional comprehensive fix (all sections):**
+- Help section with tips, examples, amendment cards
+- Interview cards and needs-work highlights
+- Attorney section, court district box and confirmation
+- AI suggestion results and agency suggestions
+- Rights violated checkboxes and suggested violations
+- Form labels, read-only fields, status indicators
+- All paragraph and label text colors
+
 ---
 
 ## Instructions for Next Claude Session
