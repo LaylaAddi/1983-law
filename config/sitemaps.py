@@ -21,10 +21,34 @@ class StaticViewSitemap(Sitemap):
         """Return list of static page URL names."""
         return [
             'public_pages:home',
+            'accounts:pricing',
             'legal:terms',
             'legal:privacy',
             'legal:disclaimer',
             'legal:cookies',
+        ]
+
+    def location(self, item):
+        """Return the URL for each item."""
+        return reverse(item)
+
+
+class KnowYourRightsSitemap(Sitemap):
+    """Sitemap for know your rights educational pages."""
+
+    priority = 0.9
+    changefreq = 'monthly'
+
+    def items(self):
+        """Return list of know your rights page URL names."""
+        return [
+            'public_pages:know_your_rights',
+            'public_pages:right_to_record',
+            'public_pages:section_1983',
+            'public_pages:rights_violated',
+            'public_pages:first_amendment_auditors',
+            'public_pages:fourth_amendment',
+            'public_pages:fifth_amendment',
         ]
 
     def location(self, item):
@@ -55,5 +79,6 @@ class CivilRightsPageSitemap(Sitemap):
 # Dictionary of all sitemaps for URL configuration
 sitemaps = {
     'static': StaticViewSitemap,
+    'know_your_rights': KnowYourRightsSitemap,
     'rights': CivilRightsPageSitemap,
 }
