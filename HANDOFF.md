@@ -2268,6 +2268,16 @@ Users with active subscriptions were seeing "AI Limit Reached - You have used al
 **Files modified:**
 - `documents/models.py` - All three methods updated
 
+### Subscribers Seeing Upgrade Prompts (RESOLVED)
+Subscribers were still seeing "Upgrade Now - $79" in the status banner even with active subscriptions.
+
+**Root cause:** The status banner template always showed upgrade buttons for draft/expired documents regardless of subscription status.
+
+**Solution:** Updated `templates/documents/partials/status_banner.html`:
+- Hide "Upgrade Now" button for subscribers
+- Show "PRO - Draft Document" instead of "DRAFT - X hours remaining"
+- Hide "Unlock Now" button for subscribers on expired docs
+
 ---
 
 ## Instructions for Next Claude Session
