@@ -781,7 +781,8 @@ The Witnesses section now includes enhanced fields for tracking evidence capture
 docker-compose up -d
 
 # Run migrations (IMPORTANT after pulling new code)
-docker-compose exec web python manage.py makemigrations accounts
+# Note: Subscription models added - run migrations for accounts and documents
+docker-compose exec web python manage.py makemigrations accounts documents
 docker-compose exec web python manage.py migrate
 
 # Create superuser (first time only)
@@ -798,8 +799,10 @@ docker-compose exec web python manage.py createsuperuser
 ```
 1983-law/
 ├── accounts/           # User auth app
-│   ├── models.py       # Custom User model (email login, address, phone, is_test_user)
-│   ├── views.py        # Login, register, profile, profile_complete views
+│   ├── models.py       # Custom User model, Subscription, DocumentPack, SubscriptionReferral
+│   ├── views.py        # Login, register, profile, pricing, subscription views
+│   ├── urls.py         # Auth + subscription URLs
+│   ├── admin.py        # User, Subscription, DocumentPack, SubscriptionReferral admin
 │   └── forms.py        # Auth forms, ProfileEditForm, ProfileCompleteForm
 │
 ├── common/             # Shared utilities across apps
@@ -822,7 +825,9 @@ docker-compose exec web python manage.py createsuperuser
 │   ├── accounts/
 │   │   ├── profile.html
 │   │   ├── profile_edit.html
-│   │   └── profile_complete.html  # NEW - profile completion page
+│   │   ├── profile_complete.html  # Profile completion page
+│   │   ├── pricing.html           # Pricing page (subscriptions + one-time)
+│   │   └── subscription_manage.html  # Subscription management
 │   └── documents/
 │       ├── document_list.html
 │       ├── document_detail.html
@@ -837,6 +842,11 @@ docker-compose exec web python manage.py createsuperuser
 │   │   └── rights-analyze.js
 │   └── css/
 │       └── tell-story.css
+│
+├── config/
+│   ├── settings.py     # Django settings with pricing config
+│   ├── urls.py         # Main URL routing
+│   └── sitemaps.py     # XML sitemap definitions
 │
 └── docker-compose.yml
 ```
@@ -915,17 +925,31 @@ The Document model still has `generated_complaint` and `generated_at` fields fro
 
 ---
 
-## Payment System (NEW)
+## Payment System (ENHANCED)
 
 ### Overview
-Pay-per-document model with Stripe integration, promo/referral codes, and document lifecycle management.
+Hybrid pricing model with both pay-per-document purchases and subscription plans. Stripe integration for all payments, promo/referral codes, and document lifecycle management.
 
-### Pricing
-| Item | Price |
-|------|-------|
-| Base price | $79.00 |
-| With promo code | $59.25 (25% off) |
-| Default referral payout | $5.00 per use (customizable per code) |
+### Pricing - One-Time Purchases
+| Item | Price | AI Budget |
+|------|-------|-----------|
+| Single Document | $49.00 | $5 per document |
+| 3-Document Pack | $99.00 ($33/each) | $5 per document |
+| With promo code | 25% off | Same |
+
+### Pricing - Subscriptions
+| Plan | Price | AI Uses | Benefits |
+|------|-------|---------|----------|
+| Monthly Pro | $29/month | 50/month | Unlimited documents |
+| Annual Pro | $249/year (~$20.75/mo) | Unlimited | Save $99 + 2 months free |
+
+### Referral Payouts (by purchase type)
+| Purchase Type | Referral Payout |
+|---------------|-----------------|
+| Single Document | $10.00 |
+| 3-Document Pack | $15.00 |
+| Monthly Subscription | $10.00 (first payment only) |
+| Annual Subscription | $40.00 (first payment only) |
 
 ### Document Lifecycle
 ```
@@ -983,6 +1007,48 @@ The Generate PDF button on document detail page adapts based on payment status:
 | PromoCode | User's referral codes (multiple per user) |
 | PromoCodeUsage | Tracks each promo use for payouts |
 | PayoutRequest | User payout requests with status tracking |
+| **Subscription** | User subscription (monthly/annual) with Stripe sync |
+| **DocumentPack** | One-time document pack purchases |
+| **SubscriptionReferral** | Tracks referral earnings from subscriptions |
+
+### Subscription Model Fields
+| Field | Purpose |
+|-------|---------|
+| user | OneToOne link to User |
+| plan | 'monthly' or 'annual' |
+| status | 'active', 'past_due', 'canceled', 'incomplete', 'incomplete_expired' |
+| stripe_subscription_id | Stripe subscription ID |
+| stripe_customer_id | Stripe customer ID |
+| current_period_start | Billing period start |
+| current_period_end | Billing period end |
+| cancel_at_period_end | Whether scheduled to cancel |
+| ai_uses_this_period | Monthly AI usage counter |
+| ai_period_reset_at | When AI uses reset (monthly) |
+| promo_code_used | FK to PromoCode (for referral tracking) |
+
+### DocumentPack Model Fields
+| Field | Purpose |
+|-------|---------|
+| user | FK to User |
+| pack_type | 'single' or '3pack' |
+| documents_included | Number of docs in pack |
+| documents_used | How many used |
+| amount_paid | Price paid |
+| stripe_payment_id | Stripe Payment Intent ID |
+| ai_budget_per_document | $5 per document |
+
+### SubscriptionReferral Model Fields
+| Field | Purpose |
+|-------|---------|
+| promo_code | FK to PromoCode |
+| subscription | FK to Subscription |
+| subscriber | FK to User |
+| plan_type | 'monthly' or 'annual' |
+| first_payment_amount | Amount of first payment |
+| referral_amount | Payout amount for this referral |
+| payout_status | 'pending' or 'paid' |
+| payout_date | When paid out |
+| payout_reference | Payment reference number |
 
 ### User Model Additions
 - `has_unlimited_access()` - Check if admin/staff
@@ -1050,6 +1116,13 @@ for doc in u.documents.filter(payment_status='draft'):
 - `/documents/admin/referrals/` - Admin referral management dashboard
 - `/documents/admin/referrals/code/{id}/edit/` - Edit promo code rate (admin only)
 
+### URLs (Subscriptions)
+- `/accounts/pricing/` - Pricing page (subscriptions + one-time)
+- `/accounts/subscribe/<plan>/` - Start subscription checkout (monthly/annual)
+- `/accounts/subscription/success/` - Subscription success handler
+- `/accounts/subscription/manage/` - Manage/cancel subscription
+- `/accounts/subscription/webhook/` - Stripe subscription webhook
+
 ### Admin Features
 - View all documents with payment status
 - PromoCode admin with usage stats
@@ -1057,19 +1130,43 @@ for doc in u.documents.filter(payment_status='draft'):
 - PayoutRequest admin for processing payouts
 - Bulk action: "Mark as paid" for referral payouts
 - Custom admin referral dashboard at `/documents/admin/referrals/`
+- **Subscription admin** with plan, status, AI usage, Stripe IDs
+- **DocumentPack admin** with documents remaining count
+- **SubscriptionReferral admin** with bulk "Mark as paid" action
 
 ### Environment Variables
 ```env
 STRIPE_PUBLIC_KEY=pk_test_xxx
 STRIPE_SECRET_KEY=sk_test_xxx
 STRIPE_WEBHOOK_SECRET=whsec_xxx  # Optional for local testing
+
+# Stripe Price IDs (from Stripe Dashboard → Products)
+STRIPE_PRICE_SINGLE=price_xxx    # Single document ($49)
+STRIPE_PRICE_3PACK=price_xxx     # 3-document pack ($99)
+STRIPE_PRICE_MONTHLY=price_xxx   # Monthly subscription ($29/mo)
+STRIPE_PRICE_ANNUAL=price_xxx    # Annual subscription ($249/yr)
 ```
 
 ### Settings (config/settings.py)
 ```python
-DOCUMENT_PRICE = 79.00
+# One-Time Purchases
+DOCUMENT_PRICE_SINGLE = 49.00
+DOCUMENT_PRICE_3PACK = 99.00
+
+# Subscriptions
+SUBSCRIPTION_PRICE_MONTHLY = 29.00
+SUBSCRIPTION_PRICE_ANNUAL = 249.00
+SUBSCRIPTION_MONTHLY_AI_USES = 50
+SUBSCRIPTION_ANNUAL_AI_USES = 999999  # Effectively unlimited
+
+# Referral Payouts (by type)
+REFERRAL_PAYOUT_SINGLE = 10.00
+REFERRAL_PAYOUT_3PACK = 15.00
+REFERRAL_PAYOUT_MONTHLY = 10.00
+REFERRAL_PAYOUT_ANNUAL = 40.00
+
+# Other settings
 PROMO_DISCOUNT_PERCENT = 25
-REFERRAL_PAYOUT = 5.00  # Default, but each PromoCode has its own referral_amount
 FREE_AI_GENERATIONS = 3
 DRAFT_EXPIRY_HOURS = 48
 PAID_AI_BUDGET = 5.00
@@ -1085,8 +1182,10 @@ HEADER_APP_NAME = '1983 Law'  # Shown in navbar and page titles
 - `templates/documents/request_payout.html` - Payout request form
 - `templates/documents/admin_referrals.html` - Admin referral management
 - `templates/documents/partials/status_banner.html` - Status display partial
+- `templates/accounts/pricing.html` - Pricing page (subscriptions + one-time)
+- `templates/accounts/subscription_manage.html` - Subscription management
 
-### Checkout Flow
+### Checkout Flow (One-Time Purchase)
 1. User clicks "Upgrade Now" in status banner
 2. Enter promo code OR check "I confirm I do not have a promo code"
 3. Redirected to Stripe Checkout
@@ -1095,6 +1194,35 @@ HEADER_APP_NAME = '1983 Law'  # Shown in navbar and page titles
 6. User clicks "Finalize & Download PDF"
 7. Confirmation modal with checkbox
 8. Document marked as `finalized`, PDF available (no watermark)
+
+### Subscription Flow
+1. User visits `/accounts/pricing/`
+2. Selects Monthly Pro ($29/mo) or Annual Pro ($249/yr)
+3. Can enter promo code during checkout (25% off first payment)
+4. Redirected to Stripe Checkout (subscription mode)
+5. On success → Subscription created in database
+6. User has unlimited documents while subscription is active
+7. AI usage tracked per billing period (50/mo for monthly, unlimited for annual)
+8. User can manage/cancel at `/accounts/subscription/manage/`
+
+### Subscription Management
+**Active subscribers can:**
+- View current plan and billing date
+- See AI usage for current period
+- Cancel subscription (access continues until period end)
+- Reactivate if cancellation pending
+
+**Subscription states:**
+| Status | Meaning |
+|--------|---------|
+| active | Subscription is current and paid |
+| past_due | Payment failed, awaiting retry |
+| canceled | Subscription ended |
+| incomplete | Initial payment pending |
+
+**AI Usage Reset:**
+- Monthly plans: AI counter resets at `current_period_start`
+- Annual plans: Unlimited AI (no tracking needed)
 
 ### Testing Without Webhook
 - Checkout flow works without webhook (success page handles verification)
@@ -1284,11 +1412,24 @@ Set these in Render Dashboard → Environment:
 4. Admin URL: `https://one983-law.onrender.com/admin/`
 
 ### Stripe Webhook Setup (Production)
+
+**Document Checkout Webhook:**
 1. Go to https://dashboard.stripe.com/webhooks
 2. Click "Add endpoint"
 3. URL: `https://one983-law.onrender.com/documents/webhook/stripe/`
 4. Select event: `checkout.session.completed`
 5. Copy signing secret → Add as `STRIPE_WEBHOOK_SECRET` on Render
+
+**Subscription Webhook (NEW):**
+1. Add another endpoint for subscriptions
+2. URL: `https://one983-law.onrender.com/accounts/subscription/webhook/`
+3. Select events:
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+   - `invoice.payment_succeeded`
+   - `invoice.payment_failed`
+4. Use same `STRIPE_WEBHOOK_SECRET` or create separate one
 
 ---
 
@@ -1809,7 +1950,7 @@ The gavel SVG uses the original detailed court gavel paths:
 {% block structured_data %}<!-- Additional JSON-LD -->{% endblock %}
 ```
 
-### XML Sitemap (NEW)
+### XML Sitemap (ENHANCED)
 An XML sitemap helps search engines discover and index all public pages.
 
 **URLs:**
@@ -1820,7 +1961,16 @@ An XML sitemap helps search engines discover and index all public pages.
 
 **What's Included:**
 - Home page
+- Pricing page (`/accounts/pricing/`)
 - Legal pages (Terms, Privacy, Disclaimer, Cookies)
+- Know Your Rights educational pages:
+  - Know Your Rights landing
+  - Right to Record
+  - Section 1983
+  - What to Do if Rights Violated
+  - First Amendment Auditors
+  - Fourth Amendment
+  - Fifth Amendment
 - CMS pages (CivilRightsPage with `is_published=True`)
 
 **What's Excluded:**
@@ -1829,7 +1979,7 @@ An XML sitemap helps search engines discover and index all public pages.
 - Document builder pages (require authentication)
 
 **Files:**
-- `config/sitemaps.py` - Sitemap definitions
+- `config/sitemaps.py` - Sitemap definitions (StaticViewSitemap, KnowYourRightsSitemap, CivilRightsPageSitemap)
 - `config/urls.py` - Sitemap URL configuration
 - `public_pages/views.py` - robots.txt view
 - `config/settings.py` - `django.contrib.sites` and `django.contrib.sitemaps` added
@@ -1848,7 +1998,6 @@ Submit sitemap to Google Search Console:
 - Video extraction
 - **News API integration** (placeholder content on landing page)
 - **CMS for article management** (planned)
-- **Membership/subscription system** (under consideration)
 
 ---
 
@@ -1994,16 +2143,18 @@ Landing page has placeholder articles. Need editable content.
 - Featured flag for homepage display
 - URL: `/rights/<slug>/` for individual articles
 
-### User Purchase System / Membership (Under Consideration)
-Current model: Pay-per-document ($79 per complaint)
+### User Purchase System / Membership (IMPLEMENTED)
+Hybrid pricing model with subscriptions and one-time purchases is now live.
 
-**Potential future options being considered:**
-- Membership/subscription tiers
-- Bundle pricing for multiple documents
+**Current options:**
+- Single Document: $49 (one-time)
+- 3-Document Pack: $99 (one-time, saves $48)
+- Monthly Pro: $29/month (unlimited docs, 50 AI/month)
+- Annual Pro: $249/year (unlimited docs, unlimited AI)
+
+**Potential future enhancements:**
 - Different pricing for different case types
 - Non-profit/reduced pricing options
-
-**Note:** No decision made yet - this is exploratory
 
 ---
 
@@ -2127,6 +2278,13 @@ OPENAI_API_KEY=sk-...          # Required for AI features
 STRIPE_PUBLIC_KEY=pk_test_...  # Stripe publishable key
 STRIPE_SECRET_KEY=sk_test_...  # Stripe secret key
 STRIPE_WEBHOOK_SECRET=whsec_...# Stripe webhook secret (optional for local)
+
+# Stripe Price IDs (Required for subscriptions)
+# Create these products in Stripe Dashboard → Products
+STRIPE_PRICE_SINGLE=price_xxx  # Single document ($49)
+STRIPE_PRICE_3PACK=price_xxx   # 3-document pack ($99)
+STRIPE_PRICE_MONTHLY=price_xxx # Monthly subscription ($29/mo recurring)
+STRIPE_PRICE_ANNUAL=price_xxx  # Annual subscription ($249/yr recurring)
 
 # Optional (Branding)
 APP_NAME=1983law.com           # Shown in DRAFT watermark and footer
