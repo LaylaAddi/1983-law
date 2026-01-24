@@ -1619,10 +1619,25 @@ Located in `static/css/public-pages.css`:
 - 55% width, 120% height
 - 8% opacity
 - Positioned right side, vertically centered
+- `z-index: 1`
 
 **`.hero-section::after`** - Gradient overlay
 - Linear gradient from solid patriot-blue to transparent
 - Ensures left-side text is always readable
+- `z-index: 2`
+
+**`.hero-section .container`** - Content layer
+- `position: relative`
+- `z-index: 3` - Ensures text/buttons appear above overlays
+
+### Z-Index Layering (Important!)
+The hero section uses z-index layering to keep content visible:
+```
+z-index: 1  →  ::before (flag background)
+z-index: 2  →  ::after (gradient overlay)
+z-index: 3  →  .container (text, buttons)
+```
+Without this, the gradient overlay would fade the text and buttons.
 
 ---
 
@@ -1685,6 +1700,55 @@ toggleTheme()        // Switch between light/dark
 2. Icon changes to sun
 3. Refresh page - dark mode persists
 4. Clear localStorage or click sun to return to light mode
+
+---
+
+## Navbar Brand & Logo (NEW)
+
+### Overview
+The navbar features a custom judge's gavel logo with patriot gradient colors and serif font branding.
+
+### Logo Design
+- **Icon**: Judge's gavel with sound block (SVG)
+- **Background**: Patriot gradient (blue → red → dark blue)
+- **Gavel**: White silhouette on gradient
+- **Shape**: Rounded square (4px radius)
+
+### Brand Text
+- **Font**: Playfair Display (Google Fonts) - law/legal style serif
+- **Color**: White
+- **Fallbacks**: Georgia, Times New Roman, serif
+
+### Gradient Colors
+```css
+linearGradient (135° diagonal):
+  0%   - #002868 (Patriot Blue)
+  50%  - #BF0A30 (Patriot Red)
+  100% - #001a4d (Dark Blue)
+```
+
+### Files
+| File | Purpose |
+|------|---------|
+| `static/gavel-icon.svg` | 32x32 navbar logo icon |
+| `static/gavel-logo.svg` | Full-size gavel logo (for other uses) |
+| `static/favicon.svg` | Browser tab icon (same as gavel-icon) |
+| `templates/base.html` | Navbar brand markup + Google Fonts link |
+| `static/css/app-theme.css` | Brand icon and text styling |
+
+### Gavel SVG Structure
+The gavel SVG uses the original detailed court gavel paths:
+- Gavel head with decorative grooves
+- Handle with end knob
+- Sound block (base)
+- Scaled to fit 32x32 with `transform="translate(1, 0) scale(0.02)"`
+
+### CSS Classes
+```css
+.navbar-brand .brand-icon      /* Container for gavel icon */
+.navbar-brand .brand-icon img  /* The SVG image */
+.navbar-brand .brand-text      /* "1983 Law" text with Playfair Display */
+```
 
 ---
 
