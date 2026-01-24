@@ -17,14 +17,12 @@
         stroke="rgba(255,255,255,0.3)"
         stroke-width="1"/>
 
-  <!-- Judge's Gavel -->
+  <!-- Bold Gavel - optimized for small sizes -->
   <g fill="#FFFFFF">
-    <!-- Gavel head - barrel shape with rounded ends -->
-    <ellipse cx="9" cy="10" rx="3" ry="4"/>
-    <rect x="9" y="6" width="14" height="8"/>
-    <ellipse cx="23" cy="10" rx="3" ry="4"/>
+    <!-- Gavel head - thick rounded rectangle -->
+    <rect x="6" y="7" width="20" height="8" rx="4" ry="4"/>
 
-    <!-- Handle -->
-    <rect x="14.5" y="14" width="3" height="10" rx="1"/>
+    <!-- Handle - thick -->
+    <rect x="13" y="13" width="6" height="12" rx="2"/>
   </g>
 </svg>
