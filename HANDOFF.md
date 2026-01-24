@@ -2235,6 +2235,26 @@ Subscription tables were created on server via auto-generated migration but a ma
 
 **Lesson:** Never run `makemigrations` on production. Always create migrations locally, test them, commit them, then deploy.
 
+### Subscription Success AttributeError (RESOLVED)
+Users completing subscription checkout were getting 500 error: `AttributeError: current_period_start`
+
+**Root cause:** The Stripe subscription object may not have `current_period_start` or `current_period_end` fields directly accessible for all subscription states. The code was using direct attribute access (`stripe_sub.current_period_start`) which fails if the field doesn't exist.
+
+**Solution:** Changed to use `.get()` method for safe access:
+```python
+# Before (broken):
+'current_period_start': _timestamp_to_datetime(stripe_sub.current_period_start),
+
+# After (fixed):
+period_start = stripe_sub.get('current_period_start')
+if period_start:
+    defaults['current_period_start'] = _timestamp_to_datetime(period_start)
+```
+
+**Files modified:**
+- `accounts/views.py` - Both `subscription_success` and `subscription_webhook` views updated
+- Added debug logging to help troubleshoot future subscription issues
+
 ---
 
 ## Instructions for Next Claude Session
