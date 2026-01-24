@@ -1,0 +1,361 @@
+/* Tell Your Story Page Styles */
+
+/* Story textarea */
+#storyText {
+    font-size: 1rem;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 250px;
+}
+
+#storyText::placeholder {
+    color: #adb5bd;
+    font-style: italic;
+}
+
+#storyText:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+/* Analyze button */
+#analyzeStoryBtn {
+    min-width: 200px;
+}
+
+#analyzeStoryBtn:disabled {
+    cursor: wait;
+}
+
+/* Results panel */
+#resultsPanel {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ========================================
+   TERMINAL PROGRESS INDICATOR STYLES
+   ======================================== */
+
+.terminal-container {
+    background: #1e1e1e;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
+}
+
+.terminal-header {
+    background: #323232;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #404040;
+}
+
+.terminal-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.terminal-btn {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.terminal-btn.close { background: #ff5f56; }
+.terminal-btn.minimize { background: #ffbd2e; }
+.terminal-btn.maximize { background: #27ca40; }
+
+.terminal-title {
+    flex: 1;
+    text-align: center;
+    color: #888;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+.terminal-body {
+    padding: 16px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.terminal-line {
+    margin-bottom: 4px;
+    line-height: 1.6;
+    font-size: 13px;
+    opacity: 0;
+    animation: terminalFadeIn 0.3s ease forwards;
+}
+
+@keyframes terminalFadeIn {
+    to { opacity: 1; }
+}
+
+.terminal-prompt {
+    color: #4ec9b0;
+}
+
+.terminal-path {
+    color: #569cd6;
+}
+
+.terminal-command {
+    color: #dcdcdc;
+}
+
+.terminal-flag {
+    color: #ce9178;
+}
+
+.terminal-string {
+    color: #ce9178;
+}
+
+.terminal-output {
+    color: #6a9955;
+    padding-left: 8px;
+}
+
+.terminal-comment {
+    color: #6a9955;
+    font-style: italic;
+}
+
+.terminal-success {
+    color: #4ec9b0;
+}
+
+.terminal-info {
+    color: #569cd6;
+}
+
+.terminal-warning {
+    color: #dcdcaa;
+}
+
+.terminal-spinner {
+    display: inline-block;
+    color: #569cd6;
+}
+
+.terminal-spinner::after {
+    content: '⠋';
+    animation: terminalSpin 0.8s steps(10) infinite;
+}
+
+@keyframes terminalSpin {
+    0% { content: '⠋'; }
+    10% { content: '⠙'; }
+    20% { content: '⠹'; }
+    30% { content: '⠸'; }
+    40% { content: '⠼'; }
+    50% { content: '⠴'; }
+    60% { content: '⠦'; }
+    70% { content: '⠧'; }
+    80% { content: '⠇'; }
+    90% { content: '⠏'; }
+}
+
+.terminal-progress-bar {
+    background: #404040;
+    height: 4px;
+    border-radius: 2px;
+    margin: 12px 0;
+    overflow: hidden;
+}
+
+.terminal-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4ec9b0, #569cd6);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 2px;
+}
+
+.terminal-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px solid #404040;
+    margin-top: 12px;
+}
+
+.terminal-status-text {
+    color: #888;
+    font-size: 11px;
+}
+
+.terminal-percentage {
+    color: #4ec9b0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Cursor blink */
+.terminal-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 14px;
+    background: #dcdcdc;
+    animation: cursorBlink 1s step-end infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+}
+
+@keyframes cursorBlink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+/* ========================================
+   END TERMINAL PROGRESS STYLES
+   ======================================== */
+
+/* Loading spinner */
+#resultsLoading .spinner-border {
+    color: #0d6efd;
+}
+
+/* Accordion sections */
+.accordion-button:not(.collapsed) {
+    background-color: #e7f1ff;
+    color: #0d6efd;
+}
+
+.accordion-button .badge {
+    font-size: 0.7rem;
+}
+
+/* Field items */
+.field-item {
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.field-item:hover {
+    background: #f8f9fa;
+    border-color: #0d6efd !important;
+}
+
+.field-item .form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.15rem;
+}
+
+.field-item .form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.field-item .form-check-label {
+    color: #212529;
+}
+
+.field-value {
+    background: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    border-left: 3px solid #0d6efd;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Selected state */
+.field-item:has(.form-check-input:checked) {
+    background: #d1e7dd;
+    border-color: #198754 !important;
+}
+
+.field-item:has(.form-check-input:checked) .field-value {
+    border-left-color: #198754;
+}
+
+/* Questions section */
+#questionsSection ul {
+    padding-left: 1.25rem;
+}
+
+#questionsSection li {
+    margin-bottom: 0.25rem;
+}
+
+/* Action buttons */
+#selectAllBtn,
+#applySelectedBtn {
+    min-width: 150px;
+}
+
+#applySelectedBtn:disabled {
+    cursor: not-allowed;
+}
+
+/* Tips card */
+.card-body ul li strong {
+    color: #0d6efd;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #storyText {
+        min-height: 200px;
+    }
+
+    #analyzeStoryBtn {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    #selectAllBtn,
+    #applySelectedBtn {
+        width: 100%;
+    }
+
+    .tech-progress-container {
+        padding: 1rem;
+    }
+
+    .tech-percentage {
+        font-size: 2rem;
+    }
+
+    .tech-step {
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+/* Error state */
+#resultsError {
+    margin: 0;
+}
+
+/* Multiple items in array sections */
+.accordion-body > .mb-3.p-3.bg-light {
+    border: 1px solid #dee2e6;
+}
+
+.accordion-body > .mb-3.p-3.bg-light h6 {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}

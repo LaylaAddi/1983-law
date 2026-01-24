@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#002868"/>
+      <stop offset="50%" style="stop-color:#BF0A30"/>
+      <stop offset="100%" style="stop-color:#001a4d"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shield shape with gradient -->
+  <path d="M16 1 L28 5 L28 14 C28 22 22 28 16 31 C10 28 4 22 4 14 L4 5 Z"
+        fill="url(#shieldGradient)"/>
+
+  <!-- Shield border -->
+  <path d="M16 1 L28 5 L28 14 C28 22 22 28 16 31 C10 28 4 22 4 14 L4 5 Z"
+        fill="none"
+        stroke="rgba(255,255,255,0.3)"
+        stroke-width="1"/>
+
+  <!-- Judge's Gavel - proper design with horizontal handle -->
+  <g fill="#FFFFFF" transform="rotate(-30, 16, 14)">
+    <!-- Cylindrical head with bands -->
+    <rect x="4" y="9" width="12" height="8" rx="4" ry="4"/>
+    <!-- Decorative grooves -->
+    <line x1="7" y1="9" x2="7" y2="17" stroke="rgba(0,40,104,0.3)" stroke-width="1"/>
+    <line x1="10" y1="9" x2="10" y2="17" stroke="rgba(0,40,104,0.3)" stroke-width="1"/>
+    <line x1="13" y1="9" x2="13" y2="17" stroke="rgba(0,40,104,0.3)" stroke-width="1"/>
+    <!-- Handle extending horizontally -->
+    <rect x="14" y="11" width="12" height="4" rx="1"/>
+    <!-- Handle end knob -->
+    <ellipse cx="27" cy="13" rx="2" ry="2.5"/>
+  </g>
+</svg>

@@ -1,0 +1,63 @@
+/* =========================================
+   CMS Admin Custom Styles
+   ========================================= */
+
+/* Section inline styling */
+.inline-group .inline-related {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #fafafa;
+}
+
+.inline-group .inline-related h3 {
+    background: #417690;
+    color: white;
+    padding: 0.5rem 1rem;
+    margin: -1rem -1rem 1rem -1rem;
+    border-radius: 8px 8px 0 0;
+}
+
+/* Collapsible fieldsets */
+fieldset.collapse {
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    margin-top: 1rem;
+}
+
+fieldset.collapse h2 {
+    background: #f5f5f5;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+/* JSON field styling */
+.field-data textarea {
+    font-family: monospace;
+    font-size: 0.85rem;
+    min-height: 150px;
+}
+
+/* Status badges in list view */
+.field-is_published_display span {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+/* Order field styling */
+.field-order input {
+    width: 60px;
+    text-align: center;
+}
+
+/* Section count badge */
+.field-section_count {
+    font-weight: bold;
+}
+
+/* CKEditor in admin */
+.cke_editable {
+    padding: 10px !important;
+}
