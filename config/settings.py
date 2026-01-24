@@ -115,23 +115,51 @@ if not DEBUG:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Document Pricing
-DOCUMENT_PRICE = 79.00
-PROMO_DISCOUNT_PERCENT = 25
-REFERRAL_PAYOUT = 15.00
+# =============================================================================
+# PRICING CONFIGURATION
+# =============================================================================
+
+# One-Time Document Purchases
+DOCUMENT_PRICE_SINGLE = 49.00          # Single document
+DOCUMENT_PRICE_3PACK = 99.00           # 3-pack ($33 each)
+DOCUMENT_PRICE = DOCUMENT_PRICE_SINGLE  # Default/legacy compatibility
+
+# Subscription Plans
+SUBSCRIPTION_PRICE_MONTHLY = 29.00     # Per month
+SUBSCRIPTION_PRICE_ANNUAL = 249.00     # Per year ($20.75/mo effective)
+
+# Subscription AI Limits
+SUBSCRIPTION_MONTHLY_AI_USES = 50      # AI uses per month for monthly subscribers
+SUBSCRIPTION_ANNUAL_AI_USES = 999      # Effectively unlimited for annual
+
+# Promo/Referral Discounts
+PROMO_DISCOUNT_PERCENT = 20            # Discount for buyer using promo code
+
+# Referral Payouts (first payment only for subscriptions)
+REFERRAL_PAYOUT_SINGLE = 10.00         # Single doc referral
+REFERRAL_PAYOUT_3PACK = 15.00          # 3-pack referral
+REFERRAL_PAYOUT_MONTHLY = 10.00        # Monthly sub first payment referral
+REFERRAL_PAYOUT_ANNUAL = 40.00         # Annual sub referral
+REFERRAL_PAYOUT = REFERRAL_PAYOUT_SINGLE  # Default/legacy compatibility
 
 # Free Tier Limits
-FREE_AI_GENERATIONS = 3
-DRAFT_EXPIRY_HOURS = 48
+FREE_AI_GENERATIONS = 3                # Per user across all documents
+DRAFT_EXPIRY_HOURS = 48                # Hours before unpaid draft expires
 
-# Paid Tier Limits
-PAID_AI_BUDGET = 5.00  # dollars
-PAID_EXPIRY_DAYS = 45
+# Paid Document Limits (one-time purchases)
+PAID_AI_BUDGET = 5.00                  # AI budget in dollars per document
+PAID_EXPIRY_DAYS = 45                  # Days to complete paid document
 
-# Stripe
+# Stripe Configuration
 STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY', '')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+
+# Stripe Price IDs (set in environment after creating in Stripe Dashboard)
+STRIPE_PRICE_SINGLE = os.getenv('STRIPE_PRICE_SINGLE', '')
+STRIPE_PRICE_3PACK = os.getenv('STRIPE_PRICE_3PACK', '')
+STRIPE_PRICE_MONTHLY = os.getenv('STRIPE_PRICE_MONTHLY', '')
+STRIPE_PRICE_ANNUAL = os.getenv('STRIPE_PRICE_ANNUAL', '')
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.User'

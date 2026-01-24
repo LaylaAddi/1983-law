@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Subscription - {{ header_app_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h2 class="mb-4"><i class="bi bi-credit-card me-2"></i>Manage Subscription</h2>
+
+            <!-- Subscription Status Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Subscription Status</h5>
+                    {% if subscription.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% elif subscription.status == 'past_due' %}
+                        <span class="badge bg-warning">Past Due</span>
+                    {% elif subscription.status == 'canceled' %}
+                        <span class="badge bg-secondary">Canceled</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ subscription.get_status_display }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong>Plan:</strong> {{ subscription.get_plan_display }}
+                            </p>
+                            <p class="mb-2">
+                                <strong>Started:</strong> {{ subscription.created_at|date:"F j, Y" }}
+                            </p>
+                            {% if subscription.current_period_end %}
+                            <p class="mb-2">
+                                <strong>{% if subscription.cancel_at_period_end %}Access until{% else %}Renews{% endif %}:</strong>
+                                {{ subscription.current_period_end|date:"F j, Y" }}
+                            </p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong>AI Uses This Period:</strong>
+                                {{ ai_used }} / {{ ai_limit }}
+                            </p>
+                            <div class="progress mb-2" style="height: 8px;">
+                                {% widthratio ai_used ai_limit 100 as ai_percent %}
+                                <div class="progress-bar {% if ai_percent > 80 %}bg-warning{% else %}bg-success{% endif %}"
+                                     role="progressbar"
+                                     style="width: {{ ai_percent }}%;"
+                                     aria-valuenow="{{ ai_used }}"
+                                     aria-valuemin="0"
+                                     aria-valuemax="{{ ai_limit }}">
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                {{ ai_remaining }} AI assists remaining
+                            </small>
+                        </div>
+                    </div>
+
+                    {% if subscription.cancel_at_period_end %}
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Your subscription is set to cancel on {{ subscription.current_period_end|date:"F j, Y" }}.
+                        You can reactivate it below to continue your subscription.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Subscription Actions</h5>
+                </div>
+                <div class="card-body">
+                    {% if subscription.cancel_at_period_end %}
+                        <!-- Reactivate Option -->
+                        <p>Changed your mind? Reactivate your subscription to keep your benefits.</p>
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="reactivate">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Reactivate Subscription
+                            </button>
+                        </form>
+                    {% elif subscription.is_active %}
+                        <!-- Cancel Option -->
+                        <p class="text-muted">
+                            If you cancel, you'll still have access until {{ subscription.current_period_end|date:"F j, Y" }}.
+                        </p>
+                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                            <i class="bi bi-x-circle me-1"></i>Cancel Subscription
+                        </button>
+                    {% else %}
+                        <p>Your subscription is no longer active.</p>
+                        <a href="{% url 'accounts:pricing' %}" class="btn btn-primary">
+                            <i class="bi bi-arrow-right me-1"></i>View Plans
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Billing History -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Links</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="{% url 'documents:document_list' %}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-file-earmark-text me-2"></i>My Documents
+                        </a>
+                        <a href="{% url 'accounts:profile' %}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-person me-2"></i>Account Settings
+                        </a>
+                        <a href="{% url 'accounts:pricing' %}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-tag me-2"></i>View All Plans
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Confirmation Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cancel Subscription?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel your subscription?</p>
+                <ul class="text-muted">
+                    <li>You'll keep access until {{ subscription.current_period_end|date:"F j, Y" }}</li>
+                    <li>You can reactivate anytime before then</li>
+                    <li>Your documents will remain accessible</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Subscription</button>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="cancel">
+                    <button type="submit" class="btn btn-danger">Yes, Cancel</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

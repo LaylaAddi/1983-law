@@ -23,4 +23,11 @@ urlpatterns = [
     # Password Change (logged-in users)
     path('password-change/', views.CustomPasswordChangeView.as_view(), name='password_change'),
     path('password-change/done/', views.CustomPasswordChangeDoneView.as_view(), name='password_change_done'),
+
+    # Subscriptions & Pricing
+    path('pricing/', views.pricing, name='pricing'),
+    path('subscribe/<str:plan>/', views.subscribe, name='subscribe'),
+    path('subscription/success/', views.subscription_success, name='subscription_success'),
+    path('subscription/manage/', views.subscription_manage, name='subscription_manage'),
+    path('subscription/webhook/', views.subscription_webhook, name='subscription_webhook'),
 ]
