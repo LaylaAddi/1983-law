@@ -2223,6 +2223,18 @@ The relief_sought section may not be saving properly when user clicks "Continue 
 - Boolean value handling in Python
 - Check `apply_story_fields` view in `documents/views.py` around line 1374
 
+### Subscription Migration Conflict (RESOLVED)
+Subscription tables were created on server via auto-generated migration but a manually created migration file caused conflicts on deploy.
+
+**Root cause:** `makemigrations` was run on the server, creating `0003_subscription_alter_user_groups_subscriptionreferral_and_more.py`. A manually created migration file `0003_subscription_documentpack_subscriptionreferral.py` conflicted with it.
+
+**Solution:**
+1. Deleted the manually created migration file
+2. Ran `python manage.py migrate accounts 0003 --fake` on server to mark existing migration as applied
+3. Deploy succeeded
+
+**Lesson:** Never run `makemigrations` on production. Always create migrations locally, test them, commit them, then deploy.
+
 ---
 
 ## Instructions for Next Claude Session
