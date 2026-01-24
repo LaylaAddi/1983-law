@@ -1244,3 +1244,348 @@ a:hover {
     border-color: var(--dark-border);
 }
 
+/* ========================================
+   SECTION EDIT PAGE DARK MODE STYLES
+   ======================================== */
+
+/* Help section */
+[data-theme="dark"] .help-section {
+    background: linear-gradient(135deg, var(--dark-bg-secondary) 0%, var(--dark-bg) 100%) !important;
+}
+
+[data-theme="dark"] .help-section .card-header {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .help-section .card-header:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+[data-theme="dark"] .help-section .card-body {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .help-tips {
+    background: var(--dark-bg) !important;
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .help-tips li {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .help-example {
+    background: var(--dark-bg-card) !important;
+    color: var(--dark-text);
+    border-left-color: #6ea8fe;
+}
+
+/* Amendment cards in help section */
+[data-theme="dark"] .amendment-card {
+    background: var(--dark-bg) !important;
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .amendment-card h6 {
+    color: #6ea8fe;
+}
+
+[data-theme="dark"] .amendment-card p,
+[data-theme="dark"] .amendment-card li {
+    color: var(--dark-text);
+}
+
+/* Relief type cards */
+[data-theme="dark"] .relief-type {
+    background: var(--dark-bg) !important;
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .relief-type strong {
+    color: #6ea8fe;
+}
+
+/* Interview cards */
+[data-theme="dark"] .interview-card {
+    background: var(--dark-bg-secondary);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .interview-card.needs-work {
+    background-color: #3d3a00 !important;
+}
+
+[data-theme="dark"] .interview-card.completed {
+    background-color: var(--dark-bg-secondary);
+}
+
+[data-theme="dark"] .interview-card.not-applicable {
+    background-color: var(--dark-bg) !important;
+}
+
+/* Needs work highlight */
+[data-theme="dark"] .needs-work-highlight {
+    background-color: #3d3a00 !important;
+    color: var(--dark-text);
+}
+
+/* Attorney section */
+[data-theme="dark"] .attorney-section {
+    background: var(--dark-bg) !important;
+    border-color: var(--dark-border) !important;
+}
+
+[data-theme="dark"] .attorney-section-header {
+    color: var(--dark-text) !important;
+    border-bottom-color: var(--dark-border) !important;
+}
+
+[data-theme="dark"] .attorney-section-header i {
+    color: #6ea8fe;
+}
+
+/* Court district box */
+[data-theme="dark"] .court-district-box {
+    background: linear-gradient(135deg, #3d3a00 0%, #2d2a00 100%) !important;
+    border-color: #ff9800 !important;
+}
+
+[data-theme="dark"] .court-district-box .box-header {
+    color: #ffb74d;
+}
+
+[data-theme="dark"] .court-district-box label,
+[data-theme="dark"] .court-district-box .form-label {
+    color: var(--dark-text);
+}
+
+/* Court district confirmation */
+[data-theme="dark"] .court-district-confirmation {
+    background: var(--dark-bg) !important;
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .court-district-confirmation label {
+    color: #f87171 !important;
+}
+
+[data-theme="dark"] .court-district-confirmation.confirmed {
+    background: #1a3d2e !important;
+    border-color: #198754 !important;
+}
+
+[data-theme="dark"] .court-district-confirmation.confirmed label {
+    color: #4ade80 !important;
+}
+
+/* Defendant/witness/evidence list items */
+[data-theme="dark"] .list-item-card,
+[data-theme="dark"] .defendant-item,
+[data-theme="dark"] .witness-item,
+[data-theme="dark"] .evidence-item {
+    background: var(--dark-bg-secondary) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .list-item-card:hover,
+[data-theme="dark"] .defendant-item:hover,
+[data-theme="dark"] .witness-item:hover,
+[data-theme="dark"] .evidence-item:hover {
+    background: var(--dark-bg-card) !important;
+}
+
+/* AI suggestion results in section edit */
+[data-theme="dark"] #suggestionResults {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] #suggestionResults .card {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] #suggestionResults h6,
+[data-theme="dark"] #suggestionResults strong {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] #suggestionResults p {
+    color: var(--dark-text);
+}
+
+/* Existing list containers */
+[data-theme="dark"] #existingList,
+[data-theme="dark"] #defendantsList,
+[data-theme="dark"] #witnessesList,
+[data-theme="dark"] #evidenceList {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] #existingList .card,
+[data-theme="dark"] #defendantsList .card,
+[data-theme="dark"] #witnessesList .card,
+[data-theme="dark"] #evidenceList .card {
+    background: var(--dark-bg-secondary) !important;
+    border-color: var(--dark-border) !important;
+}
+
+[data-theme="dark"] #existingList .card-body,
+[data-theme="dark"] #defendantsList .card-body,
+[data-theme="dark"] #witnessesList .card-body,
+[data-theme="dark"] #evidenceList .card-body {
+    color: var(--dark-text);
+}
+
+/* Agency suggestion modal/results */
+[data-theme="dark"] .agency-suggestion {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .agency-suggestion:hover {
+    background: var(--dark-bg-card);
+}
+
+/* Form check labels */
+[data-theme="dark"] .form-check-label {
+    color: var(--dark-text);
+}
+
+/* Read-only form fields (plaintiff info) */
+[data-theme="dark"] .form-control[readonly],
+[data-theme="dark"] .form-control:disabled {
+    background: var(--dark-bg) !important;
+    color: var(--dark-text-muted);
+    border-color: var(--dark-border);
+}
+
+/* Section description text */
+[data-theme="dark"] .section-description {
+    color: var(--dark-text-muted);
+}
+
+/* Just added badges */
+[data-theme="dark"] .badge.just-added {
+    background: #1a3d2e !important;
+    color: #4ade80 !important;
+}
+
+/* Rights violated checkboxes section */
+[data-theme="dark"] .rights-checkbox-group {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .rights-checkbox-group label {
+    color: var(--dark-text);
+}
+
+/* Violation details textarea */
+[data-theme="dark"] .violation-details {
+    background: var(--dark-bg);
+    color: var(--dark-text);
+    border-color: var(--dark-border);
+}
+
+/* Suggested violations panel */
+[data-theme="dark"] .suggested-violations {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .suggested-violations h6 {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .violation-suggestion {
+    background: var(--dark-bg);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .violation-suggestion:hover {
+    background: var(--dark-bg-card);
+}
+
+/* Guide/intro boxes */
+[data-theme="dark"] .guide-box,
+[data-theme="dark"] .intro-box {
+    background: var(--dark-bg-secondary) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text);
+}
+
+/* Strength badges */
+[data-theme="dark"] .strength-badge {
+    color: var(--dark-text);
+}
+
+/* Copy to details buttons area */
+[data-theme="dark"] .copy-details-area {
+    background: var(--dark-bg);
+    color: var(--dark-text);
+}
+
+/* Inline help popovers */
+[data-theme="dark"] .field-help {
+    color: var(--dark-text-muted);
+}
+
+/* Document detail page - section cards */
+[data-theme="dark"] .document-section-card {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .document-section-card .card-header {
+    background: var(--dark-bg-card);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .document-section-card .card-body {
+    color: var(--dark-text);
+}
+
+/* Status indicators */
+[data-theme="dark"] .status-not-started {
+    color: var(--dark-text-muted);
+}
+
+[data-theme="dark"] .status-in-progress {
+    color: #fbbf24;
+}
+
+[data-theme="dark"] .status-completed {
+    color: #4ade80;
+}
+
+/* Inline text colors that need override */
+[data-theme="dark"] .text-dark {
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .text-body {
+    color: var(--dark-text) !important;
+}
+
+/* Specific p and span text */
+[data-theme="dark"] p {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] label {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] legend {
+    color: var(--dark-text);
+}
+
+/* Any remaining white backgrounds */
+[data-theme="dark"] .bg-white {
+    background: var(--dark-bg-secondary) !important;
+}
+
