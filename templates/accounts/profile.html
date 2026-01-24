@@ -97,6 +97,199 @@
                 </div>
             </div>
         </div>
+
+        <!-- My Plan Section -->
+        <div class="card shadow mt-4">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="bi bi-credit-card me-2"></i>My Plan</h4>
+            </div>
+            <div class="card-body">
+                {% if subscription and subscription.is_active %}
+                <!-- Active Subscription -->
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-1">
+                            {% if subscription.plan == 'annual' %}
+                            Annual Pro
+                            {% else %}
+                            Monthly Pro
+                            {% endif %}
+                        </h5>
+                        <p class="text-muted mb-0">
+                            <span class="badge bg-success">Active</span>
+                            {% if subscription.cancel_at_period_end %}
+                            <span class="badge bg-warning text-dark ms-1">Cancels {{ subscription.current_period_end|date:"M j, Y" }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 text-center">
+                            <small class="text-muted d-block">Plan Type</small>
+                            <strong>{{ subscription.get_plan_display }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 text-center">
+                            <small class="text-muted d-block">AI Uses This Period</small>
+                            <strong>
+                                {% if subscription.plan == 'annual' %}
+                                Unlimited
+                                {% else %}
+                                {{ subscription.ai_uses_this_period }} / {{ subscription.get_ai_limit }}
+                                {% endif %}
+                            </strong>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 text-center">
+                            <small class="text-muted d-block">{% if subscription.cancel_at_period_end %}Ends{% else %}Renews{% endif %}</small>
+                            <strong>{{ subscription.current_period_end|date:"M j, Y" }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="{% url 'accounts:subscription_manage' %}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-gear me-1"></i>Manage Subscription
+                </a>
+
+                {% elif document_packs %}
+                <!-- Document Packs -->
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                        <i class="bi bi-file-earmark-text text-primary" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-1">Document Credits</h5>
+                        <p class="text-muted mb-0">You have document pack credits available</p>
+                    </div>
+                </div>
+
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Pack</th>
+                                <th>Purchased</th>
+                                <th>Remaining</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pack in document_packs %}
+                            <tr>
+                                <td>
+                                    {% if pack.pack_type == '3pack' %}
+                                    3-Document Pack
+                                    {% else %}
+                                    Single Document
+                                    {% endif %}
+                                </td>
+                                <td>{{ pack.created_at|date:"M j, Y" }}</td>
+                                <td>
+                                    <span class="badge {% if pack.documents_remaining > 0 %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {{ pack.documents_remaining }} / {{ pack.documents_included }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <a href="{% url 'accounts:pricing' %}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i>Buy More Credits
+                </a>
+
+                {% elif access_summary.free_ai_remaining > 0 %}
+                <!-- Free Trial -->
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                        <i class="bi bi-gift text-info" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-1">Free Trial</h5>
+                        <p class="text-muted mb-0">{{ access_summary.free_ai_remaining }} free AI uses remaining</p>
+                    </div>
+                </div>
+
+                <p class="text-muted small mb-3">
+                    You can create draft documents with limited AI assistance. Upgrade to unlock full features.
+                </p>
+
+                <a href="{% url 'accounts:pricing' %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-arrow-up-circle me-1"></i>Upgrade Now
+                </a>
+
+                {% else %}
+                <!-- No Active Plan -->
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-secondary bg-opacity-10 rounded-circle p-3 me-3">
+                        <i class="bi bi-dash-circle text-secondary" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-1">No Active Plan</h5>
+                        <p class="text-muted mb-0">Choose a plan to create documents with full AI assistance</p>
+                    </div>
+                </div>
+
+                <a href="{% url 'accounts:pricing' %}" class="btn btn-primary">
+                    <i class="bi bi-credit-card me-1"></i>View Plans
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Purchase History -->
+        {% if paid_documents or subscription %}
+        <div class="card shadow mt-4">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="bi bi-receipt me-2"></i>Purchase History</h4>
+            </div>
+            <div class="card-body">
+                {% if paid_documents %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Document</th>
+                                <th>Status</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in paid_documents %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'documents:document_detail' doc.id %}">
+                                        {{ doc.title|truncatechars:40 }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if doc.payment_status == 'finalized' %}
+                                    <span class="badge bg-success">Finalized</span>
+                                    {% else %}
+                                    <span class="badge bg-primary">Paid</span>
+                                    {% endif %}
+                                </td>
+                                <td>${{ doc.amount_paid|floatformat:2 }}</td>
+                                <td>{{ doc.paid_at|date:"M j, Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No document purchases yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

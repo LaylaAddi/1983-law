@@ -131,7 +131,31 @@ class CustomPasswordChangeDoneView(PasswordChangeDoneView):
 @login_required
 def profile(request):
     """User profile view."""
-    return render(request, 'accounts/profile.html')
+    user = request.user
+
+    # Get subscription info
+    subscription = user.get_subscription()
+
+    # Get document packs with remaining credits
+    document_packs = user.document_packs.all().order_by('-created_at')
+
+    # Get access summary
+    access_summary = user.get_access_summary()
+
+    # Get purchase history (document packs and subscription)
+    from documents.models import Document
+    paid_documents = Document.objects.filter(
+        user=user,
+        payment_status__in=['paid', 'finalized']
+    ).order_by('-paid_at')[:10]
+
+    context = {
+        'subscription': subscription,
+        'document_packs': document_packs,
+        'access_summary': access_summary,
+        'paid_documents': paid_documents,
+    }
+    return render(request, 'accounts/profile.html', context)
 
 
 @login_required

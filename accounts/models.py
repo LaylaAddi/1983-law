@@ -249,6 +249,46 @@ class User(AbstractBaseUser, PermissionsMixin):
             return self.subscription.can_use_ai()
         return False
 
+    def needs_purchase_prompt(self):
+        """Check if user should see the purchase interstitial when creating documents.
+
+        Returns False if user has:
+        - Unlimited access (staff/superuser)
+        - Active subscription
+        - Document pack credits remaining
+        - Free AI uses remaining
+
+        Returns True if user has exhausted all options and should be prompted to purchase.
+        """
+        if self.has_unlimited_access():
+            return False
+        if self.has_active_subscription():
+            return False
+        if self.get_document_credits() > 0:
+            return False
+        if self.can_use_free_ai():
+            return False
+        return True
+
+    def get_access_summary(self):
+        """Get a summary of user's current access for display."""
+        summary = {
+            'has_subscription': False,
+            'subscription': None,
+            'document_credits': 0,
+            'free_ai_remaining': 0,
+            'has_unlimited': self.has_unlimited_access(),
+        }
+
+        if self.has_active_subscription():
+            summary['has_subscription'] = True
+            summary['subscription'] = self.get_subscription()
+
+        summary['document_credits'] = self.get_document_credits()
+        summary['free_ai_remaining'] = self.get_free_ai_remaining()
+
+        return summary
+
 
 class SiteSettings(models.Model):
     """

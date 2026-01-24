@@ -200,6 +200,28 @@ def document_create(request):
         messages.warning(request, 'Please complete your profile before creating a document. Your profile information will appear on legal documents.')
         return redirect('accounts:profile_complete')
 
+    # Check if user needs to see purchase prompt (soft gate)
+    # Skip if user already chose to continue with limited access in this session
+    skip_purchase_prompt = request.session.get('skip_purchase_prompt', False)
+
+    if request.user.needs_purchase_prompt() and not skip_purchase_prompt:
+        # Handle "continue with limited access" form submission
+        if request.method == 'POST' and 'continue_limited' in request.POST:
+            # User chose to continue with limited access - set session flag and redirect to GET
+            request.session['skip_purchase_prompt'] = True
+            return redirect('documents:document_create')
+        else:
+            # Show purchase interstitial
+            prices = {
+                'single': int(settings.DOCUMENT_PRICE_SINGLE),
+                'pack': int(settings.DOCUMENT_PRICE_3PACK),
+                'pack_per_doc': int(settings.DOCUMENT_PRICE_3PACK / 3),
+                'pack_savings': int(settings.DOCUMENT_PRICE_SINGLE * 3 - settings.DOCUMENT_PRICE_3PACK),
+                'monthly': int(settings.SUBSCRIPTION_PRICE_MONTHLY),
+                'annual': int(settings.SUBSCRIPTION_PRICE_ANNUAL),
+            }
+            return render(request, 'documents/purchase_required.html', {'prices': prices})
+
     if request.method == 'POST':
         form = DocumentForm(request.POST)
         if form.is_valid():
