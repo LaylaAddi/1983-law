@@ -137,6 +137,7 @@ let foundAddressValue = '';
 let foundAgencyValue = '';
 
 function lookupInfo() {
+    console.log('lookupInfo called');
     const btn = document.getElementById('lookupAddressBtn');
     const resultDiv = document.getElementById('lookupResult');
     const agencyResultDiv = document.getElementById('agencyResult');
@@ -145,6 +146,14 @@ function lookupInfo() {
     const typeField = document.querySelector('[name="defendant_type"]');
     const titleField = document.querySelector('[name="title_rank"]');
     const descriptionField = document.querySelector('[name="description"]');
+
+    console.log('Fields found:', {
+        btn: !!btn,
+        resultDiv: !!resultDiv,
+        agencyField: !!agencyField,
+        nameField: !!nameField,
+        typeField: !!typeField ? typeField.value : null
+    });
 
     // For agency defendants, use 'name' field; for individuals, use 'agency_name'
     let agencyName = '';
@@ -162,6 +171,8 @@ function lookupInfo() {
         officerDescription = descriptionField ? descriptionField.value.trim() : '';
     }
 
+    console.log('Data to send:', { agencyName, officerName, officerTitle, officerDescription });
+
     // Disable button and show loading
     btn.disabled = true;
     btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Searching...';
@@ -170,8 +181,12 @@ function lookupInfo() {
 
     // Get CSRF token
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    console.log('CSRF token found:', !!csrfToken);
 
-    fetch('{% url "documents:lookup_address" document.id %}', {
+    const url = '{% url "documents:lookup_address" document.id %}';
+    console.log('Fetching URL:', url);
+
+    fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -184,8 +199,12 @@ function lookupInfo() {
             officer_description: officerDescription,
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('Response data:', data);
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-search me-1"></i>Find Agency & Address';
 
