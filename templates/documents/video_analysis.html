@@ -212,7 +212,22 @@
                             <!-- Speakers Section -->
                             <div class="mb-4">
                                 <h6><i class="bi bi-people me-2"></i>Speakers in this Video</h6>
-                                <p class="text-muted small">Identify who is speaking so you can attribute dialogue later.</p>
+                                <p class="text-muted small">Click to add speakers, then assign who they are in the video.</p>
+
+                                <!-- Quick-add buttons for Plaintiff and Defendants -->
+                                <div class="mb-3">
+                                    <span class="text-muted small me-2">Quick add:</span>
+                                    <button type="button" class="btn btn-outline-primary btn-sm me-1 quick-add-speaker"
+                                            data-video-id="{{ video.id }}" data-label="Plaintiff" data-type="plaintiff">
+                                        <i class="bi bi-person me-1"></i>Plaintiff (Me)
+                                    </button>
+                                    {% for defendant in defendants %}
+                                    <button type="button" class="btn btn-outline-secondary btn-sm me-1 quick-add-speaker"
+                                            data-video-id="{{ video.id }}" data-label="{{ defendant.name }}" data-type="defendant" data-defendant-id="{{ defendant.id }}">
+                                        <i class="bi bi-person-badge me-1"></i>{{ defendant.name }}
+                                    </button>
+                                    {% endfor %}
+                                </div>
 
                                 <div class="speakers-list mb-2" data-video-id="{{ video.id }}">
                                     {% for speaker in video.speakers.all %}
@@ -231,16 +246,16 @@
                                         <span class="text-muted small ms-2">{{ speaker.notes }}</span>
                                     </div>
                                     {% empty %}
-                                    <p class="text-muted small fst-italic">No speakers added yet.</p>
+                                    <p class="text-muted small fst-italic">No speakers added yet. Use the buttons above or add a custom name below.</p>
                                     {% endfor %}
                                 </div>
 
                                 <div class="input-group" style="max-width: 400px;">
                                     <input type="text" class="form-control form-control-sm add-speaker-input"
-                                           placeholder="e.g., Officer 1, Witness, Me">
+                                           placeholder="Other speaker (e.g., Witness, Bystander)">
                                     <button type="button" class="btn btn-outline-secondary btn-sm add-speaker-btn"
                                             data-video-id="{{ video.id }}">
-                                        <i class="bi bi-plus"></i> Add Speaker
+                                        <i class="bi bi-plus"></i> Add
                                     </button>
                                 </div>
                             </div>
@@ -686,7 +701,55 @@ document.querySelectorAll('.delete-video-btn').forEach(btn => {
     });
 });
 
-// Add Speaker
+// Quick-add Speaker (Plaintiff or Defendant buttons)
+document.querySelectorAll('.quick-add-speaker').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const videoId = this.dataset.videoId;
+        const label = this.dataset.label;
+        const type = this.dataset.type;
+        const defendantId = this.dataset.defendantId;
+
+        try {
+            // First add the speaker
+            const formData = new FormData();
+            formData.append('label', label);
+            formData.append('csrfmiddlewaretoken', csrfToken);
+
+            const response = await fetch(`/documents/${documentId}/video-analysis/${videoId}/add-speaker/`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Now assign the speaker to plaintiff or defendant
+                const speakerId = data.speaker_id;
+                const updateFormData = new FormData();
+                updateFormData.append('csrfmiddlewaretoken', csrfToken);
+
+                if (type === 'plaintiff') {
+                    updateFormData.append('attribution', 'plaintiff');
+                } else if (type === 'defendant' && defendantId) {
+                    updateFormData.append('attribution', `defendant:${defendantId}`);
+                }
+
+                await fetch(`/documents/${documentId}/video-analysis/${videoId}/update-speaker/${speakerId}/`, {
+                    method: 'POST',
+                    body: updateFormData
+                });
+
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to add speaker');
+            }
+        } catch (error) {
+            alert('Network error');
+        }
+    });
+});
+
+// Add Speaker (custom label)
 document.querySelectorAll('.add-speaker-btn').forEach(btn => {
     btn.addEventListener('click', async function() {
         const videoId = this.dataset.videoId;
