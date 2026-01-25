@@ -305,12 +305,12 @@
                                 <!-- Quick-add buttons for Plaintiff and Defendants -->
                                 <div class="mb-3">
                                     <span class="text-muted small me-2">Quick add:</span>
-                                    <button type="button" class="btn btn-outline-primary btn-sm me-1 quick-add-speaker"
+                                    <button type="button" class="btn btn-primary btn-sm me-1 quick-add-speaker"
                                             data-video-id="{{ video.id }}" data-label="Plaintiff" data-type="plaintiff">
                                         <i class="bi bi-person me-1"></i>Plaintiff (Me)
                                     </button>
                                     {% for defendant in defendants %}
-                                    <button type="button" class="btn btn-outline-secondary btn-sm me-1 quick-add-speaker"
+                                    <button type="button" class="btn btn-warning btn-sm me-1 quick-add-speaker"
                                             data-video-id="{{ video.id }}" data-label="{{ defendant.name }}" data-type="defendant" data-defendant-id="{{ defendant.id }}">
                                         <i class="bi bi-person-badge me-1"></i>{{ defendant.name }}
                                     </button>
