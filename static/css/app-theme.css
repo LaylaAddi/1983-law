@@ -1650,6 +1650,38 @@ a:hover {
     background: #1e4a35;
 }
 
+/* Violation action buttons - "Check This Box" and "Copy to Details" */
+[data-theme="dark"] .violation-actions .btn-outline-primary {
+    color: #93c5fd !important;
+    border-color: #3b82f6 !important;
+    background: transparent !important;
+}
+
+[data-theme="dark"] .violation-actions .btn-outline-primary:hover {
+    color: #fff !important;
+    background: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+}
+
+[data-theme="dark"] .violation-actions .btn-outline-secondary {
+    color: #d1d5db !important;
+    border-color: #6b7280 !important;
+    background: transparent !important;
+}
+
+[data-theme="dark"] .violation-actions .btn-outline-secondary:hover {
+    color: #fff !important;
+    background: #6b7280 !important;
+    border-color: #6b7280 !important;
+}
+
+/* Success state for buttons after action */
+[data-theme="dark"] .violation-actions .btn-success {
+    color: #fff !important;
+    background: #22c55e !important;
+    border-color: #22c55e !important;
+}
+
 /* Rights analysis footer */
 [data-theme="dark"] .rights-analysis-footer {
     background: var(--dark-bg-card);
