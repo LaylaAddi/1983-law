@@ -3811,22 +3811,15 @@ def link_youtube_to_evidence(request, document_id, evidence_id):
             'error': 'This video has already been added to your document.'
         })
 
-    # Fetch video info and check for captions
+    # Just create the VideoEvidence record - no API calls
+    # Caption availability will be checked on the video analysis page when user extracts clips
     try:
-        from .services.youtube_service import YouTubeService
-        service = YouTubeService()
-
-        # Try to get transcript to check if captions available
-        result = service.get_transcript(youtube_url, use_ai_fallback=False)
-        has_captions = result.success
-
-        # Create VideoEvidence record linked to existing Evidence
         video_evidence = VideoEvidence.objects.create(
             evidence=evidence,
             youtube_url=youtube_url,
             video_id=video_id,
             video_title=evidence.title or f'Video {video_id}',
-            has_youtube_captions=has_captions
+            has_youtube_captions=False  # Will be updated when user extracts transcript
         )
 
         # Update evidence type to video if not already
@@ -3838,7 +3831,6 @@ def link_youtube_to_evidence(request, document_id, evidence_id):
             'success': True,
             'video_evidence_id': video_evidence.id,
             'youtube_video_id': video_id,
-            'has_captions': has_captions,
             'redirect_url': f'/documents/{document_id}/video-analysis/',
             'message': 'Video linked successfully!'
         })
