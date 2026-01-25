@@ -1024,6 +1024,37 @@ def _collect_document_data(document):
     except DocumentSection.DoesNotExist:
         pass
 
+    # Video Evidence (YouTube transcript extractions)
+    data['video_transcripts'] = []
+    try:
+        evidence_section = document.sections.get(section_type='evidence')
+        for evidence in evidence_section.evidence_items.filter(evidence_type='video'):
+            try:
+                video_evidence = evidence.video_evidence
+                for capture in video_evidence.captures.filter(extraction_status='completed'):
+                    # Build speaker mapping for this capture
+                    speaker_map = {}
+                    for speaker in video_evidence.speakers.all():
+                        if speaker.defendant:
+                            speaker_map[speaker.label] = speaker.defendant.name
+                        elif speaker.is_plaintiff:
+                            speaker_map[speaker.label] = "Plaintiff"
+                        else:
+                            speaker_map[speaker.label] = speaker.label
+
+                    data['video_transcripts'].append({
+                        'video_title': video_evidence.video_title,
+                        'video_url': video_evidence.youtube_url,
+                        'start_time': capture.start_time_display,
+                        'end_time': capture.end_time_display,
+                        'transcript': capture.attributed_transcript or capture.raw_transcript,
+                        'speakers': speaker_map,
+                    })
+            except VideoEvidence.DoesNotExist:
+                pass
+    except DocumentSection.DoesNotExist:
+        pass
+
     # Check if we have minimum data to generate
     has_plaintiff = bool(data['plaintiff'].get('first_name') and data['plaintiff'].get('last_name'))
     has_narrative = bool(data['narrative'].get('detailed_narrative') or document.story_text)
