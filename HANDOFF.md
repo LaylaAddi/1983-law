@@ -1335,12 +1335,15 @@ The app uses Docker deployment on Render with these files:
 ### IMPORTANT: Pre-Deploy Command
 Set this in Render Dashboard → Settings → **Pre-Deploy Command**:
 ```
-python manage.py migrate --run-syncdb || python manage.py migrate --fake-initial || true
+bash scripts/predeploy.sh
 ```
-This resilient command:
-1. Tries normal migrate with syncdb
-2. Falls back to fake-initial if tables already exist
-3. Continues deploy even if migrations fail (prevents deploy failures from migration conflicts)
+
+The `scripts/predeploy.sh` script:
+1. Runs migrations with resilient fallback (--run-syncdb → --fake-initial → continue)
+2. Collects static files
+3. Seeds AI prompts
+
+This prevents deploy failures from migration conflicts while still running essential setup tasks.
 
 ### Migration Best Practices (IMPORTANT)
 **Migrations should be committed to git, NOT auto-generated in production.**
