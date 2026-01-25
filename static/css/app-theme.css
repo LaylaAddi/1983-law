@@ -2150,6 +2150,29 @@ a:hover {
     color: var(--dark-text-muted) !important;
 }
 
+/* Quick Add YouTube card input styling */
+[data-theme="dark"] #quickAddYouTubeCard .form-control {
+    background: var(--dark-bg) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] #quickAddYouTubeCard .form-control::placeholder {
+    color: var(--dark-text-muted) !important;
+}
+
+[data-theme="dark"] #quickAddYouTubeCard .alert-danger {
+    background: #3b1d26 !important;
+    border-color: #f87171 !important;
+    color: #fca5a5 !important;
+}
+
+[data-theme="dark"] #quickAddYouTubeCard .alert-success {
+    background: #14532d !important;
+    border-color: #22c55e !important;
+    color: #86efac !important;
+}
+
 /* Alert info improvements for dark mode */
 [data-theme="dark"] .alert-info {
     background: #1e3a5f !important;

@@ -494,6 +494,36 @@
                         </div>
                     </div>
 
+                    {% if section.section_type == 'evidence' and can_use_video_analysis %}
+                    <!-- Quick Add YouTube Video Card for Subscribers -->
+                    <div class="card border-danger mb-4" id="quickAddYouTubeCard">
+                        <div class="card-header bg-danger text-white py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-youtube me-2"></i>Quick Add YouTube Video</span>
+                                <button type="button" class="btn btn-sm btn-outline-light" id="dismissYouTubeCard" title="Dismiss">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted mb-3">
+                                Have YouTube video evidence (body cam, personal recording, news footage)?
+                                Add it here to extract and analyze the transcript.
+                            </p>
+                            <div class="input-group">
+                                <input type="url" class="form-control" id="quickYouTubeUrl" placeholder="https://www.youtube.com/watch?v=...">
+                                <button type="button" class="btn btn-danger" id="quickAddYouTubeBtn">
+                                    <i class="bi bi-plus-lg me-1"></i>Add Video Evidence
+                                </button>
+                            </div>
+                            <div id="quickYouTubeError" class="alert alert-danger mt-2 d-none small"></div>
+                            <div id="quickYouTubeSuccess" class="alert alert-success mt-2 d-none small">
+                                <i class="bi bi-check-circle me-1"></i>Video evidence added! Redirecting...
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                         <div class="mb-4 {% if not items %}d-none{% endif %}" id="defendantsListContainer">
                             <h5 id="defendantsListHeader">
                                 {% if section.section_type == 'defendants' %}
@@ -2745,6 +2775,89 @@ document.addEventListener('DOMContentLoaded', function() {
             errorDiv.classList.remove('d-none');
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<i class="bi bi-link-45deg me-1"></i>Link Video';
+        });
+    });
+})();
+
+// Quick Add YouTube Video Handler
+(function() {
+    'use strict';
+
+    const quickAddBtn = document.getElementById('quickAddYouTubeBtn');
+    const dismissBtn = document.getElementById('dismissYouTubeCard');
+    const card = document.getElementById('quickAddYouTubeCard');
+
+    if (!quickAddBtn) return;
+
+    // Dismiss card handler
+    if (dismissBtn) {
+        dismissBtn.addEventListener('click', function() {
+            card.style.display = 'none';
+        });
+    }
+
+    // Quick add handler
+    quickAddBtn.addEventListener('click', function() {
+        const youtubeUrl = document.getElementById('quickYouTubeUrl').value.trim();
+        const errorDiv = document.getElementById('quickYouTubeError');
+        const successDiv = document.getElementById('quickYouTubeSuccess');
+
+        // Reset states
+        errorDiv.classList.add('d-none');
+        successDiv.classList.add('d-none');
+
+        // Basic validation
+        if (!youtubeUrl) {
+            errorDiv.textContent = 'Please enter a YouTube URL';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        // Check if it looks like a YouTube URL
+        if (!youtubeUrl.includes('youtube.com') && !youtubeUrl.includes('youtu.be')) {
+            errorDiv.textContent = 'Please enter a valid YouTube URL (e.g., https://www.youtube.com/watch?v=...)';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        // Disable button and show loading state
+        quickAddBtn.disabled = true;
+        quickAddBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Adding...';
+
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // Make API request to quick add endpoint
+        fetch('{% url "documents:quick_add_youtube_evidence" document.id %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ youtube_url: youtubeUrl })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                successDiv.classList.remove('d-none');
+                // Redirect to video analysis page after a short delay
+                setTimeout(function() {
+                    window.location.href = data.redirect_url || '/documents/{{ document.id }}/video-analysis/';
+                }, 1500);
+            } else {
+                errorDiv.textContent = data.error || 'Failed to add video. Please try again.';
+                errorDiv.classList.remove('d-none');
+                quickAddBtn.disabled = false;
+                quickAddBtn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Add Video Evidence';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            errorDiv.textContent = 'Network error. Please try again.';
+            errorDiv.classList.remove('d-none');
+            quickAddBtn.disabled = false;
+            quickAddBtn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Add Video Evidence';
         });
     });
 })();

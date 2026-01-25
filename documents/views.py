@@ -3844,6 +3844,100 @@ def link_youtube_to_evidence(request, document_id, evidence_id):
 
 @login_required
 @require_POST
+def quick_add_youtube_evidence(request, document_id):
+    """
+    Create a new Video Evidence record with YouTube link in one step.
+    Creates an Evidence record and VideoEvidence record together.
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Check subscriber access
+    if not request.user.can_use_video_analysis():
+        return JsonResponse({
+            'success': False,
+            'error': 'Video Analysis requires a Pro subscription.'
+        }, status=403)
+
+    # Get the evidence section
+    try:
+        evidence_section = document.sections.get(section_type='evidence')
+    except DocumentSection.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Evidence section not found.'
+        }, status=404)
+
+    # Parse JSON body
+    import json
+    try:
+        data = json.loads(request.body)
+        youtube_url = data.get('youtube_url', '').strip()
+    except json.JSONDecodeError:
+        youtube_url = request.POST.get('youtube_url', '').strip()
+
+    if not youtube_url:
+        return JsonResponse({
+            'success': False,
+            'error': 'Please enter a YouTube URL.'
+        })
+
+    # Extract video ID
+    video_id = VideoEvidence.extract_video_id(youtube_url)
+    if not video_id:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid YouTube URL. Please enter a valid YouTube video link.'
+        })
+
+    # Check if this video already exists for this document
+    existing = VideoEvidence.objects.filter(
+        evidence__section=evidence_section,
+        video_id=video_id
+    ).first()
+
+    if existing:
+        return JsonResponse({
+            'success': False,
+            'error': 'This video has already been added to your document.'
+        })
+
+    try:
+        # Create Evidence record
+        evidence = Evidence.objects.create(
+            section=evidence_section,
+            evidence_type='video',
+            title=f'YouTube Video ({video_id})',
+            description='Video evidence from YouTube',
+            is_in_possession=True
+        )
+
+        # Create VideoEvidence record
+        video_evidence = VideoEvidence.objects.create(
+            evidence=evidence,
+            youtube_url=youtube_url,
+            video_id=video_id,
+            video_title=f'YouTube Video {video_id}',
+            has_youtube_captions=False
+        )
+
+        return JsonResponse({
+            'success': True,
+            'evidence_id': evidence.id,
+            'video_evidence_id': video_evidence.id,
+            'youtube_video_id': video_id,
+            'redirect_url': f'/documents/{document_id}/video-analysis/',
+            'message': 'Video evidence added successfully!'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error adding video evidence: {str(e)}'
+        })
+
+
+@login_required
+@require_POST
 def video_delete(request, document_id, video_id):
     """Delete a video and all its captures."""
     document = get_object_or_404(Document, id=document_id, user=request.user)

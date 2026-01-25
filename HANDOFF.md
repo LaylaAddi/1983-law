@@ -2643,12 +2643,20 @@ Previously, YouTube video analysis was on a separate page, disconnected from the
    - Input field to link YouTube video (for video-type evidence without linked video)
    - Pro subscription notice for non-subscribers
 
+4. **Quick Add YouTube Video Card (NEW - January 2026):**
+   - Prominent red card at top of Evidence section for subscribers
+   - Allows adding YouTube video evidence directly with URL in one step
+   - Creates Evidence record (type: video) AND VideoEvidence record together
+   - Dismissible card with X button
+   - Redirects to video analysis page after adding
+   - Dark mode styled
+
 **Files modified:**
-- `documents/views.py` - Updated `section_edit` to prefetch video_evidence, updated `edit_evidence` to pass video data, added `link_youtube_to_evidence` endpoint
-- `documents/urls.py` - Added URL for `link_youtube_to_evidence`
-- `templates/documents/section_edit.html` - Added YouTube badges, Link Video button/modal, transcript preview, modal JavaScript
+- `documents/views.py` - Updated `section_edit` to prefetch video_evidence, updated `edit_evidence` to pass video data, added `link_youtube_to_evidence` endpoint, added `quick_add_youtube_evidence` endpoint
+- `documents/urls.py` - Added URLs for `link_youtube_to_evidence` and `quick_add_youtube_evidence`
+- `templates/documents/section_edit.html` - Added YouTube badges, Link Video button/modal, transcript preview, modal JavaScript, Quick Add YouTube card with JavaScript handler
 - `templates/documents/edit_evidence.html` - Added YouTube video section with thumbnail, info, and link functionality
-- `static/css/app-theme.css` - Added dark mode styles for YouTube video elements
+- `static/css/app-theme.css` - Added dark mode styles for YouTube video elements including Quick Add card
 
 ---
 
