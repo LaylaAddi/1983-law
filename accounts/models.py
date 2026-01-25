@@ -249,6 +249,13 @@ class User(AbstractBaseUser, PermissionsMixin):
             return self.subscription.can_use_ai()
         return False
 
+    def can_use_video_analysis(self):
+        """
+        Check if user can use the video evidence extraction feature.
+        Only available to Monthly and Annual Pro subscribers.
+        """
+        return self.has_active_subscription()
+
     def needs_purchase_prompt(self):
         """Check if user should see the purchase interstitial when creating documents.
 

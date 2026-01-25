@@ -2025,7 +2025,7 @@ Subscribers (Monthly/Annual Pro) can extract transcripts from YouTube videos to 
 - Assign speakers to defendants from their document
 - Integrate video evidence into the legal document
 
-### Status: Phase 1 Complete (Database Models)
+### Status: Phase 2 Complete (YouTube Integration)
 
 **Subscriber-only feature** - Monthly and Annual Pro plans only.
 
@@ -2063,19 +2063,79 @@ Subscribers (Monthly/Annual Pro) can extract transcripts from YouTube videos to 
 | `notes` | Description of speaker |
 
 ### Cost Structure
-- **YouTube captions available**: FREE (uses `youtube-transcript-api`)
-- **Whisper fallback**: ~$0.006/minute via third-party transcript API
+- **YouTube captions available**: Supadata API (native mode)
+- **Whisper fallback**: Supadata API (generate mode) - ~$0.006/minute
 - Each extraction counts as 1 AI use toward subscriber limit
 
-### Files Added/Modified
+### Environment Variables
+```
+SUPADATA_API_KEY=sd_xxxxx  # Supadata API key for YouTube transcripts
+```
+
+### YouTube Service (Phase 2)
+
+**File:** `documents/services/youtube_service.py`
+
+**Classes:**
+- `YouTubeService` - Main service class
+- `TranscriptResult` - Dataclass for extraction results
+- `TranscriptSegment` - Individual transcript segment with timing
+
+**Key Methods:**
+```python
+from documents.services.youtube_service import YouTubeService
+
+service = YouTubeService()
+
+# Get full transcript
+result = service.get_transcript("https://youtube.com/watch?v=abc123")
+# Returns TranscriptResult with segments, full_text, language, extraction_method
+
+# Get transcript for time range (max 2 minutes)
+result = service.get_transcript_for_range(
+    "https://youtube.com/watch?v=abc123",
+    start_seconds=302,  # 5:02
+    end_seconds=333     # 5:33
+)
+
+# Extract video ID from URL
+video_id = YouTubeService.extract_video_id(url)  # Returns "abc123"
+
+# Check subscriber access
+user.can_use_video_analysis()  # Returns True for subscribers
+```
+
+**Extraction Strategy:**
+1. Try `mode=native` first (uses existing YouTube captions - cheaper)
+2. Fall back to `mode=generate` if no captions (AI transcription)
+3. Filter transcript to user's requested time range
+
+**Response Format:**
+```python
+TranscriptResult(
+    success=True,
+    segments=[
+        TranscriptSegment(text="Hello officer", start_ms=5020, duration_ms=1500),
+        TranscriptSegment(text="Why are you recording", start_ms=6520, duration_ms=2000),
+    ],
+    full_text="Hello officer Why are you recording",
+    language="en",
+    extraction_method="youtube"  # or "whisper"
+)
+```
+
+### Files Added/Modified (Phase 1 + 2)
 | File | Change |
 |------|--------|
 | `documents/models.py` | Added VideoEvidence, VideoCapture, VideoSpeaker models |
 | `documents/admin.py` | Added admin registration for new models |
 | `documents/migrations/0002_video_evidence.py` | Migration for new tables |
+| `documents/services/youtube_service.py` | NEW - Supadata API integration |
+| `config/settings.py` | Added SUPADATA_API_KEY |
+| `accounts/models.py` | Added `can_use_video_analysis()` method |
+| `requirements.txt` | Added `requests>=2.31` |
 
 ### Remaining Phases
-- **Phase 2**: YouTube integration (fetch metadata, extract transcripts)
 - **Phase 3**: UI - Video Analysis page
 - **Phase 4**: Legal document integration
 - **Phase 5**: Subscriber access gate
@@ -2091,6 +2151,9 @@ VideoCapture.parse_time_to_seconds("5:02")  # Returns 302
 # Display seconds as time
 capture.start_time_display  # "5:02"
 capture.duration_display    # "0:31"
+
+# Check subscriber access
+user.can_use_video_analysis()  # True for Monthly/Annual Pro
 ```
 
 ---

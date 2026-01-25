@@ -191,6 +191,9 @@ ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'admin@1983law.com')
 # OpenAI API Configuration
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 
+# Supadata API Configuration (YouTube transcript extraction)
+SUPADATA_API_KEY = os.getenv('SUPADATA_API_KEY', '')
+
 # App Branding
 APP_NAME = os.getenv('APP_NAME', '1983law.com')  # Used in footer and watermark
 HEADER_APP_NAME = os.getenv('HEADER_APP_NAME', '1983 Law')  # Used in header/navbar
