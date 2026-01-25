@@ -1335,9 +1335,15 @@ The app uses Docker deployment on Render with these files:
 ### IMPORTANT: Pre-Deploy Command
 Set this in Render Dashboard → Settings → **Pre-Deploy Command**:
 ```
-python manage.py migrate
+bash scripts/predeploy.sh
 ```
-This ensures migrations run automatically on every deploy.
+
+The `scripts/predeploy.sh` script:
+1. Runs migrations with resilient fallback (--run-syncdb → --fake-initial → continue)
+2. Collects static files
+3. Seeds AI prompts
+
+This prevents deploy failures from migration conflicts while still running essential setup tasks.
 
 ### Migration Best Practices (IMPORTANT)
 **Migrations should be committed to git, NOT auto-generated in production.**
