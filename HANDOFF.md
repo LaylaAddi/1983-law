@@ -2599,6 +2599,27 @@ Previously paid documents used cost-based AI tracking ($5 budget). Changed to co
 
 **Display:** Paid docs now show "AI: 95 of 100 uses remaining" instead of percentage
 
+### Dark Mode in Rights Violated Section (RESOLVED - January 2026)
+The Rights Violated section page (`/documents/{id}/section/rights_violated/`) had multiple dark mode styling issues including unreadable text and inconsistent backgrounds.
+
+**Solution:** Added comprehensive dark mode styles to `static/css/app-theme.css`:
+- Rights analysis panel, summary, and violation cards
+- Applied violation card states (green border/background)
+- Rights analysis footer and error states
+- First-time user guide alert with proper dark colors
+- Modal backgrounds and warning/info alerts in modals
+- Court district box and confirmation styling
+- Interview cards with needs-work and not-applicable states
+- Help section, tips, examples, and amendment cards
+- Attorney section styling
+- List group items with variant colors (warning, danger, success)
+- AI suggestions container and agency suggestions
+- Form check labels and floating labels
+- Dynamically applied success highlights on textareas
+
+**Files modified:**
+- `static/css/app-theme.css` - Added 500+ lines of dark mode styles for rights-analyze.css elements and section_edit.html inline styles
+
 ---
 
 ## Instructions for Next Claude Session
