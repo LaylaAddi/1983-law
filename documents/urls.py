@@ -87,6 +87,7 @@ urlpatterns = [
     path('<int:document_id>/video-analysis/', views.video_analysis, name='video_analysis'),
     path('<int:document_id>/video-analysis/add-video/', views.video_add, name='video_add'),
     path('<int:document_id>/evidence/<int:evidence_id>/link-youtube/', views.link_youtube_to_evidence, name='link_youtube_to_evidence'),
+    path('<int:document_id>/evidence/<int:evidence_id>/unlink-youtube/', views.unlink_youtube_from_evidence, name='unlink_youtube_from_evidence'),
     path('<int:document_id>/evidence/quick-add-youtube/', views.quick_add_youtube_evidence, name='quick_add_youtube_evidence'),
     path('<int:document_id>/video-analysis/<int:video_id>/delete/', views.video_delete, name='video_delete'),
     path('<int:document_id>/video-analysis/<int:video_id>/add-capture/', views.video_add_capture, name='video_add_capture'),

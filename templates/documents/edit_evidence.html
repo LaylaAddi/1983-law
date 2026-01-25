@@ -115,9 +115,14 @@
                             <div class="card-header bg-danger text-white py-2">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span><i class="bi bi-youtube me-1"></i>Linked Video</span>
-                                    <a href="{% url 'documents:video_analysis' document.id %}#video-{{ video_evidence.id }}" class="btn btn-sm btn-light">
-                                        <i class="bi bi-pencil me-1"></i>Manage Transcript
-                                    </a>
+                                    <div class="d-flex gap-2">
+                                        <a href="{% url 'documents:video_analysis' document.id %}#video-{{ video_evidence.id }}" class="btn btn-sm btn-light">
+                                            <i class="bi bi-pencil me-1"></i>Manage Transcript
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-light" id="unlinkVideoBtn" title="Remove YouTube video link (keeps evidence)">
+                                            <i class="bi bi-x-lg me-1"></i>Unlink
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <div class="card-body">
@@ -305,6 +310,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 errorDiv.classList.remove('d-none');
                 linkYouTubeBtn.disabled = false;
                 linkYouTubeBtn.innerHTML = '<i class="bi bi-link-45deg me-1"></i>Link Video';
+            });
+        });
+    }
+
+    // YouTube unlinking functionality
+    const unlinkVideoBtn = document.getElementById('unlinkVideoBtn');
+    if (unlinkVideoBtn) {
+        unlinkVideoBtn.addEventListener('click', function() {
+            if (!confirm('Are you sure you want to unlink this YouTube video? The evidence item will be kept, but the video link and any transcripts will be removed.')) {
+                return;
+            }
+
+            // Disable button and show loading
+            unlinkVideoBtn.disabled = true;
+            unlinkVideoBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Unlinking...';
+
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // Make API request
+            fetch('{% url "documents:unlink_youtube_from_evidence" document.id evidence.id %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload page to show the link video form
+                    window.location.reload();
+                } else {
+                    alert(data.error || 'Failed to unlink video.');
+                    unlinkVideoBtn.disabled = false;
+                    unlinkVideoBtn.innerHTML = '<i class="bi bi-x-lg me-1"></i>Unlink';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Network error. Please try again.');
+                unlinkVideoBtn.disabled = false;
+                unlinkVideoBtn.innerHTML = '<i class="bi bi-x-lg me-1"></i>Unlink';
             });
         });
     }

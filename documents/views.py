@@ -3844,6 +3844,40 @@ def link_youtube_to_evidence(request, document_id, evidence_id):
 
 @login_required
 @require_POST
+def unlink_youtube_from_evidence(request, document_id, evidence_id):
+    """
+    Unlink a YouTube video from an Evidence record.
+    Deletes the VideoEvidence record but keeps the Evidence record.
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    evidence = get_object_or_404(Evidence, id=evidence_id, section__document=document)
+
+    # Check if evidence has a video linked
+    if not hasattr(evidence, 'video_evidence'):
+        return JsonResponse({
+            'success': False,
+            'error': 'This evidence does not have a YouTube video linked.'
+        })
+
+    try:
+        # Delete just the VideoEvidence record, not the Evidence
+        video_evidence = evidence.video_evidence
+        video_evidence.delete()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'YouTube video unlinked successfully.'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error unlinking video: {str(e)}'
+        })
+
+
+@login_required
+@require_POST
 def quick_add_youtube_evidence(request, document_id):
     """
     Create a new Video Evidence record with YouTube link in one step.
