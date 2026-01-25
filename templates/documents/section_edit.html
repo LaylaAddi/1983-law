@@ -485,6 +485,7 @@
                                         Add each witness who saw or heard what happened. Include bystanders, fellow auditors, or anyone who can support your account.
                                     {% elif section.section_type == 'evidence' %}
                                         Add each piece of evidence separately - your video, body camera footage, police reports, medical records, etc.
+                                        {% if can_use_video_analysis %}<br><strong class="text-danger"><i class="bi bi-youtube me-1"></i>YouTube Videos:</strong> Add as "Video Recording" then click "Link Video" to attach a YouTube URL and extract transcripts.{% endif %}
                                     {% else %}
                                         Fill out the form below and click "Add" to save each entry. You can add as many as needed.
                                     {% endif %}

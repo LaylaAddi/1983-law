@@ -2139,3 +2139,30 @@ a:hover {
     border: 1px solid var(--dark-border);
 }
 
+/* Alert light in dark mode */
+[data-theme="dark"] .alert-light {
+    background: var(--dark-bg-secondary) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .alert-light .text-muted {
+    color: var(--dark-text-muted) !important;
+}
+
+/* Alert info improvements for dark mode */
+[data-theme="dark"] .alert-info {
+    background: #1e3a5f !important;
+    border-color: #1e40af !important;
+    color: #bfdbfe !important;
+}
+
+[data-theme="dark"] .alert-info strong {
+    color: #93c5fd !important;
+}
+
+[data-theme="dark"] .alert-info .small,
+[data-theme="dark"] .alert-info p {
+    color: #bfdbfe !important;
+}
+
