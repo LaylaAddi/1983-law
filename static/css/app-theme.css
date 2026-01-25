@@ -1589,3 +1589,517 @@ a:hover {
     background: var(--dark-bg-secondary) !important;
 }
 
+/* =============================================
+   RIGHTS ANALYSIS DARK MODE STYLES
+   ============================================= */
+
+/* Rights analysis panel */
+[data-theme="dark"] .rights-analysis-panel {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+/* Rights analysis summary */
+[data-theme="dark"] .rights-analysis-summary {
+    background: #2d1f47;
+    border-left-color: #8b5cf6;
+}
+
+[data-theme="dark"] .rights-analysis-summary h6 {
+    color: #c4b5fd;
+}
+
+[data-theme="dark"] .rights-analysis-summary p {
+    color: var(--dark-text);
+}
+
+/* Violation cards */
+[data-theme="dark"] .violation-card {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .violation-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .violation-card-header {
+    background: var(--dark-bg-card);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .violation-right-name {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .violation-card-body {
+    background: var(--dark-bg-secondary);
+}
+
+[data-theme="dark"] .violation-explanation {
+    color: var(--dark-text);
+}
+
+/* Applied violation card state */
+[data-theme="dark"] .violation-card.applied {
+    border-color: #22c55e;
+    background: #1a3d2e;
+}
+
+[data-theme="dark"] .violation-card.applied .violation-card-header {
+    background: #1e4a35;
+}
+
+/* Rights analysis footer */
+[data-theme="dark"] .rights-analysis-footer {
+    background: var(--dark-bg-card);
+    border-color: var(--dark-border);
+}
+
+/* No violations message */
+[data-theme="dark"] .no-violations {
+    color: var(--dark-text-muted);
+}
+
+[data-theme="dark"] .no-violations i {
+    color: var(--dark-text-muted);
+}
+
+/* Loading state */
+[data-theme="dark"] .rights-analysis-loading {
+    color: var(--dark-text-muted);
+}
+
+/* Error state */
+[data-theme="dark"] .rights-analysis-error {
+    background: #4a1d24;
+    border-color: #7f1d1d;
+    color: #fca5a5;
+}
+
+/* Analyze help text */
+[data-theme="dark"] .analyze-help-text {
+    color: var(--dark-text-muted);
+}
+
+/* =============================================
+   RIGHTS GUIDE ALERT (First-time user guide)
+   ============================================= */
+
+[data-theme="dark"] #rightsGuide {
+    background: var(--dark-bg-secondary) !important;
+    border-color: var(--dark-border) !important;
+    border-left-color: #3b82f6 !important;
+}
+
+[data-theme="dark"] #rightsGuide .alert-heading {
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] #rightsGuide ol,
+[data-theme="dark"] #rightsGuide ol li {
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] #rightsGuide ol li[style*="background-color: #d4edda"] {
+    background-color: #1a3d2e !important;
+}
+
+[data-theme="dark"] #rightsGuide ol li strong[style*="color: #155724"],
+[data-theme="dark"] #rightsGuide ol li span[style*="color: #155724"] {
+    color: #4ade80 !important;
+}
+
+[data-theme="dark"] #rightsGuide p[style*="color: #6c757d"] {
+    color: var(--dark-text-muted) !important;
+}
+
+/* =============================================
+   SECTION EDIT ADDITIONAL DARK MODE FIXES
+   ============================================= */
+
+/* Modal backgrounds */
+[data-theme="dark"] .modal-content {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .modal-header {
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .modal-header.bg-warning {
+    background: #78350f !important;
+    color: #fef3c7 !important;
+}
+
+[data-theme="dark"] .modal-header.bg-warning .modal-title {
+    color: #fef3c7;
+}
+
+[data-theme="dark"] .modal-body {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .modal-footer {
+    border-color: var(--dark-border);
+}
+
+/* Alert variations in modals */
+[data-theme="dark"] .modal .alert-warning {
+    background: #422006;
+    border-color: #78350f;
+    color: #fef3c7;
+}
+
+[data-theme="dark"] .modal .alert-info {
+    background: #1e3a5f;
+    border-color: #1e40af;
+    color: #bfdbfe;
+}
+
+/* bg-light rounded boxes in modals */
+[data-theme="dark"] .modal .bg-light {
+    background: var(--dark-bg) !important;
+}
+
+[data-theme="dark"] .modal .bg-light p,
+[data-theme="dark"] .modal .bg-light strong {
+    color: var(--dark-text);
+}
+
+/* Form check in modals */
+[data-theme="dark"] .modal .form-check.border.bg-light {
+    background: var(--dark-bg) !important;
+    border-color: var(--dark-border) !important;
+}
+
+/* Status badge backgrounds */
+[data-theme="dark"] div[style*="background-color: #f8f9fa"] {
+    background-color: var(--dark-bg-secondary) !important;
+}
+
+[data-theme="dark"] .badge.bg-light {
+    background: var(--dark-bg-card) !important;
+    color: var(--dark-text) !important;
+}
+
+/* AI suggestions container */
+[data-theme="dark"] #aiSuggestionsContainer .card {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] #aiSuggestionsContainer .card-header {
+    background: var(--dark-bg-card);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] #aiSuggestionsContainer .card-body {
+    background: var(--dark-bg-secondary);
+    color: var(--dark-text);
+}
+
+/* Agency suggestions container */
+[data-theme="dark"] #agencySuggestions .card {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] #agencySuggestions .card-header {
+    background: var(--dark-bg-card);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] #agencySuggestions .card-body {
+    background: var(--dark-bg-secondary);
+    color: var(--dark-text);
+}
+
+/* Suggestions list items with bg-light */
+[data-theme="dark"] .mb-2.p-3.border.rounded.bg-light,
+[data-theme="dark"] div.p-3.border.rounded.bg-light {
+    background: var(--dark-bg) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text);
+}
+
+/* List group items */
+[data-theme="dark"] .list-group-item {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .list-group-item-action:hover,
+[data-theme="dark"] .list-group-item-action:focus {
+    background: var(--dark-bg-card);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .list-group-item.active {
+    background: #1e40af;
+    border-color: #1e40af;
+}
+
+[data-theme="dark"] .list-group-item-warning {
+    background: #422006 !important;
+    border-color: #78350f !important;
+    color: #fef3c7 !important;
+}
+
+[data-theme="dark"] .list-group-item-danger {
+    background: #4a1d24 !important;
+    border-color: #7f1d1d !important;
+    color: #fca5a5 !important;
+}
+
+[data-theme="dark"] .list-group-item-success {
+    background: #1a3d2e !important;
+    border-color: #166534 !important;
+    color: #bbf7d0 !important;
+}
+
+/* Small text colors in list items */
+[data-theme="dark"] .list-group-item .text-muted {
+    color: var(--dark-text-muted) !important;
+}
+
+[data-theme="dark"] .list-group-item .text-danger {
+    color: #f87171 !important;
+}
+
+[data-theme="dark"] .list-group-item .text-warning {
+    color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .list-group-item .text-success {
+    color: #4ade80 !important;
+}
+
+[data-theme="dark"] .list-group-item .text-info {
+    color: #38bdf8 !important;
+}
+
+/* Quick help card */
+[data-theme="dark"] .card.border-info .card-body {
+    background: var(--dark-bg-secondary);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .card.border-info .card-body .small {
+    color: var(--dark-text);
+}
+
+/* Section progress sidebar */
+[data-theme="dark"] .card .card-header {
+    background: var(--dark-bg-card);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+/* Preview button card */
+[data-theme="dark"] .card.border-primary .card-body {
+    background: var(--dark-bg-secondary);
+}
+
+[data-theme="dark"] .card.border-primary .card-title {
+    color: var(--dark-text);
+}
+
+/* Card with bg-light inside */
+[data-theme="dark"] .card.bg-light {
+    background: var(--dark-bg-secondary) !important;
+}
+
+[data-theme="dark"] .card.bg-light .card-body {
+    background: var(--dark-bg-secondary) !important;
+    color: var(--dark-text);
+}
+
+/* =============================================
+   SECTION EDIT PAGE INLINE STYLE OVERRIDES
+   ============================================= */
+
+/* Needs work highlight */
+[data-theme="dark"] .needs-work-highlight {
+    background-color: #422006 !important;
+    border-left-color: #f59e0b !important;
+}
+
+/* Court district box */
+[data-theme="dark"] .court-district-box {
+    background: linear-gradient(135deg, #422006 0%, #451a03 100%) !important;
+    border-color: #d97706 !important;
+}
+
+[data-theme="dark"] .court-district-box .box-header {
+    color: #fdba74 !important;
+}
+
+/* Court district confirmation */
+[data-theme="dark"] .court-district-confirmation {
+    background: var(--dark-bg) !important;
+    border-color: #ef4444 !important;
+}
+
+[data-theme="dark"] .court-district-confirmation.confirmed {
+    background: #1a3d2e !important;
+    border-color: #22c55e !important;
+}
+
+[data-theme="dark"] .court-district-confirmation label {
+    color: #f87171 !important;
+}
+
+[data-theme="dark"] .court-district-confirmation.confirmed label {
+    color: #4ade80 !important;
+}
+
+/* Interview cards */
+[data-theme="dark"] .interview-card {
+    background: var(--dark-bg-secondary) !important;
+}
+
+[data-theme="dark"] .interview-card.needs-work {
+    background-color: #422006 !important;
+}
+
+[data-theme="dark"] .interview-card.not-applicable {
+    background-color: var(--dark-bg) !important;
+}
+
+/* Help section */
+[data-theme="dark"] .help-section {
+    background: linear-gradient(135deg, var(--dark-bg-secondary) 0%, var(--dark-bg-card) 100%) !important;
+}
+
+[data-theme="dark"] .help-tips {
+    background: var(--dark-bg) !important;
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .help-tips li {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .help-example {
+    background: #1e3a5f !important;
+    border-left-color: #3b82f6 !important;
+    color: var(--dark-text);
+}
+
+/* Amendment cards */
+[data-theme="dark"] .amendment-card {
+    background: var(--dark-bg-secondary) !important;
+}
+
+[data-theme="dark"] .amendment-card h6 {
+    color: #60a5fa !important;
+}
+
+[data-theme="dark"] .amendment-card p,
+[data-theme="dark"] .amendment-card ul,
+[data-theme="dark"] .amendment-card li {
+    color: var(--dark-text);
+}
+
+/* Tooltip styles */
+[data-theme="dark"] .field-tooltip {
+    color: var(--dark-text-muted) !important;
+}
+
+[data-theme="dark"] .field-tooltip:hover {
+    color: #60a5fa !important;
+}
+
+/* Relief type cards */
+[data-theme="dark"] .relief-type {
+    background: var(--dark-bg) !important;
+}
+
+[data-theme="dark"] .relief-type strong {
+    color: #60a5fa !important;
+}
+
+/* Attorney section */
+[data-theme="dark"] .attorney-section {
+    background: var(--dark-bg) !important;
+    border-color: var(--dark-border) !important;
+}
+
+[data-theme="dark"] .attorney-section-header {
+    color: var(--dark-text) !important;
+    border-bottom-color: var(--dark-border) !important;
+}
+
+[data-theme="dark"] .attorney-section-header i {
+    color: #60a5fa !important;
+}
+
+/* Terminal lookup in section edit */
+[data-theme="dark"] #courtLookupTerminal span[style*="color: #6c757d"] {
+    color: var(--dark-text-muted) !important;
+}
+
+[data-theme="dark"] #courtLookupTerminal span[style*="color: #0d6efd"] {
+    color: #60a5fa !important;
+}
+
+[data-theme="dark"] #courtLookupTerminal span[style*="color: #198754"] {
+    color: #4ade80 !important;
+}
+
+[data-theme="dark"] #courtLookupTerminal span[style*="color: #dc3545"] {
+    color: #f87171 !important;
+}
+
+/* Status badge section */
+[data-theme="dark"] .text-center.mb-3.py-2.rounded[style*="background-color: #f8f9fa"] {
+    background-color: var(--dark-bg-secondary) !important;
+}
+
+/* Success highlight for fields */
+[data-theme="dark"] input[style*="background-color: #d4edda"],
+[data-theme="dark"] textarea[style*="background-color: #d4edda"],
+[data-theme="dark"] div[style*="background-color: #d4edda"] {
+    background-color: #1a3d2e !important;
+    color: var(--dark-text) !important;
+}
+
+/* Dynamically added items highlight */
+[data-theme="dark"] .list-group-item[style*="background-color: #d4edda"] {
+    background-color: #1a3d2e !important;
+}
+
+/* AI limit reached error in rights analysis */
+[data-theme="dark"] .rights-analysis-error .text-warning {
+    color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .rights-analysis-error .text-muted {
+    color: var(--dark-text-muted) !important;
+}
+
+/* Dynamically applied success highlight on textareas */
+[data-theme="dark"] textarea[style*="background-color: #d1e7dd"],
+[data-theme="dark"] textarea[style*="background-color: rgb(209, 231, 221)"] {
+    background-color: #1a3d2e !important;
+    color: var(--dark-text) !important;
+}
+
+/* Amendment section checkboxes and labels */
+[data-theme="dark"] .form-check-label {
+    color: var(--dark-text);
+}
+
+/* Form floating labels */
+[data-theme="dark"] .form-floating label {
+    color: var(--dark-text-muted);
+}
+
+[data-theme="dark"] .form-floating > .form-control:focus ~ label,
+[data-theme="dark"] .form-floating > .form-control:not(:placeholder-shown) ~ label {
+    color: var(--dark-text-muted);
+}
+
