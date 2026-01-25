@@ -62,14 +62,14 @@ Extract information for the following sections. Fill in as many fields as possib
 
 {
     "incident_overview": {
-        "incident_date": "YYYY-MM-DD format or partial date, null if not mentioned",
-        "incident_time": "HH:MM format or description like 'afternoon', null if not mentioned",
-        "incident_location": "address or location name like 'City Hall', 'Main Street', etc.",
-        "city": "city name - extract from context",
-        "state": "two-letter state code - infer from city if possible",
-        "location_type": "type of location: 'government building', 'public sidewalk', etc.",
+        "incident_date": "MUST be YYYY-MM-DD format (e.g., 2024-03-15). Convert any date mentioned (March 15, last Tuesday, etc.) to this format. Use current year if not specified. null if date cannot be determined.",
+        "incident_time": "MUST be HH:MM format in 24-hour time (e.g., 14:30 for 2:30 PM, 09:15 for 9:15 AM). Convert any time mentioned (around 3pm, afternoon, etc.) to best estimate. null if time cannot be determined.",
+        "incident_location": "Specific address or location name like '123 Main Street', 'City Hall', 'corner of 5th and Main'. Be as specific as possible.",
+        "city": "city name - MUST extract from context. Look for city names mentioned anywhere in the story.",
+        "state": "two-letter state code (e.g., CA, NY, TX) - infer from city if possible",
+        "location_type": "type of location: 'government building', 'public sidewalk', 'private residence', 'parking lot', etc.",
         "was_recording": "true if recording/filming mentioned, false if explicitly not, null if unknown",
-        "recording_device": "device used: 'cell phone', 'camera', etc. if mentioned"
+        "recording_device": "device used: 'cell phone', 'camera', 'body camera', etc. if mentioned"
     },
     "incident_narrative": {
         "summary": "2-3 sentence summary of what happened, written in third person",
