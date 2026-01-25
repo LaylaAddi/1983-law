@@ -227,7 +227,7 @@ class Document(models.Model):
             remaining = self.user.get_subscription_ai_remaining()
             subscription = self.user.get_subscription()
             if subscription and subscription.plan == 'annual':
-                return "AI: Unlimited (Pro Annual)"
+                return f"AI: {remaining} of {settings.SUBSCRIPTION_ANNUAL_AI_USES} uses remaining (Pro Annual)"
             return f"AI: {remaining} uses remaining this month (Pro)"
         if self.payment_status == 'draft':
             remaining = self.user.get_free_ai_remaining()

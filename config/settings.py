@@ -130,7 +130,7 @@ SUBSCRIPTION_PRICE_ANNUAL = 249.00     # Per year ($20.75/mo effective)
 
 # Subscription AI Limits
 SUBSCRIPTION_MONTHLY_AI_USES = 50      # AI uses per month for monthly subscribers
-SUBSCRIPTION_ANNUAL_AI_USES = 999      # Effectively unlimited for annual
+SUBSCRIPTION_ANNUAL_AI_USES = 125      # AI uses per document for annual subscribers
 
 # Promo/Referral Discounts
 PROMO_DISCOUNT_PERCENT = 20            # Discount for buyer using promo code
