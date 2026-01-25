@@ -2031,14 +2031,64 @@ def _process_story_background(document_id, story_text):
 
                     # Apply extracted fields
                     if incident_data.get('incident_date'):
-                        try:
-                            obj.incident_date = datetime.strptime(
-                                incident_data['incident_date'], '%Y-%m-%d'
-                            ).date()
-                        except ValueError:
-                            pass
+                        date_str = incident_data['incident_date']
+                        parsed_date = None
+
+                        # Try various date formats
+                        date_formats = [
+                            '%Y-%m-%d',       # 2024-03-15
+                            '%m/%d/%Y',       # 03/15/2024
+                            '%m-%d-%Y',       # 03-15-2024
+                            '%B %d, %Y',      # March 15, 2024
+                            '%b %d, %Y',      # Mar 15, 2024
+                            '%d %B %Y',       # 15 March 2024
+                            '%d %b %Y',       # 15 Mar 2024
+                            '%Y/%m/%d',       # 2024/03/15
+                        ]
+
+                        for fmt in date_formats:
+                            try:
+                                parsed_date = datetime.strptime(date_str, fmt).date()
+                                break
+                            except ValueError:
+                                continue
+
+                        if parsed_date:
+                            obj.incident_date = parsed_date
                     if incident_data.get('incident_time'):
-                        obj.incident_time = incident_data['incident_time']
+                        # Parse various time formats to TimeField
+                        time_str = incident_data['incident_time']
+                        try:
+                            from datetime import time as dt_time
+                            import re
+
+                            # Try various formats
+                            parsed_time = None
+
+                            # Format: HH:MM or H:MM
+                            if re.match(r'^\d{1,2}:\d{2}$', time_str):
+                                parts = time_str.split(':')
+                                parsed_time = dt_time(int(parts[0]), int(parts[1]))
+                            # Format: HH:MM:SS
+                            elif re.match(r'^\d{1,2}:\d{2}:\d{2}$', time_str):
+                                parts = time_str.split(':')
+                                parsed_time = dt_time(int(parts[0]), int(parts[1]), int(parts[2]))
+                            # Format: HH:MM AM/PM or H:MM AM/PM
+                            elif re.match(r'^\d{1,2}:\d{2}\s*(AM|PM|am|pm)$', time_str, re.IGNORECASE):
+                                match = re.match(r'^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)$', time_str, re.IGNORECASE)
+                                hour = int(match.group(1))
+                                minute = int(match.group(2))
+                                ampm = match.group(3).upper()
+                                if ampm == 'PM' and hour != 12:
+                                    hour += 12
+                                elif ampm == 'AM' and hour == 12:
+                                    hour = 0
+                                parsed_time = dt_time(hour, minute)
+
+                            if parsed_time:
+                                obj.incident_time = parsed_time
+                        except (ValueError, AttributeError):
+                            pass  # Can't parse time, skip it
                     if incident_data.get('incident_location'):
                         obj.incident_location = incident_data['incident_location']
                     if incident_data.get('city'):
