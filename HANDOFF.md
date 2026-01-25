@@ -2015,10 +2015,90 @@ Submit sitemap to Google Search Console:
 
 ---
 
+## YouTube Video Evidence Extraction (IN PROGRESS)
+
+### Overview
+Subscribers (Monthly/Annual Pro) can extract transcripts from YouTube videos to use as evidence. This feature allows users to:
+- Provide YouTube URLs of videos containing evidence (personal recordings, body cam, witness video)
+- Extract time-stamped clips (max 2 minutes each)
+- Get transcripts via YouTube captions or Whisper AI
+- Assign speakers to defendants from their document
+- Integrate video evidence into the legal document
+
+### Status: Phase 1 Complete (Database Models)
+
+**Subscriber-only feature** - Monthly and Annual Pro plans only.
+
+### Database Models
+
+**VideoEvidence** - Links to existing Evidence record
+| Field | Purpose |
+|-------|---------|
+| `evidence` | OneToOne link to Evidence |
+| `youtube_url` | Full YouTube URL |
+| `video_id` | Extracted video ID |
+| `video_title` | Fetched from YouTube |
+| `video_duration_seconds` | Video length |
+| `has_youtube_captions` | Whether captions exist |
+
+**VideoCapture** - Time-stamped clips
+| Field | Purpose |
+|-------|---------|
+| `video_evidence` | FK to parent video |
+| `start_time_seconds` | Clip start (e.g., 302 = 5:02) |
+| `end_time_seconds` | Clip end (max 2 min duration) |
+| `raw_transcript` | Extracted text |
+| `attributed_transcript` | User-edited with speaker names |
+| `extraction_method` | 'youtube' or 'whisper' |
+| `extraction_status` | pending/processing/completed/failed |
+| `ai_use_recorded` | Counts toward AI usage limit |
+
+**VideoSpeaker** - Maps speakers to defendants
+| Field | Purpose |
+|-------|---------|
+| `video_evidence` | FK to parent video |
+| `label` | "Speaker 1", "Male Officer", etc. |
+| `defendant` | FK to Defendant (nullable) |
+| `is_plaintiff` | Boolean - is this the user? |
+| `notes` | Description of speaker |
+
+### Cost Structure
+- **YouTube captions available**: FREE (uses `youtube-transcript-api`)
+- **Whisper fallback**: ~$0.006/minute via third-party transcript API
+- Each extraction counts as 1 AI use toward subscriber limit
+
+### Files Added/Modified
+| File | Change |
+|------|--------|
+| `documents/models.py` | Added VideoEvidence, VideoCapture, VideoSpeaker models |
+| `documents/admin.py` | Added admin registration for new models |
+| `documents/migrations/0002_video_evidence.py` | Migration for new tables |
+
+### Remaining Phases
+- **Phase 2**: YouTube integration (fetch metadata, extract transcripts)
+- **Phase 3**: UI - Video Analysis page
+- **Phase 4**: Legal document integration
+- **Phase 5**: Subscriber access gate
+
+### Helper Methods
+```python
+# Extract YouTube video ID from URL
+VideoEvidence.extract_video_id("https://youtube.com/watch?v=abc123")  # Returns "abc123"
+
+# Parse time string to seconds
+VideoCapture.parse_time_to_seconds("5:02")  # Returns 302
+
+# Display seconds as time
+capture.start_time_display  # "5:02"
+capture.duration_display    # "0:31"
+```
+
+---
+
 ## What's NOT Built Yet
 
 - E-filing integration
-- Video extraction
+- ~~Video extraction~~ (IN PROGRESS - see above)
 - **News API integration** (placeholder content on landing page)
 - **CMS for article management** (planned)
 

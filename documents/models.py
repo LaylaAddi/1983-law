@@ -909,3 +909,261 @@ class AIPrompt(models.Model):
         except KeyError as e:
             # If a variable is missing, return template as-is
             return self.user_prompt_template
+
+
+# =============================================================================
+# Video Evidence Models (YouTube transcript extraction for subscribers)
+# =============================================================================
+
+class VideoEvidence(models.Model):
+    """
+    Links a YouTube video to an existing Evidence record.
+    Allows transcript extraction for subscriber users.
+    """
+
+    evidence = models.OneToOneField(
+        Evidence,
+        on_delete=models.CASCADE,
+        related_name='video_evidence'
+    )
+    youtube_url = models.CharField(
+        max_length=500,
+        help_text='Full YouTube URL'
+    )
+    video_id = models.CharField(
+        max_length=20,
+        help_text='YouTube video ID (extracted from URL)'
+    )
+    video_title = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text='Video title fetched from YouTube'
+    )
+    video_duration_seconds = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Total video length in seconds'
+    )
+    has_youtube_captions = models.BooleanField(
+        default=False,
+        help_text='Whether YouTube captions are available'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Video Evidence'
+        verbose_name_plural = 'Video Evidence'
+
+    def __str__(self):
+        return f"Video: {self.video_title or self.video_id}"
+
+    @staticmethod
+    def extract_video_id(url: str) -> str:
+        """
+        Extract YouTube video ID from various URL formats.
+        Supports: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID
+        """
+        import re
+        patterns = [
+            r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})',
+            r'(?:youtube\.com\/watch\?.*v=)([a-zA-Z0-9_-]{11})',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
+        return ''
+
+    def get_document(self):
+        """Get the parent Document for this video evidence."""
+        return self.evidence.section.document
+
+
+class VideoCapture(models.Model):
+    """
+    A time-stamped clip from a video with extracted transcript.
+    Each capture counts as 1 AI use for the subscriber.
+    Maximum clip length: 2 minutes.
+    """
+
+    EXTRACTION_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    EXTRACTION_METHOD_CHOICES = [
+        ('youtube', 'YouTube Captions'),
+        ('whisper', 'Whisper Transcription'),
+    ]
+
+    video_evidence = models.ForeignKey(
+        VideoEvidence,
+        on_delete=models.CASCADE,
+        related_name='captures'
+    )
+    start_time_seconds = models.IntegerField(
+        help_text='Clip start time in seconds (e.g., 302 for 5:02)'
+    )
+    end_time_seconds = models.IntegerField(
+        help_text='Clip end time in seconds (e.g., 333 for 5:33)'
+    )
+    raw_transcript = models.TextField(
+        blank=True,
+        help_text='Extracted transcript text (unedited)'
+    )
+    attributed_transcript = models.TextField(
+        blank=True,
+        help_text='User-edited transcript with speaker attributions'
+    )
+    extraction_method = models.CharField(
+        max_length=20,
+        choices=EXTRACTION_METHOD_CHOICES,
+        blank=True,
+        help_text='How the transcript was extracted'
+    )
+    extraction_status = models.CharField(
+        max_length=20,
+        choices=EXTRACTION_STATUS_CHOICES,
+        default='pending',
+        help_text='Current status of transcript extraction'
+    )
+    extraction_error = models.TextField(
+        blank=True,
+        help_text='Error message if extraction failed'
+    )
+    ai_use_recorded = models.BooleanField(
+        default=False,
+        help_text='Whether this extraction was counted toward AI usage limit'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Video Capture'
+        verbose_name_plural = 'Video Captures'
+        ordering = ['start_time_seconds']
+
+    def __str__(self):
+        return f"Capture {self.start_time_display} - {self.end_time_display}"
+
+    @property
+    def start_time_display(self) -> str:
+        """Format start time as MM:SS or HH:MM:SS."""
+        return self._seconds_to_display(self.start_time_seconds)
+
+    @property
+    def end_time_display(self) -> str:
+        """Format end time as MM:SS or HH:MM:SS."""
+        return self._seconds_to_display(self.end_time_seconds)
+
+    @property
+    def duration_seconds(self) -> int:
+        """Get clip duration in seconds."""
+        return self.end_time_seconds - self.start_time_seconds
+
+    @property
+    def duration_display(self) -> str:
+        """Format duration as MM:SS."""
+        return self._seconds_to_display(self.duration_seconds)
+
+    @staticmethod
+    def _seconds_to_display(seconds: int) -> str:
+        """Convert seconds to MM:SS or HH:MM:SS format."""
+        if seconds < 0:
+            return "0:00"
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        secs = seconds % 60
+        if hours > 0:
+            return f"{hours}:{minutes:02d}:{secs:02d}"
+        return f"{minutes}:{secs:02d}"
+
+    @staticmethod
+    def parse_time_to_seconds(time_str: str) -> int:
+        """
+        Parse time string to seconds.
+        Accepts: "5:02", "1:05:02", "302", etc.
+        """
+        time_str = time_str.strip()
+
+        # If it's just a number, assume seconds
+        if time_str.isdigit():
+            return int(time_str)
+
+        parts = time_str.split(':')
+        try:
+            if len(parts) == 2:  # MM:SS
+                return int(parts[0]) * 60 + int(parts[1])
+            elif len(parts) == 3:  # HH:MM:SS
+                return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        except (ValueError, IndexError):
+            pass
+        return 0
+
+    def clean(self):
+        """Validate clip length (max 2 minutes = 120 seconds)."""
+        from django.core.exceptions import ValidationError
+        if self.duration_seconds > 120:
+            raise ValidationError({
+                'end_time_seconds': 'Clip length cannot exceed 2 minutes (120 seconds).'
+            })
+        if self.start_time_seconds >= self.end_time_seconds:
+            raise ValidationError({
+                'end_time_seconds': 'End time must be after start time.'
+            })
+
+
+class VideoSpeaker(models.Model):
+    """
+    Maps speakers in the video to defendants or plaintiff.
+    Persists across captures from the same video.
+    """
+
+    video_evidence = models.ForeignKey(
+        VideoEvidence,
+        on_delete=models.CASCADE,
+        related_name='speakers'
+    )
+    label = models.CharField(
+        max_length=100,
+        help_text='Speaker label (e.g., "Speaker 1", "Male Officer")'
+    )
+    defendant = models.ForeignKey(
+        Defendant,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='video_speaker_attributions',
+        help_text='Link to defendant if this speaker is a defendant'
+    )
+    is_plaintiff = models.BooleanField(
+        default=False,
+        help_text='Is this speaker the plaintiff (user)?'
+    )
+    notes = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text='Description (e.g., "Officer with mustache")'
+    )
+
+    class Meta:
+        verbose_name = 'Video Speaker'
+        verbose_name_plural = 'Video Speakers'
+        unique_together = ['video_evidence', 'label']
+
+    def __str__(self):
+        if self.defendant:
+            return f"{self.label} → {self.defendant.name}"
+        elif self.is_plaintiff:
+            return f"{self.label} → Plaintiff"
+        return self.label
+
+    def get_display_name(self) -> str:
+        """Get the best display name for this speaker."""
+        if self.defendant:
+            return self.defendant.name
+        elif self.is_plaintiff:
+            return "Plaintiff"
+        return self.label

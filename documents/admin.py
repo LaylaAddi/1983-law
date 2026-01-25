@@ -4,7 +4,8 @@ from .models import (
     Document, DocumentSection, PlaintiffInfo, IncidentOverview,
     Defendant, IncidentNarrative, RightsViolated, Witness,
     Evidence, Damages, PriorComplaints, ReliefSought,
-    PromoCode, PromoCodeUsage, PayoutRequest, AIPrompt
+    PromoCode, PromoCodeUsage, PayoutRequest, AIPrompt,
+    VideoEvidence, VideoCapture, VideoSpeaker
 )
 
 
@@ -216,3 +217,93 @@ class AIPromptAdmin(admin.ModelAdmin):
             # Auto-increment version on edit
             obj.version += 1
         super().save_model(request, obj, form, change)
+
+
+# =============================================================================
+# Video Evidence Admin (YouTube transcript extraction for subscribers)
+# =============================================================================
+
+class VideoCaptureInline(admin.TabularInline):
+    model = VideoCapture
+    extra = 0
+    readonly_fields = ['start_time_display', 'end_time_display', 'extraction_status', 'extraction_method', 'ai_use_recorded', 'created_at']
+    fields = ['start_time_display', 'end_time_display', 'extraction_status', 'extraction_method', 'ai_use_recorded']
+
+    def start_time_display(self, obj):
+        return obj.start_time_display
+    start_time_display.short_description = 'Start'
+
+    def end_time_display(self, obj):
+        return obj.end_time_display
+    end_time_display.short_description = 'End'
+
+
+class VideoSpeakerInline(admin.TabularInline):
+    model = VideoSpeaker
+    extra = 0
+    fields = ['label', 'defendant', 'is_plaintiff', 'notes']
+
+
+@admin.register(VideoEvidence)
+class VideoEvidenceAdmin(admin.ModelAdmin):
+    list_display = ['video_title', 'video_id', 'has_youtube_captions', 'get_capture_count', 'created_at']
+    list_filter = ['has_youtube_captions', 'created_at']
+    search_fields = ['video_title', 'video_id', 'youtube_url']
+    readonly_fields = ['video_id', 'created_at', 'updated_at']
+    inlines = [VideoCaptureInline, VideoSpeakerInline]
+
+    fieldsets = (
+        (None, {
+            'fields': ('evidence', 'youtube_url', 'video_id', 'video_title')
+        }),
+        ('Video Info', {
+            'fields': ('video_duration_seconds', 'has_youtube_captions')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def get_capture_count(self, obj):
+        return obj.captures.count()
+    get_capture_count.short_description = 'Captures'
+
+
+@admin.register(VideoCapture)
+class VideoCaptureAdmin(admin.ModelAdmin):
+    list_display = ['video_evidence', 'start_time_display', 'end_time_display', 'extraction_status', 'extraction_method', 'ai_use_recorded']
+    list_filter = ['extraction_status', 'extraction_method', 'ai_use_recorded', 'created_at']
+    search_fields = ['video_evidence__video_title', 'raw_transcript']
+    readonly_fields = ['created_at']
+
+    fieldsets = (
+        (None, {
+            'fields': ('video_evidence', 'start_time_seconds', 'end_time_seconds')
+        }),
+        ('Transcript', {
+            'fields': ('raw_transcript', 'attributed_transcript')
+        }),
+        ('Extraction', {
+            'fields': ('extraction_status', 'extraction_method', 'extraction_error', 'ai_use_recorded')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def start_time_display(self, obj):
+        return obj.start_time_display
+    start_time_display.short_description = 'Start'
+
+    def end_time_display(self, obj):
+        return obj.end_time_display
+    end_time_display.short_description = 'End'
+
+
+@admin.register(VideoSpeaker)
+class VideoSpeakerAdmin(admin.ModelAdmin):
+    list_display = ['label', 'video_evidence', 'defendant', 'is_plaintiff']
+    list_filter = ['is_plaintiff']
+    search_fields = ['label', 'video_evidence__video_title', 'defendant__name']
