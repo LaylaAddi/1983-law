@@ -1084,9 +1084,13 @@ class VideoCapture(models.Model):
     def parse_time_to_seconds(time_str: str) -> int:
         """
         Parse time string to seconds.
-        Accepts: "5:02", "1:05:02", "302", etc.
+        Accepts: "5:02", "5.02", "1:05:02", "1.05.02", "302", etc.
+        Periods are treated as separators (same as colons).
         """
         time_str = time_str.strip()
+
+        # Convert periods to colons for parsing (1.20 → 1:20, 1.23.52 → 1:23:52)
+        time_str = time_str.replace('.', ':')
 
         # If it's just a number, assume seconds
         if time_str.isdigit():
