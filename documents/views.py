@@ -361,6 +361,9 @@ def section_edit(request, document_id, section_type):
     if is_multiple:
         # For multiple items (defendants, witnesses, evidence)
         items = Model.objects.filter(section=section)
+        # For evidence section, prefetch video_evidence and captures for YouTube integration
+        if section_type == 'evidence':
+            items = items.prefetch_related('video_evidence__captures')
         form = Form()
         instance = None
     else:
@@ -459,6 +462,7 @@ def section_edit(request, document_id, section_type):
         'help_content': help_content,
         'profile_prefilled': profile_prefilled,
         'is_profile_based': is_profile_based,
+        'can_use_video_analysis': request.user.can_use_video_analysis(),
     }
 
     # For profile-based sections, add user profile data for read-only display
@@ -676,6 +680,13 @@ def edit_evidence(request, document_id, evidence_id):
     except (DocumentSection.DoesNotExist, IncidentOverview.DoesNotExist):
         pass
 
+    # Get video evidence if it exists
+    video_evidence = None
+    try:
+        video_evidence = evidence.video_evidence
+    except VideoEvidence.DoesNotExist:
+        pass
+
     if request.method == 'POST':
         form = EvidenceForm(request.POST, instance=evidence)
         if form.is_valid():
@@ -693,6 +704,8 @@ def edit_evidence(request, document_id, evidence_id):
         'form': form,
         'section': section,
         'incident_location': incident_location_str,
+        'video_evidence': video_evidence,
+        'can_use_video_analysis': request.user.can_use_video_analysis(),
     })
 
 
@@ -3736,6 +3749,104 @@ def video_add(request, document_id):
         return JsonResponse({
             'success': False,
             'error': f'Error adding video: {str(e)}'
+        })
+
+
+@login_required
+@require_POST
+def link_youtube_to_evidence(request, document_id, evidence_id):
+    """
+    Link a YouTube video to an existing Evidence record.
+    Creates a VideoEvidence record linked to the specified evidence.
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    evidence = get_object_or_404(Evidence, id=evidence_id, section__document=document)
+
+    # Check subscriber access
+    if not request.user.can_use_video_analysis():
+        return JsonResponse({
+            'success': False,
+            'error': 'Video Analysis requires a Pro subscription.'
+        }, status=403)
+
+    # Check if evidence already has a video linked
+    if hasattr(evidence, 'video_evidence'):
+        return JsonResponse({
+            'success': False,
+            'error': 'This evidence already has a YouTube video linked.'
+        })
+
+    # Parse JSON body
+    import json
+    try:
+        data = json.loads(request.body)
+        youtube_url = data.get('youtube_url', '').strip()
+    except json.JSONDecodeError:
+        youtube_url = request.POST.get('youtube_url', '').strip()
+
+    if not youtube_url:
+        return JsonResponse({
+            'success': False,
+            'error': 'Please enter a YouTube URL.'
+        })
+
+    # Extract video ID
+    video_id = VideoEvidence.extract_video_id(youtube_url)
+    if not video_id:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid YouTube URL. Please enter a valid YouTube video link.'
+        })
+
+    # Check if this video already exists for this document
+    evidence_section = evidence.section
+    existing = VideoEvidence.objects.filter(
+        evidence__section=evidence_section,
+        video_id=video_id
+    ).first()
+
+    if existing:
+        return JsonResponse({
+            'success': False,
+            'error': 'This video has already been added to your document.'
+        })
+
+    # Fetch video info and check for captions
+    try:
+        from .services.youtube_service import YouTubeService
+        service = YouTubeService()
+
+        # Try to get transcript to check if captions available
+        result = service.get_transcript(youtube_url, use_ai_fallback=False)
+        has_captions = result.success
+
+        # Create VideoEvidence record linked to existing Evidence
+        video_evidence = VideoEvidence.objects.create(
+            evidence=evidence,
+            youtube_url=youtube_url,
+            video_id=video_id,
+            video_title=evidence.title or f'Video {video_id}',
+            has_youtube_captions=has_captions
+        )
+
+        # Update evidence type to video if not already
+        if evidence.evidence_type != 'video':
+            evidence.evidence_type = 'video'
+            evidence.save()
+
+        return JsonResponse({
+            'success': True,
+            'video_evidence_id': video_evidence.id,
+            'youtube_video_id': video_id,
+            'has_captions': has_captions,
+            'redirect_url': f'/documents/{document_id}/video-analysis/',
+            'message': 'Video linked successfully!'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error linking video: {str(e)}'
         })
 
 

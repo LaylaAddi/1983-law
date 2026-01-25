@@ -105,6 +105,81 @@
                             {% endif %}
                         {% endfor %}
 
+                        {% comment %} YouTube Video Section - shown for video evidence type or when video is linked {% endcomment %}
+                        {% if evidence.evidence_type == 'video' or video_evidence %}
+                        <hr class="my-4">
+                        <h6 class="text-muted mb-3"><i class="bi bi-youtube me-1 text-danger"></i>YouTube Video</h6>
+
+                        {% if video_evidence %}
+                        <div class="card border-danger mb-3">
+                            <div class="card-header bg-danger text-white py-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-youtube me-1"></i>Linked Video</span>
+                                    <a href="{% url 'documents:video_analysis' document.id %}#video-{{ video_evidence.id }}" class="btn btn-sm btn-light">
+                                        <i class="bi bi-pencil me-1"></i>Manage Transcript
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <a href="{{ video_evidence.youtube_url }}" target="_blank" class="d-block">
+                                            <img src="https://img.youtube.com/vi/{{ video_evidence.video_id }}/mqdefault.jpg"
+                                                 alt="Video thumbnail" class="img-fluid rounded">
+                                        </a>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <h6 class="mb-2">{{ video_evidence.video_title|default:"YouTube Video" }}</h6>
+                                        <p class="text-muted small mb-2">
+                                            <i class="bi bi-link-45deg me-1"></i>
+                                            <a href="{{ video_evidence.youtube_url }}" target="_blank" class="text-decoration-none">
+                                                {{ video_evidence.youtube_url|truncatechars:50 }}
+                                            </a>
+                                        </p>
+                                        {% if video_evidence.has_youtube_captions %}
+                                        <span class="badge bg-success"><i class="bi bi-chat-quote me-1"></i>Captions Available</span>
+                                        {% else %}
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-mic me-1"></i>AI Transcription Required</span>
+                                        {% endif %}
+
+                                        {% with clips_count=video_evidence.captures.count %}
+                                        {% if clips_count > 0 %}
+                                        <span class="badge bg-info ms-1"><i class="bi bi-scissors me-1"></i>{{ clips_count }} clip{{ clips_count|pluralize }}</span>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% elif can_use_video_analysis %}
+                        <div class="card border-secondary mb-3">
+                            <div class="card-body text-center py-4">
+                                <i class="bi bi-youtube display-4 text-muted mb-3"></i>
+                                <h6>No YouTube Video Linked</h6>
+                                <p class="text-muted small mb-3">
+                                    Link a YouTube video to extract and analyze the transcript.
+                                </p>
+                                <div class="input-group mb-3" style="max-width: 400px; margin: 0 auto;">
+                                    <input type="url" class="form-control" id="youtubeUrlInput" placeholder="https://www.youtube.com/watch?v=...">
+                                    <button class="btn btn-danger" type="button" id="linkYouTubeBtn">
+                                        <i class="bi bi-link-45deg me-1"></i>Link Video
+                                    </button>
+                                </div>
+                                <div id="youtubeError" class="alert alert-danger d-none" style="max-width: 400px; margin: 0 auto;"></div>
+                                <div id="youtubeSuccess" class="alert alert-success d-none" style="max-width: 400px; margin: 0 auto;">
+                                    <i class="bi bi-check-circle me-1"></i>Video linked successfully! Redirecting...
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>Pro Feature:</strong> Link YouTube videos to extract transcripts with a Pro subscription.
+                            <a href="{% url 'accounts:pricing' %}" class="alert-link">View Plans</a>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+
                         <hr class="my-4">
                         <h6 class="text-muted mb-3"><i class="bi bi-journal-text me-1"></i>Additional Notes</h6>
 
@@ -168,6 +243,69 @@ document.addEventListener('DOMContentLoaded', function() {
                     locationField.style.backgroundColor = '';
                 }, 1500);
             }
+        });
+    }
+
+    // YouTube linking functionality
+    const linkYouTubeBtn = document.getElementById('linkYouTubeBtn');
+    if (linkYouTubeBtn) {
+        linkYouTubeBtn.addEventListener('click', function() {
+            const youtubeUrl = document.getElementById('youtubeUrlInput').value.trim();
+            const errorDiv = document.getElementById('youtubeError');
+            const successDiv = document.getElementById('youtubeSuccess');
+
+            // Basic validation
+            if (!youtubeUrl) {
+                errorDiv.textContent = 'Please enter a YouTube URL';
+                errorDiv.classList.remove('d-none');
+                return;
+            }
+
+            if (!youtubeUrl.includes('youtube.com') && !youtubeUrl.includes('youtu.be')) {
+                errorDiv.textContent = 'Please enter a valid YouTube URL';
+                errorDiv.classList.remove('d-none');
+                return;
+            }
+
+            // Disable button and show loading
+            linkYouTubeBtn.disabled = true;
+            linkYouTubeBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Linking...';
+            errorDiv.classList.add('d-none');
+
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // Make API request
+            fetch('{% url "documents:link_youtube_to_evidence" document.id evidence.id %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ youtube_url: youtubeUrl })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    successDiv.classList.remove('d-none');
+                    setTimeout(function() {
+                        window.location.href = data.redirect_url || '{% url "documents:video_analysis" document.id %}';
+                    }, 1500);
+                } else {
+                    errorDiv.textContent = data.error || 'Failed to link video.';
+                    errorDiv.classList.remove('d-none');
+                    linkYouTubeBtn.disabled = false;
+                    linkYouTubeBtn.innerHTML = '<i class="bi bi-link-45deg me-1"></i>Link Video';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.classList.remove('d-none');
+                linkYouTubeBtn.disabled = false;
+                linkYouTubeBtn.innerHTML = '<i class="bi bi-link-45deg me-1"></i>Link Video';
+            });
         });
     }
 });

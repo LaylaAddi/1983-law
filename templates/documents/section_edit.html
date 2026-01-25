@@ -553,6 +553,49 @@
                                                     {% if not item.is_in_possession %}
                                                     <br><small class="text-info"><i class="bi bi-hourglass me-1"></i>Not yet in possession</small>
                                                     {% endif %}
+
+                                                    {% comment %} YouTube Video Evidence Integration {% endcomment %}
+                                                    {% with video_evidence=item.video_evidence %}
+                                                    {% if video_evidence %}
+                                                    <div class="mt-2 pt-2 border-top">
+                                                        <span class="badge bg-danger me-1"><i class="bi bi-youtube me-1"></i>YouTube</span>
+                                                        {% if video_evidence.video_title %}
+                                                        <small class="text-muted">{{ video_evidence.video_title|truncatechars:40 }}</small>
+                                                        {% endif %}
+                                                        {% with clips_count=video_evidence.captures.count %}
+                                                        {% if clips_count > 0 %}
+                                                        <br><small class="text-success"><i class="bi bi-chat-quote me-1"></i>{{ clips_count }} clip{{ clips_count|pluralize }} transcribed</small>
+                                                        {% comment %} Expandable transcript preview {% endcomment %}
+                                                        <div class="mt-2">
+                                                            <a class="small text-decoration-none" data-bs-toggle="collapse" href="#transcriptPreview{{ item.id }}" role="button" aria-expanded="false">
+                                                                <i class="bi bi-chevron-down me-1"></i>Show transcript preview
+                                                            </a>
+                                                            <div class="collapse mt-2" id="transcriptPreview{{ item.id }}">
+                                                                <div class="card card-body small py-2 px-3" style="max-height: 150px; overflow-y: auto; font-size: 0.85rem;">
+                                                                    {% for capture in video_evidence.captures.all %}
+                                                                    {% if capture.extraction_status == 'completed' %}
+                                                                    <div class="mb-2 pb-2 {% if not forloop.last %}border-bottom{% endif %}">
+                                                                        <span class="badge bg-secondary me-1">{{ capture.start_time_display }} - {{ capture.end_time_display }}</span>
+                                                                        <p class="mb-0 mt-1 text-muted" style="white-space: pre-wrap;">{{ capture.attributed_transcript|default:capture.raw_transcript|truncatechars:200 }}</p>
+                                                                    </div>
+                                                                    {% endif %}
+                                                                    {% empty %}
+                                                                    <p class="mb-0 text-muted">No completed transcripts yet.</p>
+                                                                    {% endfor %}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {% else %}
+                                                        <br><small class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>No transcripts yet</small>
+                                                        {% endif %}
+                                                        {% endwith %}
+                                                    </div>
+                                                    {% elif item.evidence_type == 'video' and can_use_video_analysis %}
+                                                    <div class="mt-2 pt-2 border-top">
+                                                        <small class="text-muted"><i class="bi bi-youtube me-1"></i>No YouTube video linked</small>
+                                                    </div>
+                                                    {% endif %}
+                                                    {% endwith %}
                                                 {% endif %}
                                             </div>
                                             <div class="d-flex gap-2">
@@ -635,6 +678,22 @@
                                                     <i class="bi bi-pencil me-1"></i>Edit
                                                 </a>
                                                 {% elif section.section_type == 'evidence' %}
+                                                {% with video_evidence=item.video_evidence %}
+                                                {% if video_evidence %}
+                                                <a href="{% url 'documents:video_analysis' document.id %}#video-{{ video_evidence.id }}"
+                                                   class="btn btn-danger btn-sm" title="View/Edit Transcript">
+                                                    <i class="bi bi-youtube me-1"></i>Transcript
+                                                </a>
+                                                {% elif item.evidence_type == 'video' and can_use_video_analysis %}
+                                                <button type="button" class="btn btn-outline-danger btn-sm link-youtube-btn"
+                                                        data-evidence-id="{{ item.id }}"
+                                                        data-evidence-title="{{ item.title }}"
+                                                        data-bs-toggle="modal" data-bs-target="#linkYouTubeModal"
+                                                        title="Link YouTube Video">
+                                                    <i class="bi bi-youtube me-1"></i>Link Video
+                                                </button>
+                                                {% endif %}
+                                                {% endwith %}
                                                 <a href="{% url 'documents:edit_evidence' document.id item.id %}"
                                                    class="btn btn-primary btn-sm">
                                                     <i class="bi bi-pencil me-1"></i>Edit
@@ -1056,6 +1115,48 @@
         </div>
     </div>
 </div>
+
+{% if section.section_type == 'evidence' and can_use_video_analysis %}
+<!-- Link YouTube Video Modal -->
+<div class="modal fade" id="linkYouTubeModal" tabindex="-1" aria-labelledby="linkYouTubeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="linkYouTubeModalLabel">
+                    <i class="bi bi-youtube me-2"></i>Link YouTube Video
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">
+                    Link a YouTube video to this evidence to extract and analyze the transcript.
+                    This is useful for body camera footage, personal recordings, or news coverage of the incident.
+                </p>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Evidence:</strong></label>
+                    <p id="linkYouTubeEvidenceTitle" class="mb-0"></p>
+                </div>
+                <div class="mb-3">
+                    <label for="youtubeUrlInput" class="form-label">YouTube URL</label>
+                    <input type="url" class="form-control" id="youtubeUrlInput" placeholder="https://www.youtube.com/watch?v=..." required>
+                    <div class="form-text">Paste the full YouTube video URL</div>
+                </div>
+                <div id="linkYouTubeError" class="alert alert-danger d-none"></div>
+                <div id="linkYouTubeSuccess" class="alert alert-success d-none">
+                    <i class="bi bi-check-circle me-1"></i>Video linked successfully! Redirecting to video analysis...
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="linkYouTubeSubmit">
+                    <i class="bi bi-link-45deg me-1"></i>Link Video
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
@@ -2558,4 +2659,95 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endif %}
+
+{% if section.section_type == 'evidence' and can_use_video_analysis %}
+<script>
+// YouTube Video Linking Modal Handler
+(function() {
+    'use strict';
+
+    let currentEvidenceId = null;
+    const modal = document.getElementById('linkYouTubeModal');
+
+    if (!modal) return;
+
+    // When modal is shown, store the evidence ID and title
+    modal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        currentEvidenceId = button.getAttribute('data-evidence-id');
+        const evidenceTitle = button.getAttribute('data-evidence-title');
+
+        document.getElementById('linkYouTubeEvidenceTitle').textContent = evidenceTitle;
+        document.getElementById('youtubeUrlInput').value = '';
+        document.getElementById('linkYouTubeError').classList.add('d-none');
+        document.getElementById('linkYouTubeSuccess').classList.add('d-none');
+        document.getElementById('linkYouTubeSubmit').disabled = false;
+    });
+
+    // Handle submit button click
+    document.getElementById('linkYouTubeSubmit').addEventListener('click', function() {
+        const youtubeUrl = document.getElementById('youtubeUrlInput').value.trim();
+        const errorDiv = document.getElementById('linkYouTubeError');
+        const successDiv = document.getElementById('linkYouTubeSuccess');
+        const submitBtn = document.getElementById('linkYouTubeSubmit');
+
+        // Basic validation
+        if (!youtubeUrl) {
+            errorDiv.textContent = 'Please enter a YouTube URL';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        // Check if it looks like a YouTube URL
+        if (!youtubeUrl.includes('youtube.com') && !youtubeUrl.includes('youtu.be')) {
+            errorDiv.textContent = 'Please enter a valid YouTube URL (e.g., https://www.youtube.com/watch?v=...)';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        // Disable button and show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Linking...';
+        errorDiv.classList.add('d-none');
+
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // Make API request
+        fetch(`/documents/{{ document.id }}/evidence/${currentEvidenceId}/link-youtube/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ youtube_url: youtubeUrl })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                successDiv.classList.remove('d-none');
+                // Redirect to video analysis page after a short delay
+                setTimeout(function() {
+                    window.location.href = data.redirect_url || `/documents/{{ document.id }}/video-analysis/`;
+                }, 1500);
+            } else {
+                errorDiv.textContent = data.error || 'Failed to link video. Please try again.';
+                errorDiv.classList.remove('d-none');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-link-45deg me-1"></i>Link Video';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            errorDiv.textContent = 'Network error. Please try again.';
+            errorDiv.classList.remove('d-none');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-link-45deg me-1"></i>Link Video';
+        });
+    });
+})();
+</script>
+{% endif %}
+
 {% endblock %}

@@ -2620,6 +2620,36 @@ The Rights Violated section page (`/documents/{id}/section/rights_violated/`) ha
 **Files modified:**
 - `static/css/app-theme.css` - Added 500+ lines of dark mode styles for rights-analyze.css elements and section_edit.html inline styles
 
+### YouTube Video Evidence Integration in Evidence Section (IMPLEMENTED - January 2026)
+Previously, YouTube video analysis was on a separate page, disconnected from the Evidence section. Now they are tightly integrated.
+
+**New Features:**
+
+1. **Evidence List Enhancements:**
+   - YouTube badge with video title for evidence items with linked videos
+   - Shows number of transcript clips extracted (e.g., "3 clips transcribed")
+   - "Transcript" button linking directly to video analysis
+   - "Link Video" button for video-type evidence without a linked video (subscribers only)
+   - Expandable transcript preview showing clips with timestamps
+
+2. **Link YouTube Modal:**
+   - Modal dialog to paste YouTube URL and link to existing evidence
+   - Validates URL and creates VideoEvidence record
+   - Redirects to video analysis page after linking
+
+3. **Edit Evidence Page YouTube Section:**
+   - Shows linked video with thumbnail, title, and caption status
+   - "Manage Transcript" button linking to video analysis
+   - Input field to link YouTube video (for video-type evidence without linked video)
+   - Pro subscription notice for non-subscribers
+
+**Files modified:**
+- `documents/views.py` - Updated `section_edit` to prefetch video_evidence, updated `edit_evidence` to pass video data, added `link_youtube_to_evidence` endpoint
+- `documents/urls.py` - Added URL for `link_youtube_to_evidence`
+- `templates/documents/section_edit.html` - Added YouTube badges, Link Video button/modal, transcript preview, modal JavaScript
+- `templates/documents/edit_evidence.html` - Added YouTube video section with thumbnail, info, and link functionality
+- `static/css/app-theme.css` - Added dark mode styles for YouTube video elements
+
 ---
 
 ## Instructions for Next Claude Session

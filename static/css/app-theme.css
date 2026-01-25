@@ -2103,3 +2103,39 @@ a:hover {
     color: var(--dark-text-muted);
 }
 
+/* =============================================
+   YOUTUBE VIDEO EVIDENCE INTEGRATION
+   ============================================= */
+
+/* YouTube card in evidence list */
+[data-theme="dark"] .card.border-danger .card-body {
+    background: var(--dark-bg-secondary);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .card.border-danger .card-body h6 {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .card.border-secondary .card-body {
+    background: var(--dark-bg-secondary);
+    color: var(--dark-text);
+}
+
+/* Transcript preview card in evidence list */
+[data-theme="dark"] #transcriptPreview .card-body,
+[data-theme="dark"] [id^="transcriptPreview"] .card-body {
+    background: var(--dark-bg) !important;
+    border-color: var(--dark-border) !important;
+}
+
+[data-theme="dark"] [id^="transcriptPreview"] .card {
+    background: var(--dark-bg) !important;
+    border-color: var(--dark-border) !important;
+}
+
+/* Video thumbnail border */
+[data-theme="dark"] .card.border-danger img {
+    border: 1px solid var(--dark-border);
+}
+
