@@ -2025,7 +2025,7 @@ Subscribers (Monthly/Annual Pro) can extract transcripts from YouTube videos to 
 - Assign speakers to defendants from their document
 - Integrate video evidence into the legal document
 
-### Status: Phase 3 Complete (UI)
+### Status: Phase 4 Complete (Legal Document Integration)
 
 **Subscriber-only feature** - Monthly and Annual Pro plans only.
 
@@ -2124,7 +2124,7 @@ TranscriptResult(
 )
 ```
 
-### Files Added/Modified (Phase 1 + 2)
+### Files Added/Modified (Phase 1 + 2 + 4)
 | File | Change |
 |------|--------|
 | `documents/models.py` | Added VideoEvidence, VideoCapture, VideoSpeaker models |
@@ -2134,9 +2134,10 @@ TranscriptResult(
 | `config/settings.py` | Added SUPADATA_API_KEY |
 | `accounts/models.py` | Added `can_use_video_analysis()` method |
 | `requirements.txt` | Added `requests>=2.31` |
+| `documents/views.py` | `_collect_document_data()` includes video_transcripts |
+| `documents/services/document_generator.py` | `_generate_facts()` uses video evidence in AI prompt |
 
 ### Remaining Phases
-- **Phase 4**: Legal document integration (AI uses video transcripts in Statement of Facts)
 - **Phase 5**: Testing and refinement
 
 ### Video Analysis UI (Phase 3)
@@ -2179,6 +2180,60 @@ capture.duration_display    # "0:31"
 # Check subscriber access
 user.can_use_video_analysis()  # True for Monthly/Annual Pro
 ```
+
+### Legal Document Integration (Phase 4)
+
+Video transcripts are integrated into the AI-generated Statement of Facts.
+
+**How It Works:**
+1. `_collect_document_data()` in `views.py` collects video transcripts from completed captures
+2. Each transcript includes video title, timestamps, speaker mappings, and transcript text
+3. `_generate_facts()` in `document_generator.py` includes video evidence in the AI prompt
+4. AI incorporates key quotes with timestamps into the Statement of Facts
+
+**Data Collection (`_collect_document_data`):**
+```python
+data['video_transcripts'] = [
+    {
+        'video_title': 'Body Camera Footage - March 15 Incident',
+        'video_url': 'https://youtube.com/watch?v=abc123',
+        'start_time': '5:02',
+        'end_time': '5:33',
+        'transcript': 'Officer: Put your hands up! Plaintiff: I am not resisting.',
+        'speakers': {
+            'Officer': 'Officer John Smith',  # Mapped to defendant
+            'Male Voice': 'Plaintiff'         # Marked as plaintiff
+        }
+    }
+]
+```
+
+**AI Prompt Addition:**
+The document generator adds a VIDEO EVIDENCE TRANSCRIPTS section to the prompt when video evidence exists:
+```
+VIDEO EVIDENCE TRANSCRIPTS:
+(These are transcripts from video recordings of the incident. Quote relevant statements with timestamps.)
+
+[Video 1: Body Camera Footage - March 15 Incident]
+Timestamp: 5:02 - 5:33
+Speakers: Officer = Officer John Smith, Male Voice = Plaintiff
+Transcript:
+Officer: Put your hands up! Plaintiff: I am not resisting.
+```
+
+**AI Instruction Added (Requirement 11):**
+> If VIDEO EVIDENCE TRANSCRIPTS are provided above, incorporate key quotes from the video into your narrative. Use the format: 'At approximately [timestamp], [speaker] stated "[quote]"' and reference the video source.
+
+**Files Modified (Phase 4):**
+| File | Change |
+|------|--------|
+| `documents/views.py` | `_collect_document_data()` now includes `video_transcripts` |
+| `documents/services/document_generator.py` | `_generate_facts()` incorporates video evidence in prompt |
+
+**Speaker Mapping:**
+- Speakers linked to defendants use the defendant's name
+- Speakers marked as plaintiff show as "Plaintiff"
+- Unlinked speakers use their original label
 
 ---
 

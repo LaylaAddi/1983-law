@@ -211,6 +211,7 @@ ________________________________________"""
         plaintiff = data.get('plaintiff', {})
         defendants = data.get('defendants', [])
         witnesses = data.get('witnesses', [])
+        video_transcripts = data.get('video_transcripts', [])
 
         plaintiff_name = f"{plaintiff.get('first_name', '')} {plaintiff.get('last_name', '')}".strip() or "Plaintiff"
 
@@ -265,6 +266,19 @@ ________________________________________"""
                 if w['willing_to_testify']:
                     witness_prompt_section += "\n  (Willing to testify)"
 
+        # Build video transcript section for prompt
+        video_prompt_section = ""
+        if video_transcripts:
+            video_prompt_section = "\n\nVIDEO EVIDENCE TRANSCRIPTS:\n"
+            video_prompt_section += "(These are transcripts from video recordings of the incident. Quote relevant statements with timestamps.)\n"
+            for i, vt in enumerate(video_transcripts, 1):
+                video_prompt_section += f"\n[Video {i}: {vt.get('video_title', 'Video Evidence')}]"
+                video_prompt_section += f"\nTimestamp: {vt.get('start_time', '')} - {vt.get('end_time', '')}"
+                if vt.get('speakers'):
+                    speakers_str = ', '.join([f"{k}: {v}" for k, v in vt['speakers'].items()])
+                    video_prompt_section += f"\nSpeakers: {speakers_str}"
+                video_prompt_section += f"\nTranscript:\n\"{vt.get('transcript', '')}\"\n"
+
         prompt = f"""Write the STATEMENT OF FACTS section for a Section 1983 federal complaint based on these details:
 
 PLAINTIFF: {context['plaintiff_name']}
@@ -280,7 +294,7 @@ NARRATIVE DETAILS:
 - Physical actions: {context['physical_actions']}
 - How it ended: {context['how_it_ended']}
 
-DEFENDANTS: {', '.join(context['defendants'])}{witness_prompt_section}
+DEFENDANTS: {', '.join(context['defendants'])}{witness_prompt_section}{video_prompt_section}
 
 REQUIREMENTS:
 1. Write in formal legal style with numbered paragraphs
@@ -293,6 +307,7 @@ REQUIREMENTS:
 8. Include specific details that support the constitutional claims
 9. If witnesses captured video/photo evidence, include a paragraph stating that the incident was recorded and describing what the recording captured
 10. If witnesses have prior interactions with defendants, this may be relevant to establishing pattern or motive - include if appropriate
+11. If VIDEO EVIDENCE TRANSCRIPTS are provided above, incorporate key quotes from the video with proper attribution (e.g., "As captured on video at [timestamp], Defendant [Name] stated: '[quote]'"). Video evidence is powerful - use direct quotes where they support the claims
 
 Write ONLY the Statement of Facts section, starting with the header "STATEMENT OF FACTS"."""
 
