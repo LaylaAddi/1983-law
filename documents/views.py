@@ -2031,12 +2031,30 @@ def _process_story_background(document_id, story_text):
 
                     # Apply extracted fields
                     if incident_data.get('incident_date'):
-                        try:
-                            obj.incident_date = datetime.strptime(
-                                incident_data['incident_date'], '%Y-%m-%d'
-                            ).date()
-                        except ValueError:
-                            pass
+                        date_str = incident_data['incident_date']
+                        parsed_date = None
+
+                        # Try various date formats
+                        date_formats = [
+                            '%Y-%m-%d',       # 2024-03-15
+                            '%m/%d/%Y',       # 03/15/2024
+                            '%m-%d-%Y',       # 03-15-2024
+                            '%B %d, %Y',      # March 15, 2024
+                            '%b %d, %Y',      # Mar 15, 2024
+                            '%d %B %Y',       # 15 March 2024
+                            '%d %b %Y',       # 15 Mar 2024
+                            '%Y/%m/%d',       # 2024/03/15
+                        ]
+
+                        for fmt in date_formats:
+                            try:
+                                parsed_date = datetime.strptime(date_str, fmt).date()
+                                break
+                            except ValueError:
+                                continue
+
+                        if parsed_date:
+                            obj.incident_date = parsed_date
                     if incident_data.get('incident_time'):
                         # Parse various time formats to TimeField
                         time_str = incident_data['incident_time']
