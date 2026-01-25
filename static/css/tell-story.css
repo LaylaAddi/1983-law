@@ -420,3 +420,35 @@
     background: #2d2d2d !important;
     border-color: #444;
 }
+
+/* Alert boxes in dark mode */
+[data-theme="dark"] .alert-primary,
+[data-bs-theme="dark"] .alert-primary {
+    background-color: #1e3a5f;
+    border-color: #2c5282;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .alert-primary .alert-heading,
+[data-bs-theme="dark"] .alert-primary .alert-heading {
+    color: #90cdf4;
+}
+
+[data-theme="dark"] .alert-primary hr,
+[data-bs-theme="dark"] .alert-primary hr {
+    border-color: #4a7ab0;
+}
+
+[data-theme="dark"] .alert-success,
+[data-bs-theme="dark"] .alert-success {
+    background-color: #1e3a2f;
+    border-color: #2f6b4f;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .alert-info,
+[data-bs-theme="dark"] .alert-info {
+    background-color: #1a3a4a;
+    border-color: #2c5a6a;
+    color: #e0e0e0;
+}
