@@ -2170,10 +2170,15 @@ Landing page has placeholder articles. Need editable content.
 Hybrid pricing model with subscriptions and one-time purchases is now live.
 
 **Current options:**
-- Single Document: $49 (one-time)
-- 3-Document Pack: $99 (one-time, saves $48)
+- Single Document: $49 (one-time, 100 AI assists)
+- 3-Document Pack: $99 (one-time, 100 AI assists per document)
 - Monthly Pro: $29/month (unlimited docs, 50 AI/month)
 - Annual Pro: $249/year (unlimited docs, unlimited AI)
+
+**AI Tracking:**
+- Free tier: 3 AI uses total (user-level)
+- Subscriptions: Count-based (50/month or unlimited)
+- Paid documents: Count-based (100 per document)
 
 **Potential future enhancements:**
 - Different pricing for different case types
@@ -2299,6 +2304,33 @@ Text in AI results, accordions, and various document builder elements was hard t
 - Rights violated checkboxes and suggested violations
 - Form labels, read-only fields, status indicators
 - All paragraph and label text colors
+
+### Find Agency Button Error (RESOLVED)
+Clicking "Find Agency & Address" on edit defendant page was throwing JavaScript error and doing nothing.
+
+**Root cause:** Form field values could be undefined (not just null), causing `.trim()` to fail.
+
+**Solution:** Updated `templates/documents/edit_defendant.html`:
+- Added null checks for both field existence AND value: `field && field.value ? field.value.trim() : ''`
+- Added console logging for debugging
+
+### Upgrade Button Showing $79 (RESOLVED)
+Status banner was showing outdated "$79 Upgrade" button and linking to checkout instead of pricing page.
+
+**Solution:** Updated `templates/documents/partials/status_banner.html`:
+- Changed button text to "View Plans" (no price)
+- Changed link to `/accounts/pricing/` instead of checkout
+- Users can now choose between subscriptions or one-time purchases
+
+### Paid Document AI Changed to Count-Based (IMPLEMENTED)
+Previously paid documents used cost-based AI tracking ($5 budget). Changed to count-based (100 uses).
+
+**Changes:**
+- `config/settings.py`: `PAID_AI_BUDGET` → `PAID_AI_USES = 100`
+- `documents/models.py`: Updated `can_use_ai()`, `get_ai_usage_display()`, `record_ai_usage()`
+- `templates/accounts/pricing.html`: Updated text to show "100 AI assists"
+
+**Display:** Paid docs now show "AI: 95 of 100 uses remaining" instead of percentage
 
 ---
 
