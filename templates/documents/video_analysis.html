@@ -209,59 +209,8 @@
                             </button>
                         </div>
                         <div class="video-card-body">
-                            <!-- Speakers Section -->
+                            <!-- Clips Section (Extract transcript first) -->
                             <div class="mb-4">
-                                <h6><i class="bi bi-people me-2"></i>Speakers in this Video</h6>
-                                <p class="text-muted small">Click to add speakers, then assign who they are in the video.</p>
-
-                                <!-- Quick-add buttons for Plaintiff and Defendants -->
-                                <div class="mb-3">
-                                    <span class="text-muted small me-2">Quick add:</span>
-                                    <button type="button" class="btn btn-outline-primary btn-sm me-1 quick-add-speaker"
-                                            data-video-id="{{ video.id }}" data-label="Plaintiff" data-type="plaintiff">
-                                        <i class="bi bi-person me-1"></i>Plaintiff (Me)
-                                    </button>
-                                    {% for defendant in defendants %}
-                                    <button type="button" class="btn btn-outline-secondary btn-sm me-1 quick-add-speaker"
-                                            data-video-id="{{ video.id }}" data-label="{{ defendant.name }}" data-type="defendant" data-defendant-id="{{ defendant.id }}">
-                                        <i class="bi bi-person-badge me-1"></i>{{ defendant.name }}
-                                    </button>
-                                    {% endfor %}
-                                </div>
-
-                                <div class="speakers-list mb-2" data-video-id="{{ video.id }}">
-                                    {% for speaker in video.speakers.all %}
-                                    <div class="speaker-item" data-speaker-id="{{ speaker.id }}">
-                                        <span class="badge bg-secondary">{{ speaker.label }}</span>
-                                        <select class="form-select form-select-sm speaker-attribution" style="width: auto;">
-                                            <option value="">-- Assign to --</option>
-                                            <option value="plaintiff" {% if speaker.is_plaintiff %}selected{% endif %}>Me (Plaintiff)</option>
-                                            {% for defendant in defendants %}
-                                            <option value="defendant:{{ defendant.id }}"
-                                                    {% if speaker.defendant and speaker.defendant.id == defendant.id %}selected{% endif %}>
-                                                {{ defendant.name }}
-                                            </option>
-                                            {% endfor %}
-                                        </select>
-                                        <span class="text-muted small ms-2">{{ speaker.notes }}</span>
-                                    </div>
-                                    {% empty %}
-                                    <p class="text-muted small fst-italic">No speakers added yet. Use the buttons above or add a custom name below.</p>
-                                    {% endfor %}
-                                </div>
-
-                                <div class="input-group" style="max-width: 400px;">
-                                    <input type="text" class="form-control form-control-sm add-speaker-input"
-                                           placeholder="Other speaker (e.g., Witness, Bystander)">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm add-speaker-btn"
-                                            data-video-id="{{ video.id }}">
-                                        <i class="bi bi-plus"></i> Add
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Captures Section -->
-                            <div class="mb-3">
                                 <h6><i class="bi bi-scissors me-2"></i>Clips to Extract</h6>
                                 <p class="text-muted small">Add time ranges (max 2 minutes each) and extract transcripts.</p>
 
@@ -299,6 +248,7 @@
                                         {% if capture.extraction_status == 'completed' %}
                                         <div class="transcript-box" contenteditable="true"
                                              data-capture-id="{{ capture.id }}">{{ capture.attributed_transcript }}</div>
+                                        <p class="text-muted small mt-1 mb-0"><i class="bi bi-pencil me-1"></i>Click to edit and add speaker names (e.g., "Officer: Stop right there!")</p>
                                         {% elif capture.extraction_error %}
                                         <div class="text-danger small">
                                             <i class="bi bi-exclamation-triangle me-1"></i>{{ capture.extraction_error }}
@@ -346,6 +296,58 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Speakers Section (assign after seeing transcript) -->
+                            <div class="mb-3">
+                                <h6><i class="bi bi-people me-2"></i>Speaker Attribution</h6>
+                                <p class="text-muted small">Link speakers to defendants or mark as yourself for the legal document.</p>
+
+                                <!-- Quick-add buttons for Plaintiff and Defendants -->
+                                <div class="mb-3">
+                                    <span class="text-muted small me-2">Quick add:</span>
+                                    <button type="button" class="btn btn-outline-primary btn-sm me-1 quick-add-speaker"
+                                            data-video-id="{{ video.id }}" data-label="Plaintiff" data-type="plaintiff">
+                                        <i class="bi bi-person me-1"></i>Plaintiff (Me)
+                                    </button>
+                                    {% for defendant in defendants %}
+                                    <button type="button" class="btn btn-outline-secondary btn-sm me-1 quick-add-speaker"
+                                            data-video-id="{{ video.id }}" data-label="{{ defendant.name }}" data-type="defendant" data-defendant-id="{{ defendant.id }}">
+                                        <i class="bi bi-person-badge me-1"></i>{{ defendant.name }}
+                                    </button>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="speakers-list mb-2" data-video-id="{{ video.id }}">
+                                    {% for speaker in video.speakers.all %}
+                                    <div class="speaker-item" data-speaker-id="{{ speaker.id }}">
+                                        <span class="badge bg-secondary">{{ speaker.label }}</span>
+                                        <span class="text-muted mx-2">→</span>
+                                        <select class="form-select form-select-sm speaker-attribution" style="width: auto;">
+                                            <option value="">-- Assign to --</option>
+                                            <option value="plaintiff" {% if speaker.is_plaintiff %}selected{% endif %}>Me (Plaintiff)</option>
+                                            {% for defendant in defendants %}
+                                            <option value="defendant:{{ defendant.id }}"
+                                                    {% if speaker.defendant and speaker.defendant.id == defendant.id %}selected{% endif %}>
+                                                {{ defendant.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <span class="text-muted small ms-2">{{ speaker.notes }}</span>
+                                    </div>
+                                    {% empty %}
+                                    <p class="text-muted small fst-italic">No speakers added yet. Use the buttons above or add a custom name below.</p>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="input-group" style="max-width: 400px;">
+                                    <input type="text" class="form-control form-control-sm add-speaker-input"
+                                           placeholder="Other speaker (e.g., Witness, Bystander)">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm add-speaker-btn"
+                                            data-video-id="{{ video.id }}">
+                                        <i class="bi bi-plus"></i> Add
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     {% empty %}
@@ -366,10 +368,11 @@
                 <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Tips</h6>
             </div>
             <div class="card-body small">
-                <p><strong>Max clip length:</strong> 2 minutes</p>
-                <p><strong>Each extraction</strong> counts as 1 AI use.</p>
-                <p><strong>Speakers:</strong> Add people in the video, then assign them to defendants or yourself.</p>
-                <p><strong>Edit transcripts:</strong> Click on extracted text to edit and add speaker names.</p>
+                <p><strong>1.</strong> Add a YouTube URL</p>
+                <p><strong>2.</strong> Add a time clip (max 2 min)</p>
+                <p><strong>3.</strong> Extract transcript (1 AI use)</p>
+                <p><strong>4.</strong> Edit transcript to add speaker names (e.g., "Officer: Stop!")</p>
+                <p><strong>5.</strong> Link speakers to defendants for the legal document</p>
             </div>
         </div>
     </div>
