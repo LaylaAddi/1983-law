@@ -147,7 +147,7 @@ FREE_AI_GENERATIONS = 3                # Per user across all documents
 DRAFT_EXPIRY_HOURS = 48                # Hours before unpaid draft expires
 
 # Paid Document Limits (one-time purchases)
-PAID_AI_BUDGET = 5.00                  # AI budget in dollars per document
+PAID_AI_USES = 100                     # AI uses per paid document
 PAID_EXPIRY_DAYS = 45                  # Days to complete paid document
 
 # Stripe Configuration

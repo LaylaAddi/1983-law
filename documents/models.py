@@ -214,7 +214,8 @@ class Document(models.Model):
             # Check USER-level free AI limit (across all documents)
             return self.user.can_use_free_ai()
         elif self.payment_status == 'paid':
-            return float(self.ai_cost_used) < settings.PAID_AI_BUDGET
+            # Paid documents get 100 AI uses per document
+            return self.ai_generations_used < settings.PAID_AI_USES
         return False
 
     def get_ai_usage_display(self):
@@ -232,25 +233,22 @@ class Document(models.Model):
             remaining = self.user.get_free_ai_remaining()
             return f"{remaining} of {settings.FREE_AI_GENERATIONS} free AI uses remaining"
         elif self.payment_status == 'paid':
-            budget = Decimal(str(settings.PAID_AI_BUDGET))
-            remaining_pct = max(0, int(((budget - self.ai_cost_used) / budget) * 100))
-            return f"AI: {remaining_pct}% remaining"
+            remaining = settings.PAID_AI_USES - self.ai_generations_used
+            return f"AI: {remaining} of {settings.PAID_AI_USES} uses remaining"
         return "AI unavailable"
 
     def record_ai_usage(self, cost=None):
-        """Record AI usage. For subscribers: use subscription tracking. For draft: increment count. For paid: add cost."""
+        """Record AI usage. For subscribers: use subscription tracking. For draft/paid: increment count."""
         # Subscribers track usage on their subscription
         if self.user.has_active_subscription():
             subscription = self.user.get_subscription()
             if subscription:
                 subscription.record_ai_use()
             return
-        if self.payment_status == 'draft':
+        # Both draft and paid documents use count-based tracking
+        if self.payment_status in ('draft', 'paid'):
             self.ai_generations_used += 1
             self.save(update_fields=['ai_generations_used'])
-        elif self.payment_status == 'paid' and cost:
-            self.ai_cost_used += Decimal(str(cost))
-            self.save(update_fields=['ai_cost_used'])
 
     def get_price(self, promo_code=None):
         """Calculate price with optional promo code discount."""
