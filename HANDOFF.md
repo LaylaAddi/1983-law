@@ -2031,9 +2031,11 @@ Subscribers (Monthly/Annual Pro) can extract transcripts from YouTube videos to 
 - Assign speakers to defendants from their document
 - Integrate video evidence into the legal document
 
-### Status: Phase 4 Complete (Legal Document Integration)
+### Status: Feature Complete (Testing Phase)
 
-**Subscriber-only feature** - Monthly and Annual Pro plans only.
+All phases implemented. Feature is live and available for testing.
+
+**Access:** Monthly/Annual Pro subscribers + Admin/Staff users.
 
 ### Database Models
 
@@ -2240,6 +2242,43 @@ Officer: Put your hands up! Plaintiff: I am not resisting.
 - Speakers linked to defendants use the defendant's name
 - Speakers marked as plaintiff show as "Plaintiff"
 - Unlinked speakers use their original label
+
+### Video Analysis UI Improvements (January 2026)
+
+**Layout Changes:**
+- Full-width card at bottom of document detail page with YouTube branding
+- Clips section appears BEFORE Speakers section (extract transcript first, then assign speakers)
+- Quick-add buttons for Plaintiff (blue) and Defendants (yellow)
+- Speaker insertion toolbar above each transcript for marking speaker changes
+
+**Time Input Features:**
+- Supports periods as separators: `1.20` → `1:20`
+- Supports hour format: `1:23:52` or `1.23.52` for videos over 1 hour
+- Spinner controls for end time adjustment
+
+**Access:**
+- Subscribers (Monthly/Annual Pro) can access
+- Admin/staff users (`is_staff` or `is_superuser`) can also access for testing
+
+### AI Story Parsing Improvements (January 2026)
+
+**Date/Time Parsing Fixes:**
+- Date parsing now handles multiple formats: `YYYY-MM-DD`, `MM/DD/YYYY`, `March 15, 2024`, etc.
+- Time parsing now handles: `HH:MM`, `H:MM AM/PM`, 24-hour format
+
+**Updated AI Prompt (`documents/prompts/parse_story.md`):**
+- Date must be YYYY-MM-DD format - AI converts any date mentioned
+- Time must be HH:MM in 24-hour format - AI converts any time mentioned
+- More explicit instructions for extracting city/location from context
+
+**Note:** After deployment, `predeploy.sh` runs `seed_ai_prompts` to update the database with new prompt.
+
+### Dark Mode Fixes (January 2026)
+
+**Tell Your Story Page (`static/css/tell-story.css`):**
+- Textarea: dark background with light text
+- Alert boxes (primary, success, info): dark backgrounds with light text
+- Field items and accordion buttons: proper dark mode colors
 
 ---
 
