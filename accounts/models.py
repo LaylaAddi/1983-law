@@ -252,8 +252,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     def can_use_video_analysis(self):
         """
         Check if user can use the video evidence extraction feature.
-        Only available to Monthly and Annual Pro subscribers.
+        Only available to Monthly and Annual Pro subscribers (or admin/staff).
         """
+        if self.has_unlimited_access():
+            return True
         return self.has_active_subscription()
 
     def needs_purchase_prompt(self):
