@@ -246,9 +246,24 @@
                                             </div>
                                         </div>
                                         {% if capture.extraction_status == 'completed' %}
+                                        <!-- Speaker insertion toolbar -->
+                                        <div class="speaker-toolbar mb-2" data-capture-id="{{ capture.id }}">
+                                            <span class="text-muted small me-2">Insert speaker at cursor:</span>
+                                            <button type="button" class="btn btn-sm btn-primary insert-speaker-btn" data-speaker="Plaintiff">
+                                                Plaintiff
+                                            </button>
+                                            {% for defendant in defendants %}
+                                            <button type="button" class="btn btn-sm btn-warning insert-speaker-btn" data-speaker="{{ defendant.name }}">
+                                                {{ defendant.name|truncatechars:15 }}
+                                            </button>
+                                            {% endfor %}
+                                            <button type="button" class="btn btn-sm btn-secondary insert-speaker-btn" data-speaker="Unknown">
+                                                Unknown
+                                            </button>
+                                        </div>
                                         <div class="transcript-box" contenteditable="true"
                                              data-capture-id="{{ capture.id }}">{{ capture.attributed_transcript }}</div>
-                                        <p class="text-muted small mt-1 mb-0"><i class="bi bi-pencil me-1"></i>Click to edit and add speaker names (e.g., "Officer: Stop right there!")</p>
+                                        <p class="text-muted small mt-1 mb-0"><i class="bi bi-info-circle me-1"></i>Click in the text where a speaker changes, then click a speaker button above to insert their name.</p>
                                         {% elif capture.extraction_error %}
                                         <div class="text-danger small">
                                             <i class="bi bi-exclamation-triangle me-1"></i>{{ capture.extraction_error }}
@@ -717,6 +732,88 @@ document.querySelectorAll('.delete-video-btn').forEach(btn => {
     });
 });
 
+// Insert speaker at cursor position in transcript
+let lastFocusedTranscript = null;
+let lastSelection = null;
+
+// Track which transcript box was last focused and save selection
+document.querySelectorAll('.transcript-box').forEach(box => {
+    box.addEventListener('focus', function() {
+        lastFocusedTranscript = this;
+    });
+    box.addEventListener('mouseup', function() {
+        lastFocusedTranscript = this;
+        saveSelection();
+    });
+    box.addEventListener('keyup', function() {
+        saveSelection();
+    });
+});
+
+function saveSelection() {
+    const sel = window.getSelection();
+    if (sel.rangeCount > 0) {
+        lastSelection = sel.getRangeAt(0).cloneRange();
+    }
+}
+
+function restoreSelection() {
+    if (lastSelection) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(lastSelection);
+    }
+}
+
+// Insert speaker button click handler
+document.querySelectorAll('.insert-speaker-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const speaker = this.dataset.speaker;
+        const toolbar = this.closest('.speaker-toolbar');
+        const captureId = toolbar.dataset.captureId;
+        const transcriptBox = document.querySelector(`.transcript-box[data-capture-id="${captureId}"]`);
+
+        if (!transcriptBox) return;
+
+        // Focus the transcript box and restore selection
+        transcriptBox.focus();
+
+        if (lastFocusedTranscript === transcriptBox && lastSelection) {
+            restoreSelection();
+
+            // Insert speaker label at cursor
+            const sel = window.getSelection();
+            if (sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                range.deleteContents();
+
+                // Create the speaker label with line break before if not at start
+                const speakerText = document.createTextNode(`\n${speaker}: `);
+                range.insertNode(speakerText);
+
+                // Move cursor to end of inserted text
+                range.setStartAfter(speakerText);
+                range.setEndAfter(speakerText);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        } else {
+            // No cursor position, append to end
+            transcriptBox.textContent += `\n${speaker}: `;
+            // Move cursor to end
+            const range = document.createRange();
+            range.selectNodeContents(transcriptBox);
+            range.collapse(false);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+        // Save the transcript
+        saveTranscript(captureId, transcriptBox.textContent);
+    });
+});
+
 // Quick-add Speaker (Plaintiff or Defendant buttons)
 document.querySelectorAll('.quick-add-speaker').forEach(btn => {
     btn.addEventListener('click', async function() {
@@ -841,24 +938,28 @@ document.querySelectorAll('.speaker-attribution').forEach(select => {
     });
 });
 
+// Save transcript function (reusable)
+async function saveTranscript(captureId, text) {
+    try {
+        const formData = new FormData();
+        formData.append('attributed_transcript', text);
+        formData.append('csrfmiddlewaretoken', csrfToken);
+
+        await fetch(`/documents/${documentId}/video-analysis/capture/${captureId}/update/`, {
+            method: 'POST',
+            body: formData
+        });
+    } catch (error) {
+        console.error('Failed to save transcript');
+    }
+}
+
 // Save transcript edits on blur
 document.querySelectorAll('.transcript-box[contenteditable="true"]').forEach(box => {
     box.addEventListener('blur', async function() {
         const captureId = this.dataset.captureId;
         const text = this.textContent;
-
-        try {
-            const formData = new FormData();
-            formData.append('attributed_transcript', text);
-            formData.append('csrfmiddlewaretoken', csrfToken);
-
-            await fetch(`/documents/${documentId}/video-analysis/capture/${captureId}/update/`, {
-                method: 'POST',
-                body: formData
-            });
-        } catch (error) {
-            console.error('Failed to save transcript');
-        }
+        await saveTranscript(captureId, text);
     });
 });
 
