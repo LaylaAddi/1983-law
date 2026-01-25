@@ -82,4 +82,15 @@ urlpatterns = [
     path('admin/referrals/payout/<int:request_id>/process/', views.admin_process_payout, name='admin_process_payout'),
     path('admin/referrals/usage/<int:usage_id>/mark-paid/', views.admin_mark_usage_paid, name='admin_mark_usage_paid'),
     path('admin/referrals/code/<int:code_id>/edit/', views.admin_edit_promo_code, name='admin_edit_promo_code'),
+
+    # Video Analysis (YouTube transcript extraction - subscribers only)
+    path('<int:document_id>/video-analysis/', views.video_analysis, name='video_analysis'),
+    path('<int:document_id>/video-analysis/add-video/', views.video_add, name='video_add'),
+    path('<int:document_id>/video-analysis/<int:video_id>/delete/', views.video_delete, name='video_delete'),
+    path('<int:document_id>/video-analysis/<int:video_id>/add-capture/', views.video_add_capture, name='video_add_capture'),
+    path('<int:document_id>/video-analysis/<int:video_id>/add-speaker/', views.video_add_speaker, name='video_add_speaker'),
+    path('<int:document_id>/video-analysis/<int:video_id>/update-speaker/<int:speaker_id>/', views.video_update_speaker, name='video_update_speaker'),
+    path('<int:document_id>/video-analysis/capture/<int:capture_id>/extract/', views.video_extract_transcript, name='video_extract_transcript'),
+    path('<int:document_id>/video-analysis/capture/<int:capture_id>/delete/', views.video_delete_capture, name='video_delete_capture'),
+    path('<int:document_id>/video-analysis/capture/<int:capture_id>/update/', views.video_update_capture, name='video_update_capture'),
 ]

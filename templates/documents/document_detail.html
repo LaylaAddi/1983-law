@@ -93,6 +93,11 @@
                     <i class="bi bi-chat-quote me-1"></i>Tell Your Story
                 </a>
                 {% endif %}
+                {% if request.user.can_use_video_analysis %}
+                <a href="{% url 'documents:video_analysis' document.id %}" class="btn btn-outline-secondary ms-2" title="Extract transcripts from YouTube videos">
+                    <i class="bi bi-youtube me-1"></i>Video Analysis
+                </a>
+                {% endif %}
             </div>
         </div>
     </div>

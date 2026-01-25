@@ -2025,7 +2025,7 @@ Subscribers (Monthly/Annual Pro) can extract transcripts from YouTube videos to 
 - Assign speakers to defendants from their document
 - Integrate video evidence into the legal document
 
-### Status: Phase 2 Complete (YouTube Integration)
+### Status: Phase 3 Complete (UI)
 
 **Subscriber-only feature** - Monthly and Annual Pro plans only.
 
@@ -2136,9 +2136,33 @@ TranscriptResult(
 | `requirements.txt` | Added `requests>=2.31` |
 
 ### Remaining Phases
-- **Phase 3**: UI - Video Analysis page
-- **Phase 4**: Legal document integration
-- **Phase 5**: Subscriber access gate
+- **Phase 4**: Legal document integration (AI uses video transcripts in Statement of Facts)
+- **Phase 5**: Testing and refinement
+
+### Video Analysis UI (Phase 3)
+
+**URL:** `/documents/{id}/video-analysis/`
+
+**Features:**
+- Add YouTube videos by URL
+- Add time-stamped clips (max 2 minutes each)
+- Spinner controls for end time (click and hold to adjust)
+- Extract transcripts (counts as 1 AI use)
+- Editable transcripts with speaker attribution
+- Link speakers to defendants or mark as plaintiff
+- Delete videos and clips
+
+**Access:**
+- Button visible on document detail page for subscribers
+- Non-subscribers redirected to pricing page
+
+**Files Added (Phase 3):**
+| File | Purpose |
+|------|---------|
+| `documents/urls.py` | Added 9 video analysis routes |
+| `documents/views.py` | Added video_* view functions |
+| `templates/documents/video_analysis.html` | Full UI with JavaScript |
+| `templates/documents/document_detail.html` | Added Video Analysis button |
 
 ### Helper Methods
 ```python

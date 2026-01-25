@@ -1,0 +1,789 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Video Analysis - {{ document.title }} - {{ header_app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .video-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    .video-card-header {
+        background: linear-gradient(135deg, #002868, #001a4d);
+        color: white;
+        padding: 1rem;
+        border-radius: 7px 7px 0 0;
+    }
+    .video-card-body {
+        padding: 1rem;
+    }
+    .capture-item {
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: #f8f9fa;
+    }
+    .capture-item.extracted {
+        background: #e8f5e9;
+        border-color: #a5d6a7;
+    }
+    .capture-item.failed {
+        background: #ffebee;
+        border-color: #ef9a9a;
+    }
+    .capture-item.processing {
+        background: #fff3e0;
+        border-color: #ffcc80;
+    }
+    .time-input-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .time-input {
+        width: 80px;
+        text-align: center;
+        font-family: monospace;
+        font-size: 1.1rem;
+    }
+    .spinner-btn {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        font-weight: bold;
+        user-select: none;
+    }
+    .spinner-btn:active {
+        transform: scale(0.95);
+    }
+    .duration-display {
+        font-family: monospace;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    .duration-display.warning {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    .transcript-box {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 1rem;
+        min-height: 100px;
+        white-space: pre-wrap;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+    .transcript-box.editable {
+        cursor: text;
+    }
+    .speaker-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+    }
+    .caption-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .youtube-thumbnail {
+        width: 120px;
+        height: 68px;
+        object-fit: cover;
+        border-radius: 4px;
+    }
+
+    /* Dark mode support */
+    [data-theme="dark"] .video-card {
+        border-color: #444;
+    }
+    [data-theme="dark"] .capture-item {
+        background: #2d2d2d;
+        border-color: #444;
+    }
+    [data-theme="dark"] .capture-item.extracted {
+        background: #1b3d1b;
+        border-color: #2e7d32;
+    }
+    [data-theme="dark"] .transcript-box {
+        background: #1a1a2e;
+        border-color: #444;
+        color: #e4e4e4;
+    }
+    [data-theme="dark"] .speaker-item {
+        background: #2d2d2d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include 'documents/partials/status_banner.html' %}
+
+<!-- Top Navigation -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <nav aria-label="breadcrumb" class="mb-0">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'documents:document_list' %}">Documents</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'documents:document_detail' document.id %}">{{ document.title|truncatechars:30 }}</a></li>
+            <li class="breadcrumb-item active">Video Analysis</li>
+        </ol>
+    </nav>
+    <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Document
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-10">
+        <!-- Header -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-youtube me-2"></i>Video Analysis</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    Extract transcripts from YouTube videos to use as evidence. Add video URLs, select time ranges,
+                    and we'll extract the transcript. You can then assign speakers (officers, witnesses, yourself)
+                    to the dialogue.
+                </p>
+
+                <!-- Add Video Form -->
+                <div class="card bg-light mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-plus-circle me-2"></i>Add YouTube Video</h5>
+                        <form id="addVideoForm" class="row g-3 align-items-end">
+                            {% csrf_token %}
+                            <div class="col-md-8">
+                                <label for="youtubeUrl" class="form-label">YouTube URL</label>
+                                <input type="url" class="form-control" id="youtubeUrl"
+                                       placeholder="https://www.youtube.com/watch?v=..." required>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary w-100" id="addVideoBtn">
+                                    <i class="bi bi-plus-lg me-1"></i>Add Video
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Videos Container -->
+                <div id="videosContainer">
+                    {% for video in video_evidences %}
+                    <div class="video-card" data-video-id="{{ video.id }}">
+                        <div class="video-card-header d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <img src="https://img.youtube.com/vi/{{ video.video_id }}/default.jpg"
+                                     alt="Thumbnail" class="youtube-thumbnail me-3">
+                                <div>
+                                    <h5 class="mb-1">{{ video.video_title }}</h5>
+                                    <small class="opacity-75">
+                                        <i class="bi bi-link-45deg me-1"></i>{{ video.video_id }}
+                                        {% if video.has_youtube_captions %}
+                                        <span class="badge bg-success caption-badge ms-2">
+                                            <i class="bi bi-cc-circle me-1"></i>Captions Available
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-warning caption-badge ms-2">
+                                            <i class="bi bi-cpu me-1"></i>AI Transcription
+                                        </span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-light btn-sm delete-video-btn"
+                                    data-video-id="{{ video.id }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        <div class="video-card-body">
+                            <!-- Speakers Section -->
+                            <div class="mb-4">
+                                <h6><i class="bi bi-people me-2"></i>Speakers in this Video</h6>
+                                <p class="text-muted small">Identify who is speaking so you can attribute dialogue later.</p>
+
+                                <div class="speakers-list mb-2" data-video-id="{{ video.id }}">
+                                    {% for speaker in video.speakers.all %}
+                                    <div class="speaker-item" data-speaker-id="{{ speaker.id }}">
+                                        <span class="badge bg-secondary">{{ speaker.label }}</span>
+                                        <select class="form-select form-select-sm speaker-attribution" style="width: auto;">
+                                            <option value="">-- Assign to --</option>
+                                            <option value="plaintiff" {% if speaker.is_plaintiff %}selected{% endif %}>Me (Plaintiff)</option>
+                                            {% for defendant in defendants %}
+                                            <option value="defendant:{{ defendant.id }}"
+                                                    {% if speaker.defendant and speaker.defendant.id == defendant.id %}selected{% endif %}>
+                                                {{ defendant.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <span class="text-muted small ms-2">{{ speaker.notes }}</span>
+                                    </div>
+                                    {% empty %}
+                                    <p class="text-muted small fst-italic">No speakers added yet.</p>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="input-group" style="max-width: 400px;">
+                                    <input type="text" class="form-control form-control-sm add-speaker-input"
+                                           placeholder="e.g., Officer 1, Witness, Me">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm add-speaker-btn"
+                                            data-video-id="{{ video.id }}">
+                                        <i class="bi bi-plus"></i> Add Speaker
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Captures Section -->
+                            <div class="mb-3">
+                                <h6><i class="bi bi-scissors me-2"></i>Clips to Extract</h6>
+                                <p class="text-muted small">Add time ranges (max 2 minutes each) and extract transcripts.</p>
+
+                                <div class="captures-list" data-video-id="{{ video.id }}">
+                                    {% for capture in video.captures.all %}
+                                    <div class="capture-item {% if capture.extraction_status == 'completed' %}extracted{% elif capture.extraction_status == 'failed' %}failed{% elif capture.extraction_status == 'processing' %}processing{% endif %}"
+                                         data-capture-id="{{ capture.id }}">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <strong>{{ capture.start_time_display }} - {{ capture.end_time_display }}</strong>
+                                                <span class="text-muted small ms-2">({{ capture.duration_display }})</span>
+                                                {% if capture.extraction_status == 'completed' %}
+                                                <span class="badge bg-success ms-2">Extracted</span>
+                                                {% elif capture.extraction_status == 'failed' %}
+                                                <span class="badge bg-danger ms-2">Failed</span>
+                                                {% elif capture.extraction_status == 'processing' %}
+                                                <span class="badge bg-warning ms-2">Processing...</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary ms-2">Pending</span>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                {% if capture.extraction_status != 'completed' %}
+                                                <button type="button" class="btn btn-primary btn-sm extract-btn"
+                                                        data-capture-id="{{ capture.id }}">
+                                                    <i class="bi bi-download me-1"></i>Extract
+                                                </button>
+                                                {% endif %}
+                                                <button type="button" class="btn btn-outline-danger btn-sm delete-capture-btn"
+                                                        data-capture-id="{{ capture.id }}">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {% if capture.extraction_status == 'completed' %}
+                                        <div class="transcript-box" contenteditable="true"
+                                             data-capture-id="{{ capture.id }}">{{ capture.attributed_transcript }}</div>
+                                        {% elif capture.extraction_error %}
+                                        <div class="text-danger small">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ capture.extraction_error }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% empty %}
+                                    <p class="text-muted small fst-italic no-captures-msg">No clips added yet. Add a time range below.</p>
+                                    {% endfor %}
+                                </div>
+
+                                <!-- Add Capture Form -->
+                                <div class="card bg-light mt-3">
+                                    <div class="card-body py-3">
+                                        <div class="row align-items-end g-3">
+                                            <div class="col-auto">
+                                                <label class="form-label small mb-1">Start Time</label>
+                                                <input type="text" class="form-control time-input start-time-input"
+                                                       placeholder="0:00" data-video-id="{{ video.id }}">
+                                            </div>
+                                            <div class="col-auto d-flex align-items-center pt-4">
+                                                <i class="bi bi-arrow-right text-muted"></i>
+                                            </div>
+                                            <div class="col-auto">
+                                                <label class="form-label small mb-1">End Time</label>
+                                                <div class="time-input-group">
+                                                    <button type="button" class="btn btn-outline-secondary spinner-btn minus-btn">−</button>
+                                                    <input type="text" class="form-control time-input end-time-input"
+                                                           placeholder="0:00" data-video-id="{{ video.id }}" readonly>
+                                                    <button type="button" class="btn btn-outline-secondary spinner-btn plus-btn">+</button>
+                                                </div>
+                                            </div>
+                                            <div class="col-auto pt-4">
+                                                <span class="duration-display" data-video-id="{{ video.id }}">
+                                                    Duration: 0:00 / 2:00
+                                                </span>
+                                            </div>
+                                            <div class="col-auto pt-4">
+                                                <button type="button" class="btn btn-success add-capture-btn"
+                                                        data-video-id="{{ video.id }}">
+                                                    <i class="bi bi-plus-lg me-1"></i>Add Clip
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5" id="noVideosMessage">
+                        <i class="bi bi-camera-video text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-3">No videos added yet. Add a YouTube URL above to get started.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-2">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Tips</h6>
+            </div>
+            <div class="card-body small">
+                <p><strong>Max clip length:</strong> 2 minutes</p>
+                <p><strong>Each extraction</strong> counts as 1 AI use.</p>
+                <p><strong>Speakers:</strong> Add people in the video, then assign them to defendants or yourself.</p>
+                <p><strong>Edit transcripts:</strong> Click on extracted text to edit and add speaker names.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const documentId = {{ document.id }};
+const maxClipSeconds = {{ max_clip_seconds }};
+const csrfToken = '{{ csrf_token }}';
+
+// Helper: Parse time string to seconds
+function parseTimeToSeconds(timeStr) {
+    if (!timeStr) return 0;
+    timeStr = timeStr.trim();
+
+    // If just a number, assume seconds
+    if (/^\d+$/.test(timeStr)) {
+        return parseInt(timeStr);
+    }
+
+    const parts = timeStr.split(':');
+    if (parts.length === 2) {
+        return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    } else if (parts.length === 3) {
+        return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+    }
+    return 0;
+}
+
+// Helper: Format seconds to display string
+function secondsToDisplay(seconds) {
+    if (seconds < 0) seconds = 0;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Update duration display
+function updateDurationDisplay(videoId) {
+    const startInput = document.querySelector(`.start-time-input[data-video-id="${videoId}"]`);
+    const endInput = document.querySelector(`.end-time-input[data-video-id="${videoId}"]`);
+    const durationDisplay = document.querySelector(`.duration-display[data-video-id="${videoId}"]`);
+
+    const startSec = parseTimeToSeconds(startInput.value);
+    const endSec = parseTimeToSeconds(endInput.value);
+    const duration = endSec - startSec;
+
+    durationDisplay.textContent = `Duration: ${secondsToDisplay(duration)} / 2:00`;
+
+    if (duration > maxClipSeconds) {
+        durationDisplay.classList.add('warning');
+    } else {
+        durationDisplay.classList.remove('warning');
+    }
+}
+
+// Initialize time inputs for a video
+function initTimeInputs(videoCard) {
+    const videoId = videoCard.dataset.videoId;
+    const startInput = videoCard.querySelector('.start-time-input');
+    const endInput = videoCard.querySelector('.end-time-input');
+    const minusBtn = videoCard.querySelector('.minus-btn');
+    const plusBtn = videoCard.querySelector('.plus-btn');
+
+    let holdInterval = null;
+
+    // When start time changes, update end time to match
+    startInput.addEventListener('change', function() {
+        const startSec = parseTimeToSeconds(this.value);
+        endInput.value = secondsToDisplay(startSec);
+        updateDurationDisplay(videoId);
+    });
+
+    startInput.addEventListener('blur', function() {
+        const sec = parseTimeToSeconds(this.value);
+        this.value = secondsToDisplay(sec);
+        endInput.value = secondsToDisplay(sec);
+        updateDurationDisplay(videoId);
+    });
+
+    // Spinner buttons for end time
+    function adjustEndTime(delta) {
+        const startSec = parseTimeToSeconds(startInput.value);
+        let endSec = parseTimeToSeconds(endInput.value);
+        endSec += delta;
+
+        // Clamp: can't go below start, can't exceed start + maxClipSeconds
+        if (endSec < startSec) endSec = startSec;
+        if (endSec > startSec + maxClipSeconds) endSec = startSec + maxClipSeconds;
+
+        endInput.value = secondsToDisplay(endSec);
+        updateDurationDisplay(videoId);
+    }
+
+    // Click handlers
+    minusBtn.addEventListener('click', () => adjustEndTime(-1));
+    plusBtn.addEventListener('click', () => adjustEndTime(1));
+
+    // Hold to repeat
+    function startHold(delta) {
+        adjustEndTime(delta);
+        holdInterval = setInterval(() => adjustEndTime(delta), 100);
+    }
+
+    function stopHold() {
+        if (holdInterval) {
+            clearInterval(holdInterval);
+            holdInterval = null;
+        }
+    }
+
+    minusBtn.addEventListener('mousedown', () => startHold(-1));
+    plusBtn.addEventListener('mousedown', () => startHold(1));
+
+    document.addEventListener('mouseup', stopHold);
+    document.addEventListener('mouseleave', stopHold);
+}
+
+// Add Video
+document.getElementById('addVideoForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const urlInput = document.getElementById('youtubeUrl');
+    const btn = document.getElementById('addVideoBtn');
+    const originalText = btn.innerHTML;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Adding...';
+
+    try {
+        const formData = new FormData();
+        formData.append('youtube_url', urlInput.value);
+        formData.append('csrfmiddlewaretoken', csrfToken);
+
+        const response = await fetch(`/documents/${documentId}/video-analysis/add-video/`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Reload page to show new video
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to add video');
+        }
+    } catch (error) {
+        alert('Network error. Please try again.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+});
+
+// Add Capture
+document.querySelectorAll('.add-capture-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const videoId = this.dataset.videoId;
+        const startInput = document.querySelector(`.start-time-input[data-video-id="${videoId}"]`);
+        const endInput = document.querySelector(`.end-time-input[data-video-id="${videoId}"]`);
+
+        const startTime = startInput.value;
+        const endTime = endInput.value;
+
+        if (!startTime || !endTime) {
+            alert('Please enter start and end times.');
+            return;
+        }
+
+        const startSec = parseTimeToSeconds(startTime);
+        const endSec = parseTimeToSeconds(endTime);
+
+        if (endSec <= startSec) {
+            alert('End time must be after start time.');
+            return;
+        }
+
+        if (endSec - startSec > maxClipSeconds) {
+            alert('Clip cannot exceed 2 minutes.');
+            return;
+        }
+
+        const originalText = this.innerHTML;
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        try {
+            const formData = new FormData();
+            formData.append('start_time', startTime);
+            formData.append('end_time', endTime);
+            formData.append('csrfmiddlewaretoken', csrfToken);
+
+            const response = await fetch(`/documents/${documentId}/video-analysis/${videoId}/add-capture/`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to add capture');
+            }
+        } catch (error) {
+            alert('Network error. Please try again.');
+        } finally {
+            this.disabled = false;
+            this.innerHTML = originalText;
+        }
+    });
+});
+
+// Extract Transcript
+document.querySelectorAll('.extract-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const captureId = this.dataset.captureId;
+        const captureItem = this.closest('.capture-item');
+
+        const originalText = this.innerHTML;
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Extracting...';
+
+        captureItem.classList.remove('failed');
+        captureItem.classList.add('processing');
+
+        try {
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', csrfToken);
+
+            const response = await fetch(`/documents/${documentId}/video-analysis/capture/${captureId}/extract/`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                location.reload();
+            } else if (data.limit_reached) {
+                alert('AI limit reached. Please upgrade your plan to continue.');
+                this.disabled = false;
+                this.innerHTML = originalText;
+                captureItem.classList.remove('processing');
+            } else {
+                alert(data.error || 'Failed to extract transcript');
+                this.disabled = false;
+                this.innerHTML = originalText;
+                captureItem.classList.remove('processing');
+                captureItem.classList.add('failed');
+            }
+        } catch (error) {
+            alert('Network error. Please try again.');
+            this.disabled = false;
+            this.innerHTML = originalText;
+            captureItem.classList.remove('processing');
+        }
+    });
+});
+
+// Delete Capture
+document.querySelectorAll('.delete-capture-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        if (!confirm('Delete this clip?')) return;
+
+        const captureId = this.dataset.captureId;
+
+        try {
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', csrfToken);
+
+            const response = await fetch(`/documents/${documentId}/video-analysis/capture/${captureId}/delete/`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.closest('.capture-item').remove();
+            } else {
+                alert(data.error || 'Failed to delete');
+            }
+        } catch (error) {
+            alert('Network error');
+        }
+    });
+});
+
+// Delete Video
+document.querySelectorAll('.delete-video-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        if (!confirm('Delete this video and all its clips?')) return;
+
+        const videoId = this.dataset.videoId;
+
+        try {
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', csrfToken);
+
+            const response = await fetch(`/documents/${documentId}/video-analysis/${videoId}/delete/`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.closest('.video-card').remove();
+                // Show empty message if no videos left
+                if (document.querySelectorAll('.video-card').length === 0) {
+                    document.getElementById('videosContainer').innerHTML = `
+                        <div class="text-center py-5" id="noVideosMessage">
+                            <i class="bi bi-camera-video text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-3">No videos added yet. Add a YouTube URL above to get started.</p>
+                        </div>
+                    `;
+                }
+            } else {
+                alert(data.error || 'Failed to delete');
+            }
+        } catch (error) {
+            alert('Network error');
+        }
+    });
+});
+
+// Add Speaker
+document.querySelectorAll('.add-speaker-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const videoId = this.dataset.videoId;
+        const input = this.previousElementSibling;
+        const label = input.value.trim();
+
+        if (!label) {
+            alert('Please enter a speaker label');
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('label', label);
+            formData.append('csrfmiddlewaretoken', csrfToken);
+
+            const response = await fetch(`/documents/${documentId}/video-analysis/${videoId}/add-speaker/`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to add speaker');
+            }
+        } catch (error) {
+            alert('Network error');
+        }
+    });
+});
+
+// Update Speaker Attribution
+document.querySelectorAll('.speaker-attribution').forEach(select => {
+    select.addEventListener('change', async function() {
+        const speakerItem = this.closest('.speaker-item');
+        const speakerId = speakerItem.dataset.speakerId;
+        const videoCard = this.closest('.video-card');
+        const videoId = videoCard.dataset.videoId;
+
+        let attributionType = '';
+        let defendantId = '';
+
+        const value = this.value;
+        if (value === 'plaintiff') {
+            attributionType = 'plaintiff';
+        } else if (value.startsWith('defendant:')) {
+            attributionType = 'defendant';
+            defendantId = value.split(':')[1];
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('attribution_type', attributionType);
+            formData.append('defendant_id', defendantId);
+            formData.append('csrfmiddlewaretoken', csrfToken);
+
+            const response = await fetch(`/documents/${documentId}/video-analysis/${videoId}/update-speaker/${speakerId}/`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                alert(data.error || 'Failed to update speaker');
+            }
+        } catch (error) {
+            alert('Network error');
+        }
+    });
+});
+
+// Save transcript edits on blur
+document.querySelectorAll('.transcript-box[contenteditable="true"]').forEach(box => {
+    box.addEventListener('blur', async function() {
+        const captureId = this.dataset.captureId;
+        const text = this.textContent;
+
+        try {
+            const formData = new FormData();
+            formData.append('attributed_transcript', text);
+            formData.append('csrfmiddlewaretoken', csrfToken);
+
+            await fetch(`/documents/${documentId}/video-analysis/capture/${captureId}/update/`, {
+                method: 'POST',
+                body: formData
+            });
+        } catch (error) {
+            console.error('Failed to save transcript');
+        }
+    });
+});
+
+// Initialize all video cards
+document.querySelectorAll('.video-card').forEach(initTimeInputs);
+</script>
+{% endblock %}

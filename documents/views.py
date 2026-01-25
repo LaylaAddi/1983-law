@@ -19,7 +19,8 @@ from .models import (
     Document, DocumentSection, PlaintiffInfo, IncidentOverview,
     Defendant, IncidentNarrative, RightsViolated, Witness,
     Evidence, Damages, PriorComplaints, ReliefSought,
-    PromoCode, PromoCodeUsage, PayoutRequest
+    PromoCode, PromoCodeUsage, PayoutRequest,
+    VideoEvidence, VideoCapture, VideoSpeaker
 )
 
 # Initialize Stripe
@@ -3513,3 +3514,431 @@ def pdf_generation_status(request, document_id):
             'success': False,
             'error': f'An error occurred: {str(e)}'
         })
+
+
+# =============================================================================
+# Video Analysis Views (YouTube transcript extraction - subscribers only)
+# =============================================================================
+
+@login_required
+def video_analysis(request, document_id):
+    """
+    Main video analysis page for extracting YouTube transcripts.
+    Only available to subscribers (Monthly/Annual Pro).
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Check subscriber access
+    if not request.user.can_use_video_analysis():
+        messages.warning(
+            request,
+            'Video Analysis is available for Pro subscribers. '
+            'Upgrade to extract transcripts from YouTube videos.'
+        )
+        return redirect('accounts:pricing')
+
+    # Get evidence section for this document
+    evidence_section = document.sections.filter(section_type='evidence').first()
+
+    # Get all video evidence for this document
+    video_evidences = []
+    if evidence_section:
+        # Get evidence items that have video_evidence attached
+        for evidence in evidence_section.evidence_items.all():
+            try:
+                video_evidences.append(evidence.video_evidence)
+            except VideoEvidence.DoesNotExist:
+                pass
+
+    # Get defendants for speaker attribution dropdown
+    defendants_section = document.sections.filter(section_type='defendants').first()
+    defendants = []
+    if defendants_section:
+        defendants = list(defendants_section.defendants.all())
+
+    context = {
+        'document': document,
+        'video_evidences': video_evidences,
+        'defendants': defendants,
+        'max_clip_seconds': 120,  # 2 minutes
+    }
+
+    return render(request, 'documents/video_analysis.html', context)
+
+
+@login_required
+@require_POST
+def video_add(request, document_id):
+    """
+    Add a new YouTube video for transcript extraction.
+    Creates Evidence + VideoEvidence records.
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Check subscriber access
+    if not request.user.can_use_video_analysis():
+        return JsonResponse({
+            'success': False,
+            'error': 'Video Analysis requires a Pro subscription.'
+        }, status=403)
+
+    youtube_url = request.POST.get('youtube_url', '').strip()
+    if not youtube_url:
+        return JsonResponse({
+            'success': False,
+            'error': 'Please enter a YouTube URL.'
+        })
+
+    # Extract video ID
+    video_id = VideoEvidence.extract_video_id(youtube_url)
+    if not video_id:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid YouTube URL. Please enter a valid YouTube video link.'
+        })
+
+    # Get or create evidence section
+    evidence_section, _ = DocumentSection.objects.get_or_create(
+        document=document,
+        section_type='evidence',
+        defaults={'status': 'in_progress', 'order': 7}
+    )
+
+    # Check if this video already exists for this document
+    existing = VideoEvidence.objects.filter(
+        evidence__section=evidence_section,
+        video_id=video_id
+    ).first()
+
+    if existing:
+        return JsonResponse({
+            'success': False,
+            'error': 'This video has already been added to your document.'
+        })
+
+    # Fetch video info from Supadata
+    try:
+        from .services.youtube_service import YouTubeService
+        service = YouTubeService()
+
+        # Try to get transcript to check if captions available
+        result = service.get_transcript(youtube_url, use_ai_fallback=False)
+        has_captions = result.success
+
+        # Create Evidence record
+        evidence = Evidence.objects.create(
+            section=evidence_section,
+            evidence_type='video',
+            title=f'YouTube Video: {video_id}',
+            description='YouTube video for transcript extraction',
+            is_in_possession=True
+        )
+
+        # Create VideoEvidence record
+        video_evidence = VideoEvidence.objects.create(
+            evidence=evidence,
+            youtube_url=youtube_url,
+            video_id=video_id,
+            video_title=f'Video {video_id}',  # Will be updated when we have metadata API
+            has_youtube_captions=has_captions
+        )
+
+        return JsonResponse({
+            'success': True,
+            'video_id': video_evidence.id,
+            'youtube_video_id': video_id,
+            'has_captions': has_captions,
+            'message': 'Video added successfully!'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error adding video: {str(e)}'
+        })
+
+
+@login_required
+@require_POST
+def video_delete(request, document_id, video_id):
+    """Delete a video and all its captures."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    video_evidence = get_object_or_404(VideoEvidence, id=video_id)
+
+    # Verify ownership
+    if video_evidence.evidence.section.document != document:
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+
+    # Delete the evidence (cascades to VideoEvidence)
+    video_evidence.evidence.delete()
+
+    return JsonResponse({
+        'success': True,
+        'message': 'Video deleted successfully.'
+    })
+
+
+@login_required
+@require_POST
+def video_add_capture(request, document_id, video_id):
+    """Add a new capture (time range) to a video."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    video_evidence = get_object_or_404(VideoEvidence, id=video_id)
+
+    # Verify ownership
+    if video_evidence.evidence.section.document != document:
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+
+    # Parse time inputs
+    start_time = request.POST.get('start_time', '').strip()
+    end_time = request.POST.get('end_time', '').strip()
+
+    if not start_time or not end_time:
+        return JsonResponse({
+            'success': False,
+            'error': 'Please enter both start and end times.'
+        })
+
+    try:
+        start_seconds = VideoCapture.parse_time_to_seconds(start_time)
+        end_seconds = VideoCapture.parse_time_to_seconds(end_time)
+    except ValueError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid time format. Use M:SS or MM:SS format.'
+        })
+
+    # Validate
+    if end_seconds <= start_seconds:
+        return JsonResponse({
+            'success': False,
+            'error': 'End time must be after start time.'
+        })
+
+    duration = end_seconds - start_seconds
+    if duration > 120:
+        return JsonResponse({
+            'success': False,
+            'error': 'Clip duration cannot exceed 2 minutes (120 seconds).'
+        })
+
+    # Create capture
+    capture = VideoCapture.objects.create(
+        video_evidence=video_evidence,
+        start_time_seconds=start_seconds,
+        end_time_seconds=end_seconds,
+        extraction_status='pending'
+    )
+
+    return JsonResponse({
+        'success': True,
+        'capture_id': capture.id,
+        'start_display': capture.start_time_display,
+        'end_display': capture.end_time_display,
+        'duration_display': capture.duration_display,
+        'message': 'Capture added. Click Extract to get the transcript.'
+    })
+
+
+@login_required
+@require_POST
+def video_delete_capture(request, document_id, capture_id):
+    """Delete a capture."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    capture = get_object_or_404(VideoCapture, id=capture_id)
+
+    # Verify ownership
+    if capture.video_evidence.evidence.section.document != document:
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+
+    capture.delete()
+
+    return JsonResponse({
+        'success': True,
+        'message': 'Capture deleted.'
+    })
+
+
+@login_required
+@require_POST
+def video_extract_transcript(request, document_id, capture_id):
+    """
+    Extract transcript for a capture using Supadata API.
+    Counts as 1 AI use toward subscriber limit.
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    capture = get_object_or_404(VideoCapture, id=capture_id)
+
+    # Verify ownership
+    if capture.video_evidence.evidence.section.document != document:
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+
+    # Check AI usage limits
+    if not document.can_use_ai():
+        return JsonResponse({
+            'success': False,
+            'limit_reached': True,
+            'error': 'AI limit reached. Please upgrade your plan to continue.'
+        })
+
+    # Mark as processing
+    capture.extraction_status = 'processing'
+    capture.save(update_fields=['extraction_status'])
+
+    try:
+        from .services.youtube_service import YouTubeService
+        service = YouTubeService()
+
+        # Extract transcript for time range
+        result = service.get_transcript_for_range(
+            capture.video_evidence.youtube_url,
+            capture.start_time_seconds,
+            capture.end_time_seconds
+        )
+
+        if result.success:
+            capture.raw_transcript = result.full_text
+            capture.attributed_transcript = result.full_text  # Start with raw, user can edit
+            capture.extraction_method = result.extraction_method
+            capture.extraction_status = 'completed'
+            capture.extraction_error = ''
+
+            # Record AI usage
+            if not capture.ai_use_recorded:
+                document.record_ai_usage()
+                capture.ai_use_recorded = True
+
+            capture.save()
+
+            return JsonResponse({
+                'success': True,
+                'transcript': result.full_text,
+                'extraction_method': result.extraction_method,
+                'language': result.language,
+                'ai_usage_display': document.get_ai_usage_display(),
+                'message': 'Transcript extracted successfully!'
+            })
+        else:
+            capture.extraction_status = 'failed'
+            capture.extraction_error = result.error or 'Unknown error'
+            capture.save(update_fields=['extraction_status', 'extraction_error'])
+
+            return JsonResponse({
+                'success': False,
+                'error': result.error or 'Failed to extract transcript.'
+            })
+
+    except Exception as e:
+        capture.extraction_status = 'failed'
+        capture.extraction_error = str(e)
+        capture.save(update_fields=['extraction_status', 'extraction_error'])
+
+        return JsonResponse({
+            'success': False,
+            'error': f'Error extracting transcript: {str(e)}'
+        })
+
+
+@login_required
+@require_POST
+def video_update_capture(request, document_id, capture_id):
+    """Update capture transcript (user edits with speaker attribution)."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    capture = get_object_or_404(VideoCapture, id=capture_id)
+
+    # Verify ownership
+    if capture.video_evidence.evidence.section.document != document:
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+
+    attributed_transcript = request.POST.get('attributed_transcript', '').strip()
+    capture.attributed_transcript = attributed_transcript
+    capture.save(update_fields=['attributed_transcript'])
+
+    return JsonResponse({
+        'success': True,
+        'message': 'Transcript updated.'
+    })
+
+
+@login_required
+@require_POST
+def video_add_speaker(request, document_id, video_id):
+    """Add a speaker to a video."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    video_evidence = get_object_or_404(VideoEvidence, id=video_id)
+
+    # Verify ownership
+    if video_evidence.evidence.section.document != document:
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+
+    label = request.POST.get('label', '').strip()
+    if not label:
+        return JsonResponse({
+            'success': False,
+            'error': 'Please enter a speaker label.'
+        })
+
+    # Check if label already exists
+    if video_evidence.speakers.filter(label=label).exists():
+        return JsonResponse({
+            'success': False,
+            'error': f'Speaker "{label}" already exists.'
+        })
+
+    speaker = VideoSpeaker.objects.create(
+        video_evidence=video_evidence,
+        label=label
+    )
+
+    return JsonResponse({
+        'success': True,
+        'speaker_id': speaker.id,
+        'label': speaker.label,
+        'message': 'Speaker added.'
+    })
+
+
+@login_required
+@require_POST
+def video_update_speaker(request, document_id, video_id, speaker_id):
+    """Update speaker attribution (link to defendant or mark as plaintiff)."""
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+    video_evidence = get_object_or_404(VideoEvidence, id=video_id)
+    speaker = get_object_or_404(VideoSpeaker, id=speaker_id, video_evidence=video_evidence)
+
+    # Verify ownership
+    if video_evidence.evidence.section.document != document:
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+
+    # Get attribution type
+    attribution_type = request.POST.get('attribution_type', '')
+    defendant_id = request.POST.get('defendant_id', '')
+    notes = request.POST.get('notes', '').strip()
+
+    speaker.notes = notes
+
+    if attribution_type == 'plaintiff':
+        speaker.is_plaintiff = True
+        speaker.defendant = None
+    elif attribution_type == 'defendant' and defendant_id:
+        # Get defendant and verify it belongs to this document
+        defendants_section = document.sections.filter(section_type='defendants').first()
+        if defendants_section:
+            try:
+                defendant = defendants_section.defendants.get(id=defendant_id)
+                speaker.defendant = defendant
+                speaker.is_plaintiff = False
+            except Defendant.DoesNotExist:
+                pass
+    else:
+        # Unattributed
+        speaker.is_plaintiff = False
+        speaker.defendant = None
+
+    speaker.save()
+
+    return JsonResponse({
+        'success': True,
+        'display_name': speaker.get_display_name(),
+        'message': 'Speaker updated.'
+    })
