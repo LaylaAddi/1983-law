@@ -2280,6 +2280,74 @@ Officer: Put your hands up! Plaintiff: I am not resisting.
 - Alert boxes (primary, success, info): dark backgrounds with light text
 - Field items and accordion buttons: proper dark mode colors
 
+### Video Evidence Integration Enhancements (January 2026)
+
+**Quick Add YouTube Video Card:**
+- Prominent card at top of Evidence section for subscribers
+- One-click to add YouTube video as evidence
+- Creates Evidence + VideoEvidence records together
+- Endpoint: `quick_add_youtube_evidence`
+
+**Unlink YouTube Video:**
+- Users can remove YouTube link without deleting the evidence
+- Button appears next to "Manage Transcript" on edit evidence page
+- Endpoint: `unlink_youtube_from_evidence`
+
+**Video Evidence Analysis Feature:**
+- AI analyzes video transcripts and suggests additions to document sections
+- Suggestions for: narrative, evidence, rights_violated, damages
+- Each suggestion includes timestamp references
+- Apply button auto-inserts text into document sections via API
+- Endpoint: `analyze_video_evidence`, `apply_video_suggestion`
+
+**Video Evidence Sidebar:**
+- Evidence section page shows sidebar card with video evidence summary
+- Lists videos with transcript counts and timestamps
+- Links to video analysis page
+
+**Files Modified:**
+| File | Change |
+|------|--------|
+| `documents/views.py` | Added `quick_add_youtube_evidence`, `unlink_youtube_from_evidence`, `analyze_video_evidence`, `apply_video_suggestion` endpoints |
+| `documents/urls.py` | Added URL patterns for new endpoints |
+| `templates/documents/section_edit.html` | Added Quick Add card, Analyze Video card, sidebar summary |
+| `templates/documents/edit_evidence.html` | Added Unlink button |
+| `templates/documents/video_analysis.html` | Added link to Evidence section, save indicator |
+| `static/css/app-theme.css` | Dark mode styles for video suggestion cards |
+
+### Subscription User PDF Generation Fix (January 2026)
+
+**Issue:** Subscribers were being asked to pay per-document even with active subscriptions.
+
+**Root Cause:** Templates only checked `has_unlimited_access` (admin/staff) but not `has_active_subscription`.
+
+**Fix:** Added `has_active_subscription` check to:
+- `templates/documents/document_review.html` - Generate PDF button
+- `templates/documents/document_detail.html` - Generate PDF button
+
+Now subscribers can generate PDFs without paying per document.
+
+### Document Review Page Dark Mode (January 2026)
+
+**Fixed Elements:**
+- `.review-controls` - Control bar at top
+- `.edit-panel-card` and `.edit-panel-header` - Edit sidebar
+- AI Review panel and issue items
+- Diff container and word diff styling
+- Fix mode elements and comparison panels
+- Terminal animation background
+- All text colors for proper readability
+
+**File:** `static/css/app-theme.css` (added ~300 lines)
+
+### Relief Sought Section Dark Mode (January 2026)
+
+Fixed dark mode for Relief Sought section including:
+- Summary card with gradient background
+- Customize section header and body
+- Form sections with labels and inputs
+- Alert boxes within sections
+
 ---
 
 ## What's NOT Built Yet
