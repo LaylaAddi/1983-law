@@ -1613,17 +1613,29 @@ def generate_fix(request, document_id):
                     for line in rewritten.split('\n'):
                         line = line.strip()
                         if line.startswith('Location:'):
-                            field_updates['incident_location'] = line.replace('Location:', '').strip()
+                            val = line.replace('Location:', '').strip()
+                            if val:
+                                field_updates['incident_location'] = val
                         elif line.startswith('City:'):
-                            field_updates['city'] = line.replace('City:', '').strip()
+                            val = line.replace('City:', '').strip()
+                            if val:
+                                field_updates['city'] = val
                         elif line.startswith('State:'):
-                            field_updates['state'] = line.replace('State:', '').strip()
+                            val = line.replace('State:', '').strip()
+                            if val:
+                                field_updates['state'] = val
                         elif line.startswith('Date:'):
                             date_str = line.replace('Date:', '').strip()
-                            field_updates['incident_date'] = _convert_date_format(date_str)
+                            if date_str:
+                                converted = _convert_date_format(date_str)
+                                if converted:
+                                    field_updates['incident_date'] = converted
                         elif line.startswith('Time:'):
                             time_str = line.replace('Time:', '').strip()
-                            field_updates['incident_time'] = _convert_time_format(time_str)
+                            if time_str:
+                                converted = _convert_time_format(time_str)
+                                if converted:
+                                    field_updates['incident_time'] = converted
                     if field_updates:
                         result['field_updates'] = field_updates
 
@@ -1703,12 +1715,19 @@ def apply_fix(request, document_id):
             updated_fields = []
             for field_name, new_value in field_updates.items():
                 if hasattr(instance, field_name):
+                    # Skip empty values to avoid overwriting existing data with nothing
+                    if new_value is None or new_value == '':
+                        continue
                     # Convert time formats like "09:30 AM" to "09:30:00" for TimeField
                     if field_name.endswith('_time') or field_name == 'incident_time':
                         new_value = _convert_time_format(new_value)
+                        if not new_value:  # Skip if conversion failed
+                            continue
                     # Convert date formats like "August 24, 2025" to "2025-08-24" for DateField
                     if field_name.endswith('_date') or field_name == 'incident_date':
                         new_value = _convert_date_format(new_value)
+                        if not new_value:  # Skip if conversion failed
+                            continue
                     setattr(instance, field_name, new_value)
                     updated_fields.append(field_name)
 
