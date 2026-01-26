@@ -332,7 +332,7 @@
         {% with para_num=document_data.defendants|length|add:5 %}
         <p class="numbered-para">
             {{ para_num }}. On or about {{ document_data.incident.incident_date|default:"[DATE]" }}
-            {% if document_data.incident.incident_time %}, at approximately {{ document_data.incident.incident_time }}{% endif %},
+            {% if document_data.incident.incident_time %}, at approximately {{ document_data.incident.incident_time|time:"g:i A" }}{% endif %},
             Plaintiff was located at {{ document_data.incident.incident_location|default:"[LOCATION]" }},
             {{ document_data.incident.city|default:"[CITY]" }}, {{ document_data.incident.state|default:"[STATE]" }}.
         </p>

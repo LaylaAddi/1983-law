@@ -747,7 +747,7 @@
                         <strong>{{ document_data.defendants|length|add:4 }}.</strong>
                         On or about
                         {% if document_data.incident.incident_date %}{{ document_data.incident.incident_date }}{% else %}<span class="text-muted">[DATE]</span>{% endif %}
-                        {% if document_data.incident.incident_time %}, at approximately {{ document_data.incident.incident_time }}{% endif %},
+                        {% if document_data.incident.incident_time %}, at approximately {{ document_data.incident.incident_time|time:"g:i A" }}{% endif %},
                         Plaintiff was located at
                         {% if document_data.incident.incident_location %}{{ document_data.incident.incident_location }}{% else %}<span class="text-muted">[LOCATION]</span>{% endif %},
                         {% if document_data.incident.city %}{{ document_data.incident.city }}, {{ document_data.incident.state }}{% else %}<span class="text-muted">[CITY, STATE]</span>{% endif %}.
