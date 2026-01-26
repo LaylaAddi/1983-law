@@ -2762,6 +2762,20 @@ During fix mode, when an issue was identified for sections like `incident_overvi
 **Files modified:**
 - `templates/documents/document_review.html` - Added `data-caption="true"` to caption elements, updated JS functions
 
+**Issue 3: Cross-section fixes routed to wrong section**
+
+When AI review identified cross-section issues like "Incident time inconsistency" (time in `incident_overview` vs. description in story text), the fix was being applied to `incident_overview` instead of `incident_narrative`.
+
+**Root cause:** The section mapping only looked at the `section` field from the AI review, not the suggestion content. When suggestion said "change the story text", it should route to `incident_narrative`.
+
+**Solution:** Added `determineFixSection()` function that intelligently routes fixes based on suggestion content:
+- If suggestion mentions "story text" or "narrative" → route to `incident_narrative`
+- If suggestion mentions "incident section" → route to `incident_overview`
+- Added 'story' and 'story text' to `sectionNameMap`
+
+**Files modified:**
+- `templates/documents/document_review.html` - Added `determineFixSection()` function, updated `generateFix()` to use it
+
 ---
 
 ## Instructions for Next Claude Session
