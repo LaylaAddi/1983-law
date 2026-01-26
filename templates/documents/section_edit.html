@@ -3146,31 +3146,34 @@ document.addEventListener('DOMContentLoaded', function() {
         // Build the text to add with timestamp reference
         const fullText = timestamp ? `${text} ${timestamp}` : text;
 
-        // Redirect to appropriate section with the text to add
-        // Store in sessionStorage so the target page can pick it up
-        sessionStorage.setItem('videoSuggestionText', fullText);
-        sessionStorage.setItem('videoSuggestionSection', section);
-
-        // Map section to URL
+        // Get section label and URL for display
+        const sectionLabel = getSectionLabel(section);
         const sectionUrls = {
             'narrative': '{% url "documents:section_edit" document.id "incident_narrative" %}',
-            'evidence': window.location.href, // Stay on current page for evidence
+            'evidence': window.location.href,
             'rights_violated': '{% url "documents:section_edit" document.id "rights_violated" %}',
             'damages': '{% url "documents:section_edit" document.id "damages" %}'
         };
 
-        if (section === 'evidence') {
-            // For evidence, show a message to edit the evidence item
-            alert('Text copied! Edit your evidence item and paste the suggestion into the description field.');
-            navigator.clipboard.writeText(fullText);
-            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied!';
-            btn.classList.remove('btn-success');
-            btn.classList.add('btn-secondary');
-            btn.disabled = true;
-        } else {
-            // Redirect to the section
-            window.location.href = sectionUrls[section] + '?videoSuggestion=1';
-        }
+        // Copy to clipboard
+        navigator.clipboard.writeText(fullText).then(() => {
+            // Update button to show copied state with link
+            const card = btn.closest('.video-suggestion-card');
+
+            if (section === 'evidence') {
+                btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied! Paste in evidence description';
+            } else {
+                btn.outerHTML = `
+                    <a href="${sectionUrls[section]}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-check-lg me-1"></i>Copied! Go to ${sectionLabel} →
+                    </a>
+                `;
+            }
+
+            // Mark card as applied
+            card.classList.add('applied-suggestion');
+            card.style.opacity = '0.7';
+        });
     }
 })();
 </script>
