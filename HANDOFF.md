@@ -2857,6 +2857,30 @@ When applying AI fix for time inconsistency, the time wasn't being updated becau
 **Files modified:**
 - `documents/views.py` - Added time extraction from issue suggestion as final fallback
 
+**Issue 9: Fix preview not appearing in right comparison panel**
+
+When generating AI fixes, users expected to see the proposed changes in the right comparison panel ("UPDATED DOCUMENT") BEFORE clicking "Apply This Fix", but the preview only appeared in the edit panel sidebar as a diff.
+
+**Root cause:** The `showFixPreview` function only showed the diff in the edit panel. The comparison panel was only updated AFTER applying the fix, not when previewing it.
+
+**Solution:**
+1. Added `previewFixInComparisonPanel()` function that updates the right comparison panel with the proposed changes when a fix is generated
+2. Added CSS styling for `.preview-pending` class to visually distinguish proposed changes (purple highlight with "PREVIEW" label)
+3. Added `clearPreviewStyling()` and `restorePreviewContent()` helper functions
+4. Updated `skipIssue()` to restore original content when skipping a previewed fix
+5. Updated `showCurrentIssue()` to clear preview styling when moving to next issue
+6. Updated `updateComparisonView()` to remove preview-pending class when applying
+
+**Files modified:**
+- `templates/documents/document_review.html` - Added preview functions, CSS styling, and cleanup logic
+
+**How it works now:**
+1. User clicks "Generate AI Fix" → diff appears in edit panel AND preview appears in right comparison panel
+2. Right panel shows purple highlight with "PREVIEW" label to indicate proposed changes
+3. User can see exactly how the document will look before applying
+4. If user clicks "Skip", the preview is restored to original content
+5. If user clicks "Apply", the preview styling changes to green (applied)
+
 ---
 
 ## Instructions for Next Claude Session

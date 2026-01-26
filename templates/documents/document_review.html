@@ -534,6 +534,29 @@
         padding-left: 0.5rem;
     }
 
+    /* Preview of pending fix - shows proposed change before applying */
+    .comparison-panel.updated-panel .preview-pending {
+        background: rgba(111, 66, 193, 0.12);
+        border-left: 4px solid #6f42c1;
+        margin-left: -4px;
+        padding-left: 0.5rem;
+        position: relative;
+    }
+
+    .comparison-panel.updated-panel .preview-pending::before {
+        content: 'PREVIEW';
+        position: absolute;
+        top: -20px;
+        left: 0;
+        background: #6f42c1;
+        color: white;
+        font-size: 0.65rem;
+        font-weight: bold;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-family: system-ui, -apple-system, sans-serif;
+    }
+
     .comparison-panel.original-panel .section-original {
         background: rgba(220, 53, 69, 0.08);
         border-left: 3px solid #dc3545;
@@ -1540,8 +1563,8 @@ function updateComparisonView(sectionType, newContent) {
     const sections = updatedDoc.querySelectorAll(`[data-section="${sectionType}"]:not([data-caption="true"])`);
 
     sections.forEach(el => {
-        // Remove previous change highlights
-        el.classList.remove('section-changed');
+        // Remove previous change highlights and preview styling
+        el.classList.remove('section-changed', 'preview-pending');
 
         // Find ALL paragraph elements inside and update the first one with content
         const paragraphs = el.querySelectorAll('p');
@@ -1572,6 +1595,56 @@ function updateComparisonView(sectionType, newContent) {
     }
 
     // Scroll both panels to show the changed section
+    if (sections.length > 0) {
+        sections[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function previewFixInComparisonPanel(sectionType, newContent) {
+    // Show the fix preview in the right comparison panel BEFORE applying
+    // This lets users see what the document will look like with the proposed change
+    const updatedDoc = document.getElementById('updatedDocument');
+    if (!updatedDoc || !newContent) return;
+
+    const mappedSection = sectionNameMap[sectionType?.toLowerCase()] || sectionType;
+    if (!mappedSection) return;
+
+    // Find the section in the updated document panel (exclude caption sections)
+    const sections = updatedDoc.querySelectorAll(`[data-section="${mappedSection}"]:not([data-caption="true"])`);
+
+    sections.forEach(el => {
+        // Remove any previous preview styling
+        el.classList.remove('section-changed', 'preview-pending');
+
+        // For prose sections (incident_narrative, damages details), update the text
+        const paragraphs = el.querySelectorAll('p');
+        if (paragraphs.length > 0) {
+            const mainP = paragraphs[0];
+            const strongEl = mainP.querySelector('strong');
+            if (strongEl) {
+                // Preserve the paragraph number, update the rest
+                const numberText = strongEl.outerHTML;
+                mainP.innerHTML = numberText + ' ' + escapeHtml(newContent);
+            } else if (sectionType === 'incident_narrative' || sectionType === 'damages') {
+                // For prose sections without number prefix
+                mainP.innerHTML = escapeHtml(newContent);
+            }
+        }
+
+        // Add preview styling to show this is a proposed change
+        el.classList.add('section-changed', 'preview-pending');
+    });
+
+    // Also mark the corresponding section in the original document
+    const originalDoc = document.getElementById('originalDocument');
+    if (originalDoc) {
+        const originalSections = originalDoc.querySelectorAll(`[data-section="${mappedSection}"]:not([data-caption="true"])`);
+        originalSections.forEach(el => {
+            el.classList.add('section-original');
+        });
+    }
+
+    // Scroll to show the previewed section
     if (sections.length > 0) {
         sections[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
@@ -1633,6 +1706,9 @@ function updateSectionContent(sectionType, newContent) {
 }
 
 function showCurrentIssue() {
+    // Clear any pending preview styling from previous issue
+    clearPreviewStyling();
+
     const issues = aiReviewResults.issues;
     if (currentIssueIndex >= issues.length) {
         clearFixingHighlight();
@@ -1823,6 +1899,10 @@ function showFixPreview(fix) {
 
     const diffHtml = generateWordDiff(fix.original_content || '', fix.rewritten_content || '');
 
+    // Update the right comparison panel to show what the fix will look like BEFORE applying
+    // This gives users a preview of the document with the proposed changes
+    previewFixInComparisonPanel(fix.section_type, fix.rewritten_content);
+
     // Check for placeholders in the rewritten content
     const placeholders = detectPlaceholders(fix.rewritten_content || '');
     let warningHtml = '';
@@ -1987,7 +2067,52 @@ async function applyFix() {
     }
 }
 
+function clearPreviewStyling() {
+    // Clear any preview styling from the comparison panels
+    const updatedDoc = document.getElementById('updatedDocument');
+    if (updatedDoc) {
+        updatedDoc.querySelectorAll('.preview-pending').forEach(el => {
+            el.classList.remove('preview-pending', 'section-changed');
+        });
+    }
+    const originalDoc = document.getElementById('originalDocument');
+    if (originalDoc) {
+        originalDoc.querySelectorAll('.section-original').forEach(el => {
+            el.classList.remove('section-original');
+        });
+    }
+}
+
+function restorePreviewContent(sectionType) {
+    // Restore the original content in the preview panel when skipping
+    const updatedDoc = document.getElementById('updatedDocument');
+    const originalDoc = document.getElementById('originalDocument');
+    if (!updatedDoc || !originalDoc || !sectionType) return;
+
+    const mappedSection = sectionNameMap[sectionType?.toLowerCase()] || sectionType;
+    if (!mappedSection) return;
+
+    // Find matching sections
+    const updatedSections = updatedDoc.querySelectorAll(`[data-section="${mappedSection}"]:not([data-caption="true"])`);
+    const originalSections = originalDoc.querySelectorAll(`[data-section="${mappedSection}"]:not([data-caption="true"])`);
+
+    // Restore content from original to updated
+    updatedSections.forEach((updatedEl, index) => {
+        const originalEl = originalSections[index];
+        if (originalEl) {
+            updatedEl.innerHTML = originalEl.innerHTML;
+        }
+        updatedEl.classList.remove('preview-pending', 'section-changed');
+    });
+}
+
 function skipIssue() {
+    // If there's a pending fix, restore the original content in the preview
+    if (pendingFix && pendingFix.section_type) {
+        restorePreviewContent(pendingFix.section_type);
+    }
+    clearPreviewStyling();
+
     if (pendingFix) {
         appliedChanges.push({
             issue: pendingFix.issue,
