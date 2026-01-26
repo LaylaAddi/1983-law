@@ -2319,3 +2319,92 @@ a:hover {
     color: var(--dark-text) !important;
 }
 
+/* =============================================
+   RELIEF SOUGHT SECTION DARK MODE
+   ============================================= */
+
+/* Summary Card */
+[data-theme="dark"] .relief-summary-card {
+    background: linear-gradient(135deg, #1a3d2e 0%, #14532d 100%) !important;
+    border-color: #22c55e !important;
+}
+
+[data-theme="dark"] .relief-summary-card h5 {
+    color: #86efac !important;
+}
+
+[data-theme="dark"] .relief-summary-card .text-muted {
+    color: #9ca3af !important;
+}
+
+[data-theme="dark"] .relief-summary-card .relief-item span {
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .relief-summary-card .relief-item strong {
+    color: #bbf7d0 !important;
+}
+
+[data-theme="dark"] .relief-summary-card .relief-item.excluded span {
+    color: #6b7280 !important;
+}
+
+/* Customize Section */
+[data-theme="dark"] .customize-section {
+    background: var(--dark-bg-secondary) !important;
+    border-color: var(--dark-border) !important;
+}
+
+[data-theme="dark"] .customize-header {
+    background: var(--dark-bg-card) !important;
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .customize-header:hover {
+    background: #3d3d3d !important;
+}
+
+[data-theme="dark"] .customize-header .text-muted {
+    color: var(--dark-text-muted) !important;
+}
+
+[data-theme="dark"] .customize-body {
+    background: var(--dark-bg-secondary) !important;
+}
+
+/* Form Sections */
+[data-theme="dark"] .form-section {
+    background: var(--dark-bg-card) !important;
+    border-color: var(--dark-border) !important;
+}
+
+[data-theme="dark"] .form-section-title {
+    color: var(--dark-text) !important;
+    border-color: var(--dark-border) !important;
+}
+
+[data-theme="dark"] .form-section .form-check-label {
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .form-section .text-muted {
+    color: var(--dark-text-muted) !important;
+}
+
+[data-theme="dark"] .form-section .form-label {
+    color: var(--dark-text) !important;
+}
+
+/* Alert boxes in relief section */
+[data-theme="dark"] .form-section .alert-success {
+    background: #14532d !important;
+    border-color: #22c55e !important;
+    color: #86efac !important;
+}
+
+[data-theme="dark"] .form-section .alert-info {
+    background: #1e3a5f !important;
+    border-color: #1e40af !important;
+    color: #bfdbfe !important;
+}
+
