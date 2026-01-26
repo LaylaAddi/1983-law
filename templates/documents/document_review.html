@@ -1167,12 +1167,35 @@ const sectionNameMap = {
     'narrative': 'incident_narrative',
     'incident_narrative': 'incident_narrative',
     'incident narrative': 'incident_narrative',
+    'story': 'incident_narrative',
+    'story text': 'incident_narrative',
     'rights': 'rights_violated',
     'rights_violated': 'rights_violated',
     'rights violated': 'rights_violated',
     'witnesses': 'witnesses',
     'evidence': 'evidence'
 };
+
+// Determine the correct section to fix based on issue content
+// AI review may identify cross-section issues where the fix should go to a different section
+function determineFixSection(issue) {
+    const suggestion = (issue.suggestion || '').toLowerCase();
+    const description = (issue.description || '').toLowerCase();
+    const defaultSection = sectionNameMap[issue.section.toLowerCase()] || issue.section;
+
+    // If suggestion mentions changing "story text" or "narrative", fix should go to incident_narrative
+    if (suggestion.includes('story text') || suggestion.includes('story to') ||
+        suggestion.includes('narrative') || description.includes('story text')) {
+        return 'incident_narrative';
+    }
+
+    // If suggestion mentions changing "incident section" or "incident overview", use that
+    if (suggestion.includes('incident section') || suggestion.includes('incident overview')) {
+        return 'incident_overview';
+    }
+
+    return defaultSection;
+}
 
 function startAIReview() {
     const btn = document.getElementById('aiReviewBtn');
@@ -1674,7 +1697,8 @@ function showCurrentIssue() {
 async function generateFix(issueIndex) {
     const issue = aiReviewResults.issues[issueIndex];
     const fixArea = document.getElementById('fixContentArea');
-    const mappedSection = sectionNameMap[issue.section.toLowerCase()] || issue.section;
+    // Use smart section detection based on issue content
+    const mappedSection = determineFixSection(issue);
 
     fixArea.innerHTML = `
         <div class="text-center py-3">
