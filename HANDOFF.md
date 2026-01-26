@@ -2776,6 +2776,18 @@ When AI review identified cross-section issues like "Incident time inconsistency
 **Files modified:**
 - `templates/documents/document_review.html` - Added `determineFixSection()` function, updated `generateFix()` to use it
 
+**Issue 4: Time displayed in 24-hour military format**
+
+The incident time was displayed as "18:30:00" instead of "6:30 PM" in the document review and preview pages.
+
+**Root cause:** The Django TimeField value was being displayed raw without formatting.
+
+**Solution:** Added Django's `|time:"g:i A"` filter to format times in 12-hour AM/PM format.
+
+**Files modified:**
+- `templates/documents/document_review.html` - Added time filter
+- `templates/documents/document_preview.html` - Added time filter
+
 ---
 
 ## Instructions for Next Claude Session
