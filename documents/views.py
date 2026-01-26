@@ -1598,7 +1598,6 @@ def generate_fix(request, document_id):
             rewritten = result.get('rewritten_content', '')
             if rewritten:
                 # Map section types to their primary TEXT field only
-                # Exclude: relief_sought (booleans), plaintiff_info (structured), incident_overview (structured)
                 default_field_map = {
                     'incident_narrative': 'detailed_narrative',
                     'damages': 'physical_injury_description',
@@ -1607,6 +1606,26 @@ def generate_fix(request, document_id):
                 default_field = default_field_map.get(section_type)
                 if default_field:
                     result['field_updates'] = {default_field: rewritten}
+                elif section_type == 'incident_overview':
+                    # For incident_overview, try to parse the rewritten content to extract fields
+                    # Format: "Location: value\nCity: value\nState: value"
+                    field_updates = {}
+                    for line in rewritten.split('\n'):
+                        line = line.strip()
+                        if line.startswith('Location:'):
+                            field_updates['incident_location'] = line.replace('Location:', '').strip()
+                        elif line.startswith('City:'):
+                            field_updates['city'] = line.replace('City:', '').strip()
+                        elif line.startswith('State:'):
+                            field_updates['state'] = line.replace('State:', '').strip()
+                        elif line.startswith('Date:'):
+                            date_str = line.replace('Date:', '').strip()
+                            field_updates['incident_date'] = _convert_date_format(date_str)
+                        elif line.startswith('Time:'):
+                            time_str = line.replace('Time:', '').strip()
+                            field_updates['incident_time'] = _convert_time_format(time_str)
+                    if field_updates:
+                        result['field_updates'] = field_updates
 
         # Record AI usage on success and include updated usage info
         if result.get('success'):

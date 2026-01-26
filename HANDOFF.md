@@ -2726,6 +2726,42 @@ Previously, YouTube video analysis was on a separate page, disconnected from the
 - `templates/documents/edit_evidence.html` - Added YouTube video section with thumbnail, info, and link functionality
 - `static/css/app-theme.css` - Added dark mode styles for YouTube video elements including Quick Add card
 
+### AI Review Fix Mode Issues (RESOLVED - January 2026)
+
+Two issues were found with the AI Review "Fix Issues Step-by-Step" feature:
+
+**Issue 1: AI fixes not being saved for `incident_overview` section**
+
+When applying AI-suggested fixes for issues like "Inconsistent Incident Location", the changes weren't being saved to the database.
+
+**Root cause:** The `generate_fix` function had a fallback that created `field_updates` when the AI didn't return them, but `incident_overview` was excluded from the fallback map because it's a structured section with multiple fields.
+
+**Solution:**
+1. Added a smarter fallback in `generate_fix` that parses the rewritten content for `incident_overview` and extracts individual fields (location, city, state, date, time)
+2. Updated the `rewrite_section` AI prompt to be more explicit about required `field_updates` format for each section type
+
+**Files modified:**
+- `documents/views.py` - Added parsing logic for `incident_overview` fallback in `generate_fix`
+- `documents/management/commands/seed_ai_prompts.py` - Updated `rewrite_section` prompt with explicit field requirements
+
+**Note:** Run `python manage.py seed_ai_prompts` after deploying to update the prompt.
+
+**Issue 2: Document header (caption) incorrectly highlighted during fix mode**
+
+During fix mode, when an issue was identified for sections like `incident_overview` or `plaintiff_info`, both the document caption AND the content sections were being highlighted, causing confusion.
+
+**Root cause:** Multiple elements share the same `data-section` attribute (caption and content sections), and the highlighting code selected ALL matching elements.
+
+**Solution:** Added `data-caption="true"` attribute to caption sections and updated JavaScript functions to exclude caption sections from highlighting:
+- `highlightSection()` - excludes caption sections
+- `highlightCurrentFixSection()` - excludes caption sections
+- `scrollToIssue()` - prefers non-caption sections
+- `updateSectionContent()` - only updates content sections
+- `updateComparisonView()` - excludes caption sections
+
+**Files modified:**
+- `templates/documents/document_review.html` - Added `data-caption="true"` to caption elements, updated JS functions
+
 ---
 
 ## Instructions for Next Claude Session

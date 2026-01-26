@@ -626,7 +626,7 @@
             <div class="legal-document">
 
                 <!-- CAPTION -->
-                <div class="editable-section" data-section="incident_overview" data-field="court">
+                <div class="editable-section" data-section="incident_overview" data-field="court" data-caption="true">
                     <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('incident_overview')">
                         <i class="bi bi-pencil"></i>
                     </button>
@@ -640,7 +640,7 @@
                         </div>
 
                         <div class="caption-box">
-                            <div class="editable-section" data-section="plaintiff_info">
+                            <div class="editable-section" data-section="plaintiff_info" data-caption="true">
                                 <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('plaintiff_info')">
                                     <i class="bi bi-pencil"></i>
                                 </button>
@@ -652,7 +652,7 @@
                                 <span style="margin-left: 2rem;">Plaintiff,</span>
                             </div>
                             <div class="caption-vs">v.</div>
-                            <div class="editable-section" data-section="defendants">
+                            <div class="editable-section" data-section="defendants" data-caption="true">
                                 <button class="btn btn-sm btn-outline-primary edit-btn" onclick="editSection('defendants')">
                                     <i class="bi bi-pencil"></i>
                                 </button>
@@ -1382,7 +1382,8 @@ function highlightSection(sectionName, severity, issueIndex) {
     // Map section name to data-section attribute
     const mappedSection = sectionNameMap[sectionName.toLowerCase()] || sectionName;
 
-    const sections = document.querySelectorAll(`[data-section="${mappedSection}"]`);
+    // Exclude caption sections from highlighting - only highlight content sections
+    const sections = document.querySelectorAll(`[data-section="${mappedSection}"]:not([data-caption="true"])`);
     sections.forEach(el => {
         // Add the highest severity class (error/critical > warning > suggestion)
         // Handle both old (critical) and new (error) severity values
@@ -1400,7 +1401,12 @@ function highlightSection(sectionName, severity, issueIndex) {
 
 function scrollToIssue(sectionName, issueIndex) {
     const mappedSection = sectionNameMap[sectionName.toLowerCase()] || sectionName;
-    const section = document.querySelector(`[data-section="${mappedSection}"]`);
+    // Prefer non-caption sections for scrolling
+    let section = document.querySelector(`[data-section="${mappedSection}"]:not([data-caption="true"])`);
+    if (!section) {
+        // Fallback to any section if no non-caption section found
+        section = document.querySelector(`[data-section="${mappedSection}"]`);
+    }
     if (section) {
         section.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Flash effect
@@ -1500,7 +1506,8 @@ function updateComparisonView(sectionType, newContent) {
     const updatedDoc = document.getElementById('updatedDocument');
     if (!updatedDoc) return;
 
-    const sections = updatedDoc.querySelectorAll(`[data-section="${sectionType}"]`);
+    // Exclude caption sections - only update content sections
+    const sections = updatedDoc.querySelectorAll(`[data-section="${sectionType}"]:not([data-caption="true"])`);
 
     sections.forEach(el => {
         // Remove previous change highlights
@@ -1527,7 +1534,8 @@ function updateComparisonView(sectionType, newContent) {
     // Also highlight the corresponding section in the original as changed
     const originalDoc = document.getElementById('originalDocument');
     if (originalDoc) {
-        const originalSections = originalDoc.querySelectorAll(`[data-section="${sectionType}"]`);
+        // Exclude caption sections
+        const originalSections = originalDoc.querySelectorAll(`[data-section="${sectionType}"]:not([data-caption="true"])`);
         originalSections.forEach(el => {
             el.classList.add('section-original');
         });
@@ -1548,7 +1556,8 @@ function clearFixingHighlight() {
 function highlightCurrentFixSection(sectionName) {
     clearFixingHighlight();
     const mappedSection = sectionNameMap[sectionName.toLowerCase()] || sectionName;
-    const sections = document.querySelectorAll(`[data-section="${mappedSection}"]`);
+    // Exclude caption sections from fix highlighting - only highlight content sections
+    const sections = document.querySelectorAll(`[data-section="${mappedSection}"]:not([data-caption="true"])`);
     sections.forEach(el => {
         el.classList.add('fixing-now');
     });
@@ -1560,7 +1569,8 @@ function updateSectionContent(sectionType, newContent) {
     const documentPanel = document.querySelector('.document-panel .legal-document');
     if (!documentPanel) return;
 
-    const sections = documentPanel.querySelectorAll(`[data-section="${sectionType}"]`);
+    // Exclude caption sections - only update content sections
+    const sections = documentPanel.querySelectorAll(`[data-section="${sectionType}"]:not([data-caption="true"])`);
 
     sections.forEach(el => {
         // Remove fixing-now class and add just-updated class

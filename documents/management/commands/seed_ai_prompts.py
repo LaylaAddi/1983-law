@@ -690,12 +690,25 @@ Return a JSON object:
     }}
 }}
 
-The field_updates should map to actual database fields that need to be updated. Common fields:
-- For narrative: "detailed_narrative"
-- For damages: "physical_injury_description", "emotional_distress_description", etc.
-- For incident: "incident_location", "incident_date", etc.
+CRITICAL: field_updates is REQUIRED for the fix to be saved. Map to actual database fields:
 
-If the fix requires updating multiple fields, include all of them.''',
+For incident_overview section (MUST use these exact field names):
+- "incident_location": "Location name" (e.g., "City Hall, Waterloo, Iowa")
+- "city": "City name" (e.g., "Waterloo")
+- "state": "State abbreviation" (e.g., "Iowa")
+- "incident_date": "YYYY-MM-DD" format (e.g., "2024-01-15")
+- "incident_time": "HH:MM:SS" 24-hour format (e.g., "14:30:00")
+
+For incident_narrative section:
+- "detailed_narrative": The full narrative text
+
+For damages section:
+- "physical_injury_description", "emotional_distress_description", "property_damage_description"
+
+For rights_violated section:
+- "fourth_amendment_details", "first_amendment_details", "fourteenth_amendment_details"
+
+IMPORTANT: Include ALL fields that need updating. For location consistency issues, typically update "incident_location" field.''',
                 'available_variables': 'section_type, current_content, issue_title, issue_description, issue_suggestion, document_context',
                 'model_name': 'gpt-4o-mini',
                 'temperature': 0.2,
