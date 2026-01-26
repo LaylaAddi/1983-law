@@ -2817,6 +2817,26 @@ When applying AI fixes, the time field was being cleared because empty values we
 **Files modified:**
 - `documents/views.py` - Added empty value checks in both `generate_fix` and `apply_fix`
 
+**Issue 7: Document not updating after applying AI fix**
+
+When applying AI-generated fixes to structured sections (incident_overview, plaintiff_info, relief_sought), the document didn't visually update because:
+1. Visual updates only worked for prose sections, not structured field-based sections
+2. Page only reloaded after ALL issues were processed, not after each structured fix
+
+**Root cause:** Structured sections store data in multiple database fields but display as prose. The AI returns structured data that doesn't match the prose display format, so visual updates silently failed. Users had to wait until all issues were processed to see any changes.
+
+**Solution:**
+- Reload page immediately after applying fix to structured sections (not just after last issue)
+- Show clear feedback about what fields were updated (or warning if none)
+- Added extensive debug logging (server-side and console) to help diagnose issues
+- Improved alert messages to show exact fields that were saved
+
+**Files modified:**
+- `documents/views.py` - Added Python logging to `generate_fix` and `apply_fix` for debugging
+- `templates/documents/document_review.html` - Reload for structured sections, console logging, better feedback UI
+
+**Deployment note:** After deploying these changes, check the server logs for `generate_fix` and `apply_fix` entries to see what field_updates are being passed around. Console logging is also added to the browser for frontend debugging.
+
 ---
 
 ## Instructions for Next Claude Session
