@@ -4407,3 +4407,106 @@ def _time_to_seconds(time_str):
     elif len(parts) == 3:
         return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
     return 0
+
+
+@login_required
+@require_POST
+def apply_video_suggestion(request, document_id):
+    """
+    Apply a video evidence suggestion directly to a document section.
+    Appends the suggested text to the appropriate field.
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    try:
+        data = json.loads(request.body)
+        section_type = data.get('section', '').strip()
+        text = data.get('text', '').strip()
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid request format.'})
+
+    if not section_type or not text:
+        return JsonResponse({'success': False, 'error': 'Section and text are required.'})
+
+    try:
+        if section_type == 'narrative':
+            section = document.sections.get(section_type='incident_narrative')
+            narrative = section.incident_narrative
+            if narrative.narrative:
+                narrative.narrative += '\n\n' + text
+            else:
+                narrative.narrative = text
+            narrative.save()
+            return JsonResponse({
+                'success': True,
+                'message': 'Added to Incident Narrative',
+                'section_url': f'/documents/{document_id}/section/incident_narrative/'
+            })
+
+        elif section_type == 'damages':
+            section = document.sections.get(section_type='damages')
+            damages = section.damages
+            # Append to emotional distress field (most common for video evidence)
+            if damages.emotional_distress:
+                damages.emotional_distress += '\n\n' + text
+            else:
+                damages.emotional_distress = text
+            damages.save()
+            return JsonResponse({
+                'success': True,
+                'message': 'Added to Damages (Emotional Distress)',
+                'section_url': f'/documents/{document_id}/section/damages/'
+            })
+
+        elif section_type == 'rights_violated':
+            section = document.sections.get(section_type='rights_violated')
+            rights = section.rights_violated
+
+            # Try to find the most appropriate amendment details field
+            # Check which amendments are checked and append to the first one
+            if rights.first_amendment:
+                if rights.first_amendment_details:
+                    rights.first_amendment_details += '\n\n' + text
+                else:
+                    rights.first_amendment_details = text
+                field_name = '1st Amendment Details'
+            elif rights.fourth_amendment:
+                if rights.fourth_amendment_details:
+                    rights.fourth_amendment_details += '\n\n' + text
+                else:
+                    rights.fourth_amendment_details = text
+                field_name = '4th Amendment Details'
+            elif rights.fourteenth_amendment:
+                if rights.fourteenth_amendment_details:
+                    rights.fourteenth_amendment_details += '\n\n' + text
+                else:
+                    rights.fourteenth_amendment_details = text
+                field_name = '14th Amendment Details'
+            else:
+                # Default to first amendment if none checked
+                if rights.first_amendment_details:
+                    rights.first_amendment_details += '\n\n' + text
+                else:
+                    rights.first_amendment_details = text
+                field_name = '1st Amendment Details'
+
+            rights.save()
+            return JsonResponse({
+                'success': True,
+                'message': f'Added to Rights Violated ({field_name})',
+                'section_url': f'/documents/{document_id}/section/rights_violated/'
+            })
+
+        elif section_type == 'evidence':
+            # For evidence, we can't easily pick which item, so just copy
+            return JsonResponse({
+                'success': False,
+                'copy_only': True,
+                'message': 'For evidence descriptions, please paste manually into the specific evidence item.'
+            })
+
+        else:
+            return JsonResponse({'success': False, 'error': f'Unknown section type: {section_type}'})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

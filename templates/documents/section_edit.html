@@ -3155,24 +3155,67 @@ document.addEventListener('DOMContentLoaded', function() {
             'damages': '{% url "documents:section_edit" document.id "damages" %}'
         };
 
-        // Copy to clipboard
-        navigator.clipboard.writeText(fullText).then(() => {
-            // Update button to show copied state with link
-            const card = btn.closest('.video-suggestion-card');
+        const card = btn.closest('.video-suggestion-card');
 
-            if (section === 'evidence') {
+        // For evidence section, just copy (can't auto-insert to specific item)
+        if (section === 'evidence') {
+            navigator.clipboard.writeText(fullText).then(() => {
                 btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied! Paste in evidence description';
-            } else {
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-secondary');
+                btn.disabled = true;
+                card.style.opacity = '0.7';
+            });
+            return;
+        }
+
+        // Show loading state
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Adding...';
+
+        // Call API to insert text directly
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch('{% url "documents:apply_video_suggestion" document.id %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ section: section, text: fullText })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success with link to view
                 btn.outerHTML = `
-                    <a href="${sectionUrls[section]}" class="btn btn-outline-success btn-sm">
-                        <i class="bi bi-check-lg me-1"></i>Copied! Go to ${sectionLabel} →
+                    <span class="text-success me-2"><i class="bi bi-check-circle-fill me-1"></i>${data.message}</span>
+                    <a href="${data.section_url}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-eye me-1"></i>View
                     </a>
                 `;
+                card.style.opacity = '0.7';
+                card.classList.add('applied-suggestion');
+            } else if (data.copy_only) {
+                // Fallback to copy
+                navigator.clipboard.writeText(fullText);
+                btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied! Paste manually';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-secondary');
+                btn.disabled = true;
+            } else {
+                btn.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Failed';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-danger');
+                console.error(data.error);
             }
-
-            // Mark card as applied
-            card.classList.add('applied-suggestion');
-            card.style.opacity = '0.7';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            btn.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Error';
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-danger');
         });
     }
 })();
