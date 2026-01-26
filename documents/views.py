@@ -1831,7 +1831,9 @@ def _get_section_content(document, section_type):
             if overview.incident_date:
                 parts.append(f"Date: {overview.incident_date}")
             if overview.incident_time:
-                parts.append(f"Time: {overview.incident_time}")
+                # Format time in 12-hour AM/PM format for display
+                formatted_time = overview.incident_time.strftime('%I:%M %p').lstrip('0')
+                parts.append(f"Time: {formatted_time}")
             if overview.incident_location:
                 parts.append(f"Location: {overview.incident_location}")
             if overview.city:
