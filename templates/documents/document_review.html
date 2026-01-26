@@ -1181,17 +1181,24 @@ const sectionNameMap = {
 function determineFixSection(issue) {
     const suggestion = (issue.suggestion || '').toLowerCase();
     const description = (issue.description || '').toLowerCase();
+    const title = (issue.title || '').toLowerCase();
     const defaultSection = sectionNameMap[issue.section.toLowerCase()] || issue.section;
 
-    // If suggestion mentions changing "story text" or "narrative", fix should go to incident_narrative
-    if (suggestion.includes('story text') || suggestion.includes('story to') ||
-        suggestion.includes('narrative') || description.includes('story text')) {
-        return 'incident_narrative';
+    // Time and date issues should ALWAYS go to incident_overview (where those fields are stored)
+    if (title.includes('time') || title.includes('date') ||
+        description.includes('incident time') || description.includes('incident date')) {
+        return 'incident_overview';
     }
 
-    // If suggestion mentions changing "incident section" or "incident overview", use that
-    if (suggestion.includes('incident section') || suggestion.includes('incident overview')) {
+    // Location issues should go to incident_overview
+    if (title.includes('location') && !title.includes('narrative')) {
         return 'incident_overview';
+    }
+
+    // If suggestion mentions changing "story text" or "narrative" (and not time/date), use incident_narrative
+    if ((suggestion.includes('story text') || suggestion.includes('narrative')) &&
+        !title.includes('time') && !title.includes('date')) {
+        return 'incident_narrative';
     }
 
     return defaultSection;

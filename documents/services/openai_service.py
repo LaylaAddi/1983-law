@@ -984,11 +984,16 @@ If no clear court can be determined, return:
                 context_parts.append(f"Plaintiff: {p.get('first_name', '')} {p.get('last_name', '')}")
             if document_data.get('incident', {}).get('incident_date'):
                 inc = document_data['incident']
-                context_parts.append(f"Incident: {inc.get('incident_date', '')} at {inc.get('incident_location', '')}, {inc.get('city', '')}, {inc.get('state', '')}")
+                time_str = inc.get('incident_time', '')
+                context_parts.append(f"Incident: {inc.get('incident_date', '')} at {time_str}, {inc.get('incident_location', '')}, {inc.get('city', '')}, {inc.get('state', '')}")
             if document_data.get('defendants'):
                 def_names = [d.get('name', '') for d in document_data['defendants'][:3]]
                 context_parts.append(f"Defendants: {', '.join(def_names)}")
-            if document_data.get('narrative', {}).get('summary'):
+            # Include narrative for context (has story details that may mention times, dates, etc.)
+            if document_data.get('narrative', {}).get('detailed_narrative'):
+                narrative = document_data['narrative']['detailed_narrative'][:500]
+                context_parts.append(f"Story: {narrative}...")
+            elif document_data.get('narrative', {}).get('summary'):
                 context_parts.append(f"Summary: {document_data['narrative']['summary'][:200]}...")
 
             document_context = '\n'.join(context_parts) if context_parts else 'No additional context available'
