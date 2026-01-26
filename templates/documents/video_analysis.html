@@ -147,6 +147,17 @@
     [data-theme="dark"] .add-clip-card .duration-display {
         color: #9ca3af;
     }
+    [data-theme="dark"] .alert-success {
+        background: #14532d !important;
+        border-color: #22c55e !important;
+        color: #86efac !important;
+    }
+    [data-theme="dark"] .alert-success strong {
+        color: #bbf7d0 !important;
+    }
+    [data-theme="dark"] .alert-success .small {
+        color: #86efac !important;
+    }
 </style>
 {% endblock %}
 
@@ -180,6 +191,23 @@
                     and we'll extract the transcript. You can then assign speakers (officers, witnesses, yourself)
                     to the dialogue.
                 </p>
+
+                <!-- Link to Evidence Section for AI Analysis -->
+                <div class="alert alert-success mb-4">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-robot fs-4 me-3"></i>
+                        <div>
+                            <strong>Ready to use your video evidence?</strong>
+                            <p class="mb-0 small">
+                                Once you've extracted transcripts, go to the Evidence section to let AI analyze them
+                                and suggest additions to your complaint with timestamps.
+                            </p>
+                        </div>
+                        <a href="{% url 'documents:section_edit' document.id 'evidence' %}" class="btn btn-success ms-auto">
+                            <i class="bi bi-arrow-right me-1"></i>Go to Evidence
+                        </a>
+                    </div>
+                </div>
 
                 <!-- Add Video Form -->
                 <div class="card bg-light mb-4">
