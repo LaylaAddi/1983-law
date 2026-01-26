@@ -1598,6 +1598,23 @@ def generate_fix(request, document_id):
         # Log AI response for debugging
         logger.info(f"generate_fix AI response: section_type={section_type}, field_updates={result.get('field_updates')}, rewritten_content[:100]={result.get('rewritten_content', '')[:100]}")
 
+        # Helper function to extract time from text (like "6:30 PM" or "18:30")
+        def extract_time_from_text(text):
+            import re
+            if not text:
+                return None
+            # Match patterns like "6:30 PM", "06:30 AM", "18:30", "6:30PM"
+            patterns = [
+                r'\b(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\b',  # 6:30 PM, 6:30PM
+                r'\b(\d{1,2}:\d{2}:\d{2})\b',  # 18:30:00
+                r'\b(\d{2}:\d{2})\b',  # 18:30
+            ]
+            for pattern in patterns:
+                match = re.search(pattern, text)
+                if match:
+                    return match.group(1)
+            return None
+
         # If field_updates is empty, create a default based on section_type
         # Only for sections with primary text fields - NOT for boolean/structured sections
         if result.get('success') and not result.get('field_updates'):
@@ -1647,6 +1664,21 @@ def generate_fix(request, document_id):
                         logger.info(f"generate_fix fallback parsed: field_updates={field_updates}")
                     else:
                         logger.warning(f"generate_fix fallback: no fields parsed from incident_overview rewritten_content")
+
+        # For incident_overview: if we still don't have incident_time, try to extract from issue suggestion
+        if section_type == 'incident_overview':
+            current_updates = result.get('field_updates', {})
+            if not current_updates.get('incident_time'):
+                # Try to extract time from issue suggestion or description
+                suggestion_text = f"{issue.get('suggestion', '')} {issue.get('description', '')}"
+                extracted_time = extract_time_from_text(suggestion_text)
+                if extracted_time:
+                    converted = _convert_time_format(extracted_time)
+                    if converted:
+                        if not current_updates:
+                            result['field_updates'] = {}
+                        result['field_updates']['incident_time'] = converted
+                        logger.info(f"generate_fix extracted time from issue: {extracted_time} -> {converted}")
 
         # Log final field_updates being returned
         logger.info(f"generate_fix returning: field_updates={result.get('field_updates')}")
