@@ -2837,6 +2837,26 @@ When applying AI-generated fixes to structured sections (incident_overview, plai
 
 **Deployment note:** After deploying these changes, check the server logs for `generate_fix` and `apply_fix` entries to see what field_updates are being passed around. Console logging is also added to the browser for frontend debugging.
 
+**Issue 8: Time not being extracted when field is already blank**
+
+When applying AI fix for time inconsistency, the time wasn't being updated because:
+1. `_get_section_content` only includes "Time:" line if `incident_time` exists in database
+2. If time is blank, AI has nothing to preserve/fix
+3. AI returns no field_updates for time
+4. Fallback parsing finds no "Time:" line to parse
+5. Nothing gets saved
+
+**Root cause:** The AI review identifies the time from the narrative (e.g., "6:30 PM"), but when generating the fix, the current content sent to AI has no time value because the database field is already empty.
+
+**Solution:**
+- Added `extract_time_from_text()` helper function to extract time patterns from text
+- After all other attempts, check the issue's suggestion/description for time values
+- The issue suggestion typically says something like "update time to 6:30 PM"
+- Extract and convert that time to save to database
+
+**Files modified:**
+- `documents/views.py` - Added time extraction from issue suggestion as final fallback
+
 ---
 
 ## Instructions for Next Claude Session
