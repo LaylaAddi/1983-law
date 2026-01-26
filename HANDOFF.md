@@ -2788,6 +2788,21 @@ The incident time was displayed as "18:30:00" instead of "6:30 PM" in the docume
 - `templates/documents/document_review.html` - Added time filter
 - `templates/documents/document_preview.html` - Added time filter
 
+**Issue 5: Visual updates not working for structured sections**
+
+When applying AI fixes to structured sections (incident_overview, plaintiff_info), the document preview didn't update visually even though the database was updated.
+
+**Root cause:** The visual update function tried to insert structured content ("Date: X\nTime: Y...") into a paragraph expecting prose format ("On or about X, at approximately Y...").
+
+**Solution:**
+- Skip visual updates for structured sections (incident_overview, plaintiff_info, relief_sought)
+- Auto-reload the page after all fixes are applied to show actual changes
+- Also format time in AM/PM in `_get_section_content` before sending to AI
+
+**Files modified:**
+- `templates/documents/document_review.html` - Skip visual updates for structured sections, auto-reload after fixes
+- `documents/views.py` - Format time in AM/PM in `_get_section_content`
+
 ---
 
 ## Instructions for Next Claude Session
