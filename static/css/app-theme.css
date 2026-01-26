@@ -1682,6 +1682,11 @@ a:hover {
     border-color: #22c55e !important;
 }
 
+/* Hint text below violation action buttons */
+[data-theme="dark"] .violation-action-hint {
+    color: var(--dark-text-muted) !important;
+}
+
 /* Rights analysis footer */
 [data-theme="dark"] .rights-analysis-footer {
     background: var(--dark-bg-card);

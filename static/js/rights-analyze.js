@@ -400,6 +400,9 @@
                             <i class="bi bi-clipboard me-1"></i>Copy to Details
                         </button>
                     </div>
+                    <p class="violation-action-hint text-muted small mt-2 mb-0" style="display: none;">
+                        <i class="bi bi-info-circle me-1"></i>Review changes below and save to add to your case.
+                    </p>
                 </div>
             </div>
         `;
@@ -425,14 +428,15 @@
             // Mark card as applied
             card.classList.add('applied');
 
-            // Update button
-            button.innerHTML = '<i class="bi bi-check-lg me-1"></i>Checked!';
+            // Update button to show it was checked
+            button.innerHTML = '<i class="bi bi-check-lg me-1"></i>Box Checked Below';
             button.classList.remove('btn-outline-primary');
             button.classList.add('btn-success');
             button.disabled = true;
 
-            // Scroll to the checkbox so user can see it
-            checkbox.closest('.form-check, .mb-3')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Show the hint text
+            const hint = card.querySelector('.violation-action-hint');
+            if (hint) hint.style.display = 'block';
         }
     }
 
@@ -529,21 +533,19 @@
         button.classList.remove('btn-outline-secondary');
         button.classList.add('btn-success');
 
+        // Show the hint text
+        const card = button.closest('.violation-card');
+        if (card) {
+            const hint = card.querySelector('.violation-action-hint');
+            if (hint) hint.style.display = 'block';
+        }
+
         // Reset button after 2 seconds
         setTimeout(function() {
             button.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy to Details';
             button.classList.remove('btn-success');
             button.classList.add('btn-outline-secondary');
         }, 2000);
-
-        // Scroll to the details field
-        detailsField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-        // Highlight briefly
-        detailsField.style.backgroundColor = '#d1e7dd';
-        setTimeout(function() {
-            detailsField.style.backgroundColor = '';
-        }, 1000);
     }
 
     function showError(panel, message) {
