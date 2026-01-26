@@ -285,7 +285,12 @@
                                         </div>
                                         <div class="transcript-box" contenteditable="true"
                                              data-capture-id="{{ capture.id }}">{{ capture.attributed_transcript }}</div>
-                                        <p class="text-muted small mt-1 mb-0"><i class="bi bi-info-circle me-1"></i>Click in the text where a speaker changes, then click a speaker button above to insert their name.</p>
+                                        <div class="d-flex justify-content-between align-items-center mt-1">
+                                            <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>Click in the text where a speaker changes, then click a speaker button above to insert their name.</p>
+                                            <span class="save-status small text-muted" data-capture-id="{{ capture.id }}">
+                                                <i class="bi bi-cloud-check me-1"></i>Auto-saved
+                                            </span>
+                                        </div>
                                         {% elif capture.extraction_error %}
                                         <div class="text-danger small">
                                             <i class="bi bi-exclamation-triangle me-1"></i>{{ capture.extraction_error }}
@@ -968,17 +973,50 @@ document.querySelectorAll('.speaker-attribution').forEach(select => {
 
 // Save transcript function (reusable)
 async function saveTranscript(captureId, text) {
+    const statusEl = document.querySelector(`.save-status[data-capture-id="${captureId}"]`);
+
+    // Show saving indicator
+    if (statusEl) {
+        statusEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+        statusEl.classList.remove('text-muted', 'text-success', 'text-danger');
+        statusEl.classList.add('text-info');
+    }
+
     try {
         const formData = new FormData();
         formData.append('attributed_transcript', text);
         formData.append('csrfmiddlewaretoken', csrfToken);
 
-        await fetch(`/documents/${documentId}/video-analysis/capture/${captureId}/update/`, {
+        const response = await fetch(`/documents/${documentId}/video-analysis/capture/${captureId}/update/`, {
             method: 'POST',
             body: formData
         });
+
+        // Show saved indicator
+        if (statusEl) {
+            if (response.ok) {
+                statusEl.innerHTML = '<i class="bi bi-cloud-check me-1"></i>Saved';
+                statusEl.classList.remove('text-info', 'text-danger');
+                statusEl.classList.add('text-success');
+                // Fade back to muted after 2 seconds
+                setTimeout(() => {
+                    statusEl.innerHTML = '<i class="bi bi-cloud-check me-1"></i>Auto-saved';
+                    statusEl.classList.remove('text-success');
+                    statusEl.classList.add('text-muted');
+                }, 2000);
+            } else {
+                statusEl.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Save failed';
+                statusEl.classList.remove('text-info', 'text-success');
+                statusEl.classList.add('text-danger');
+            }
+        }
     } catch (error) {
         console.error('Failed to save transcript');
+        if (statusEl) {
+            statusEl.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Save failed';
+            statusEl.classList.remove('text-info', 'text-success');
+            statusEl.classList.add('text-danger');
+        }
     }
 }
 
