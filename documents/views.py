@@ -4432,10 +4432,10 @@ def apply_video_suggestion(request, document_id):
         if section_type == 'narrative':
             section = document.sections.get(section_type='incident_narrative')
             narrative = section.incident_narrative
-            if narrative.narrative:
-                narrative.narrative += '\n\n' + text
+            if narrative.detailed_narrative:
+                narrative.detailed_narrative += '\n\n' + text
             else:
-                narrative.narrative = text
+                narrative.detailed_narrative = text
             narrative.save()
             return JsonResponse({
                 'success': True,
