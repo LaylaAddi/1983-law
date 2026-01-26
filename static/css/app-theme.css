@@ -2239,3 +2239,68 @@ a:hover {
     color: #bfdbfe !important;
 }
 
+/* =============================================
+   VIDEO EVIDENCE ANALYSIS FEATURE
+   ============================================= */
+
+/* Analyze Video Card */
+[data-theme="dark"] #analyzeVideoCard {
+    border-color: #0ea5e9 !important;
+}
+
+[data-theme="dark"] #analyzeVideoCard .card-header {
+    background: #0369a1 !important;
+}
+
+[data-theme="dark"] #analyzeVideoCard .card-body {
+    background: var(--dark-bg-secondary);
+}
+
+/* Video Suggestions Panel */
+[data-theme="dark"] #videoSuggestionsPanel {
+    border-color: #22c55e !important;
+}
+
+[data-theme="dark"] #videoSuggestionsPanel .card-header {
+    background: #166534 !important;
+}
+
+[data-theme="dark"] #videoSuggestionsPanel .card-body {
+    background: var(--dark-bg-secondary);
+}
+
+[data-theme="dark"] #videoSuggestionsSummary {
+    background: #1e3a5f !important;
+    border-color: #1e40af !important;
+    color: #bfdbfe !important;
+}
+
+/* Video Suggestion Cards */
+[data-theme="dark"] .video-suggestion-card {
+    background: var(--dark-bg-card) !important;
+    border-color: var(--dark-border) !important;
+}
+
+[data-theme="dark"] .video-suggestion-card .card-header {
+    background: var(--dark-bg-secondary) !important;
+    border-color: var(--dark-border) !important;
+}
+
+[data-theme="dark"] .video-suggestion-card .card-body {
+    background: var(--dark-bg-card) !important;
+}
+
+[data-theme="dark"] .video-suggestion-card blockquote {
+    border-color: #6b7280 !important;
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .video-suggestion-card .suggested-text-preview {
+    background: var(--dark-bg) !important;
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .video-suggestion-card .text-muted {
+    color: var(--dark-text-muted) !important;
+}
+

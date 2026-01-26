@@ -4254,3 +4254,156 @@ def video_update_speaker(request, document_id, video_id, speaker_id):
         'display_name': speaker.get_display_name(),
         'message': 'Speaker updated.'
     })
+
+
+@login_required
+@require_POST
+def analyze_video_evidence(request, document_id):
+    """
+    Analyze video transcripts and suggest document updates.
+    Returns suggestions for narrative, evidence descriptions, rights violations, and damages.
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Check AI usage limits
+    if not document.can_use_ai():
+        return JsonResponse({
+            'success': False,
+            'error': 'You have used all free AI analyses. Please upgrade to continue.',
+            'limit_reached': True,
+        })
+
+    # Get all video evidence with completed transcripts
+    evidence_section = document.sections.filter(section_type='evidence').first()
+    if not evidence_section:
+        return JsonResponse({
+            'success': False,
+            'error': 'No evidence section found.'
+        })
+
+    # Collect all transcripts with timestamps
+    transcripts = []
+    video_evidences = VideoEvidence.objects.filter(
+        evidence__section=evidence_section
+    ).prefetch_related('captures')
+
+    for video in video_evidences:
+        for capture in video.captures.filter(extraction_status='completed'):
+            transcript_text = capture.attributed_transcript or capture.raw_transcript
+            if transcript_text:
+                transcripts.append({
+                    'video_title': video.video_title,
+                    'video_id': video.video_id,
+                    'youtube_url': video.youtube_url,
+                    'start_time': capture.start_time_display,
+                    'end_time': capture.end_time_display,
+                    'transcript': transcript_text,
+                })
+
+    if not transcripts:
+        return JsonResponse({
+            'success': False,
+            'error': 'No video transcripts found. Please extract transcripts from your videos first.'
+        })
+
+    # Get current document context
+    story_text = document.story_text or ''
+
+    # Get defendants for context
+    defendants = []
+    defendants_section = document.sections.filter(section_type='defendants').first()
+    if defendants_section:
+        defendants = list(defendants_section.defendants.values_list('name', flat=True))
+
+    # Build transcript context for AI
+    transcript_context = ""
+    for i, t in enumerate(transcripts, 1):
+        transcript_context += f"\n--- Video Clip {i}: {t['video_title']} [{t['start_time']} - {t['end_time']}] ---\n"
+        transcript_context += f"YouTube URL: {t['youtube_url']}&t={_time_to_seconds(t['start_time'])}\n"
+        transcript_context += f"Transcript:\n{t['transcript']}\n"
+
+    # Call OpenAI for analysis
+    from .services.openai_service import OpenAIService
+    service = OpenAIService()
+
+    system_message = """You are a legal assistant helping a pro se plaintiff build a Section 1983 civil rights complaint.
+Analyze the video transcript evidence and suggest specific additions to the legal document.
+
+For each suggestion, provide:
+1. The target section (narrative, evidence, rights_violated, or damages)
+2. A direct quote from the transcript
+3. The timestamp reference formatted as [Video Title, MM:SS-MM:SS]
+4. Suggested text to add to that section
+
+Focus on:
+- Direct quotes showing rights violations (threats, unlawful orders, excessive force)
+- Statements by officers that demonstrate unlawful conduct
+- Evidence of damages (emotional distress, intimidation)
+- Key moments that support the plaintiff's claims
+
+Return JSON in this exact format:
+{
+    "suggestions": [
+        {
+            "section": "narrative|evidence|rights_violated|damages",
+            "quote": "Direct quote from transcript",
+            "timestamp_ref": "[Video Title, 1:23-1:45]",
+            "youtube_link": "full youtube URL with timestamp",
+            "suggested_text": "Text to add to the document section",
+            "explanation": "Brief explanation of why this is relevant"
+        }
+    ],
+    "summary": "Brief overall summary of what the video evidence shows"
+}"""
+
+    user_prompt = f"""Plaintiff's Story:
+{story_text}
+
+Defendants: {', '.join(defendants) if defendants else 'Not specified'}
+
+VIDEO TRANSCRIPT EVIDENCE:
+{transcript_context}
+
+Analyze these video transcripts and provide specific suggestions for improving the legal complaint.
+Focus on direct quotes and statements that support the plaintiff's Section 1983 claims.
+Include the YouTube link with timestamp for each suggestion so it can be referenced in the legal document."""
+
+    try:
+        response = service.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.3,
+            max_tokens=3000,
+            response_format={"type": "json_object"}
+        )
+
+        result = json.loads(response.choices[0].message.content)
+
+        # Record AI usage
+        document.record_ai_usage()
+
+        return JsonResponse({
+            'success': True,
+            'suggestions': result.get('suggestions', []),
+            'summary': result.get('summary', ''),
+            'transcript_count': len(transcripts),
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error analyzing video evidence: {str(e)}'
+        })
+
+
+def _time_to_seconds(time_str):
+    """Convert MM:SS or HH:MM:SS to seconds for YouTube timestamp."""
+    parts = time_str.split(':')
+    if len(parts) == 2:
+        return int(parts[0]) * 60 + int(parts[1])
+    elif len(parts) == 3:
+        return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+    return 0

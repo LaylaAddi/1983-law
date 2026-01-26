@@ -522,6 +522,50 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Analyze Video Evidence Card -->
+                    <div class="card border-info mb-4" id="analyzeVideoCard">
+                        <div class="card-header bg-info text-white py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-robot me-2"></i>AI: Analyze Video Evidence</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted mb-3">
+                                Let AI analyze your video transcripts and suggest additions to your complaint.
+                                Suggestions include timestamps and direct quotes for your legal document.
+                            </p>
+                            <button type="button" class="btn btn-info text-white" id="analyzeVideoBtn">
+                                <i class="bi bi-play-circle me-1"></i>Analyze Video Transcripts
+                            </button>
+                            <div id="analyzeVideoLoading" class="mt-3 d-none">
+                                <div class="d-flex align-items-center">
+                                    <div class="spinner-border spinner-border-sm text-info me-2" role="status"></div>
+                                    <span>Analyzing transcripts...</span>
+                                </div>
+                            </div>
+                            <div id="analyzeVideoError" class="alert alert-danger mt-3 d-none"></div>
+                        </div>
+                    </div>
+
+                    <!-- Video Analysis Suggestions Panel -->
+                    <div class="card border-success mb-4 d-none" id="videoSuggestionsPanel">
+                        <div class="card-header bg-success text-white py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-lightbulb me-2"></i>Video Evidence Suggestions</span>
+                                <button type="button" class="btn btn-sm btn-outline-light" id="closeSuggestionsPanel">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="videoSuggestionsSummary" class="alert alert-info mb-3"></div>
+                            <div id="videoSuggestionsList"></div>
+                            <p class="small text-muted mt-3 mb-0">
+                                <i class="bi bi-info-circle me-1"></i>Click "Apply" to add a suggestion to that section. You can edit the text after applying.
+                            </p>
+                        </div>
+                    </div>
                     {% endif %}
 
                         <div class="mb-4 {% if not items %}d-none{% endif %}" id="defendantsListContainer">
@@ -1237,6 +1281,80 @@ document.addEventListener('DOMContentLoaded', function() {
         helpContent.addEventListener('hide.bs.collapse', function () {
             helpChevron.style.transform = 'rotate(0deg)';
         });
+    }
+
+    // Check for video suggestion from sessionStorage
+    var videoSuggestionText = sessionStorage.getItem('videoSuggestionText');
+    var videoSuggestionSection = sessionStorage.getItem('videoSuggestionSection');
+    if (videoSuggestionText && window.location.search.includes('videoSuggestion=1')) {
+        // Clear the stored suggestion
+        sessionStorage.removeItem('videoSuggestionText');
+        sessionStorage.removeItem('videoSuggestionSection');
+
+        // Find the appropriate textarea based on section type
+        var targetTextarea = null;
+        var sectionType = '{{ section.section_type }}';
+
+        if (videoSuggestionSection === 'narrative' && sectionType === 'incident_narrative') {
+            targetTextarea = document.getElementById('id_narrative');
+        } else if (videoSuggestionSection === 'damages' && sectionType === 'damages') {
+            // For damages, append to the most relevant field
+            targetTextarea = document.getElementById('id_emotional_distress') ||
+                            document.getElementById('id_physical_injuries');
+        } else if (videoSuggestionSection === 'rights_violated' && sectionType === 'rights_violated') {
+            // For rights violated, find the first amendment details field
+            targetTextarea = document.getElementById('id_first_amendment_details') ||
+                            document.getElementById('id_fourth_amendment_details') ||
+                            document.getElementById('id_fourteenth_amendment_details');
+        }
+
+        if (targetTextarea) {
+            // Show a banner with the suggestion
+            var banner = document.createElement('div');
+            banner.className = 'alert alert-success alert-dismissible fade show mb-4';
+            banner.innerHTML = `
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <h6><i class="bi bi-youtube me-2"></i>Video Evidence Suggestion</h6>
+                <p class="mb-2">${videoSuggestionText}</p>
+                <button type="button" class="btn btn-success btn-sm" id="applyVideoSuggestionBtn">
+                    <i class="bi bi-plus-lg me-1"></i>Append to Field Below
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm ms-2" id="copyVideoSuggestionBtn">
+                    <i class="bi bi-clipboard me-1"></i>Copy Only
+                </button>
+            `;
+
+            // Insert banner at top of form
+            var form = document.querySelector('form#sectionForm') || document.querySelector('form');
+            if (form) {
+                form.insertBefore(banner, form.firstChild);
+
+                // Handle append button
+                document.getElementById('applyVideoSuggestionBtn').addEventListener('click', function() {
+                    if (targetTextarea.value.trim()) {
+                        targetTextarea.value += '\n\n' + videoSuggestionText;
+                    } else {
+                        targetTextarea.value = videoSuggestionText;
+                    }
+                    targetTextarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetTextarea.style.backgroundColor = '#d1e7dd';
+                    setTimeout(function() {
+                        targetTextarea.style.backgroundColor = '';
+                    }, 2000);
+                    banner.remove();
+                    formHasUnsavedChanges = true;
+                });
+
+                // Handle copy button
+                document.getElementById('copyVideoSuggestionBtn').addEventListener('click', function() {
+                    navigator.clipboard.writeText(videoSuggestionText).then(function() {
+                        this.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied!';
+                    }.bind(this));
+                });
+
+                banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
     }
 
     // Attorney toggle for plaintiff_info section
@@ -2860,6 +2978,200 @@ document.addEventListener('DOMContentLoaded', function() {
             quickAddBtn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Add Video Evidence';
         });
     });
+})();
+
+// Video Evidence Analysis Handler
+(function() {
+    'use strict';
+
+    const analyzeBtn = document.getElementById('analyzeVideoBtn');
+    const loadingDiv = document.getElementById('analyzeVideoLoading');
+    const errorDiv = document.getElementById('analyzeVideoError');
+    const suggestionsPanel = document.getElementById('videoSuggestionsPanel');
+    const suggestionsList = document.getElementById('videoSuggestionsList');
+    const summaryDiv = document.getElementById('videoSuggestionsSummary');
+    const closeBtn = document.getElementById('closeSuggestionsPanel');
+
+    if (!analyzeBtn) return;
+
+    // Close suggestions panel
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            suggestionsPanel.classList.add('d-none');
+        });
+    }
+
+    analyzeBtn.addEventListener('click', function() {
+        // Show loading, hide error
+        loadingDiv.classList.remove('d-none');
+        errorDiv.classList.add('d-none');
+        suggestionsPanel.classList.add('d-none');
+        analyzeBtn.disabled = true;
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch('{% url "documents:analyze_video_evidence" document.id %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingDiv.classList.add('d-none');
+            analyzeBtn.disabled = false;
+
+            if (data.success) {
+                displaySuggestions(data);
+            } else {
+                errorDiv.textContent = data.error || 'Failed to analyze video evidence.';
+                errorDiv.classList.remove('d-none');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            loadingDiv.classList.add('d-none');
+            analyzeBtn.disabled = false;
+            errorDiv.textContent = 'Network error. Please try again.';
+            errorDiv.classList.remove('d-none');
+        });
+    });
+
+    function displaySuggestions(data) {
+        // Show summary
+        summaryDiv.innerHTML = `<i class="bi bi-info-circle me-1"></i>${data.summary || 'Analysis complete.'} <strong>(${data.transcript_count} transcript${data.transcript_count !== 1 ? 's' : ''} analyzed)</strong>`;
+
+        // Build suggestions HTML
+        const suggestions = data.suggestions || [];
+        if (suggestions.length === 0) {
+            suggestionsList.innerHTML = '<p class="text-muted">No specific suggestions found. Your video transcripts may not contain content relevant to a Section 1983 claim.</p>';
+        } else {
+            let html = '';
+            suggestions.forEach((s, idx) => {
+                const sectionLabel = getSectionLabel(s.section);
+                const sectionBadgeClass = getSectionBadgeClass(s.section);
+
+                html += `
+                    <div class="card mb-3 video-suggestion-card" data-suggestion-idx="${idx}">
+                        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                            <span class="badge ${sectionBadgeClass}">${sectionLabel}</span>
+                            <small class="text-muted">${escapeHtml(s.timestamp_ref || '')}</small>
+                        </div>
+                        <div class="card-body py-2">
+                            <blockquote class="blockquote mb-2" style="font-size: 0.9rem; border-left: 3px solid #6c757d; padding-left: 1rem;">
+                                "${escapeHtml(s.quote || '')}"
+                            </blockquote>
+                            <p class="mb-2"><strong>Suggested text:</strong></p>
+                            <div class="suggested-text-preview p-2 bg-light rounded mb-2" style="font-size: 0.9rem;">
+                                ${escapeHtml(s.suggested_text || '')}
+                            </div>
+                            ${s.youtube_link ? `<p class="mb-2"><small><a href="${escapeHtml(s.youtube_link)}" target="_blank" class="text-decoration-none"><i class="bi bi-youtube me-1"></i>Watch clip</a></small></p>` : ''}
+                            <p class="text-muted small mb-2"><i class="bi bi-lightbulb me-1"></i>${escapeHtml(s.explanation || '')}</p>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-success btn-sm apply-suggestion-btn"
+                                        data-section="${s.section}"
+                                        data-text="${escapeHtml(s.suggested_text || '')}"
+                                        data-timestamp="${escapeHtml(s.timestamp_ref || '')}">
+                                    <i class="bi bi-check-lg me-1"></i>Apply to ${sectionLabel}
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm copy-suggestion-btn"
+                                        data-text="${escapeHtml(s.suggested_text || '')}">
+                                    <i class="bi bi-clipboard me-1"></i>Copy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            suggestionsList.innerHTML = html;
+
+            // Add click handlers for apply buttons
+            suggestionsList.querySelectorAll('.apply-suggestion-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    applySuggestion(this);
+                });
+            });
+
+            // Add click handlers for copy buttons
+            suggestionsList.querySelectorAll('.copy-suggestion-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const text = this.getAttribute('data-text');
+                    navigator.clipboard.writeText(text).then(() => {
+                        this.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied!';
+                        setTimeout(() => {
+                            this.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy';
+                        }, 2000);
+                    });
+                });
+            });
+        }
+
+        suggestionsPanel.classList.remove('d-none');
+        suggestionsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function getSectionLabel(section) {
+        const labels = {
+            'narrative': 'Incident Narrative',
+            'evidence': 'Evidence Description',
+            'rights_violated': 'Rights Violated',
+            'damages': 'Damages'
+        };
+        return labels[section] || section;
+    }
+
+    function getSectionBadgeClass(section) {
+        const classes = {
+            'narrative': 'bg-primary',
+            'evidence': 'bg-info',
+            'rights_violated': 'bg-danger',
+            'damages': 'bg-warning text-dark'
+        };
+        return classes[section] || 'bg-secondary';
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function applySuggestion(btn) {
+        const section = btn.getAttribute('data-section');
+        const text = btn.getAttribute('data-text');
+        const timestamp = btn.getAttribute('data-timestamp');
+
+        // Build the text to add with timestamp reference
+        const fullText = timestamp ? `${text} ${timestamp}` : text;
+
+        // Redirect to appropriate section with the text to add
+        // Store in sessionStorage so the target page can pick it up
+        sessionStorage.setItem('videoSuggestionText', fullText);
+        sessionStorage.setItem('videoSuggestionSection', section);
+
+        // Map section to URL
+        const sectionUrls = {
+            'narrative': '{% url "documents:section_edit" document.id "incident_narrative" %}',
+            'evidence': window.location.href, // Stay on current page for evidence
+            'rights_violated': '{% url "documents:section_edit" document.id "rights_violated" %}',
+            'damages': '{% url "documents:section_edit" document.id "damages" %}'
+        };
+
+        if (section === 'evidence') {
+            // For evidence, show a message to edit the evidence item
+            alert('Text copied! Edit your evidence item and paste the suggestion into the description field.');
+            navigator.clipboard.writeText(fullText);
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied!';
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-secondary');
+            btn.disabled = true;
+        } else {
+            // Redirect to the section
+            window.location.href = sectionUrls[section] + '?videoSuggestion=1';
+        }
+    }
 })();
 </script>
 {% endif %}
