@@ -12,6 +12,9 @@ from decimal import Decimal, InvalidOperation
 import stripe
 import json
 import threading
+import logging
+
+logger = logging.getLogger(__name__)
 from .help_content import get_section_help
 from django.core.mail import send_mail
 from django.contrib.admin.views.decorators import staff_member_required
@@ -1592,6 +1595,9 @@ def generate_fix(request, document_id):
         # Include the original content for diff comparison
         result['original_content'] = current_content
 
+        # Log AI response for debugging
+        logger.info(f"generate_fix AI response: section_type={section_type}, field_updates={result.get('field_updates')}, rewritten_content[:100]={result.get('rewritten_content', '')[:100]}")
+
         # If field_updates is empty, create a default based on section_type
         # Only for sections with primary text fields - NOT for boolean/structured sections
         if result.get('success') and not result.get('field_updates'):
@@ -1638,6 +1644,12 @@ def generate_fix(request, document_id):
                                     field_updates['incident_time'] = converted
                     if field_updates:
                         result['field_updates'] = field_updates
+                        logger.info(f"generate_fix fallback parsed: field_updates={field_updates}")
+                    else:
+                        logger.warning(f"generate_fix fallback: no fields parsed from incident_overview rewritten_content")
+
+        # Log final field_updates being returned
+        logger.info(f"generate_fix returning: field_updates={result.get('field_updates')}")
 
         # Record AI usage on success and include updated usage info
         if result.get('success'):
@@ -1666,6 +1678,9 @@ def apply_fix(request, document_id):
 
         section_type = data.get('section_type', '')
         field_updates = data.get('field_updates', {})
+
+        # Debug logging
+        logger.info(f"apply_fix called: section_type={section_type}, field_updates={field_updates}")
 
         if not section_type:
             return JsonResponse({
@@ -1735,6 +1750,9 @@ def apply_fix(request, document_id):
                 instance.save()
                 # Invalidate cached complaint
                 document.invalidate_generated_complaint()
+                logger.info(f"apply_fix saved: updated_fields={updated_fields}")
+            else:
+                logger.warning(f"apply_fix: no fields updated (all skipped or not found)")
 
             return JsonResponse({
                 'success': True,

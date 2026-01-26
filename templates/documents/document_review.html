@@ -1734,6 +1734,13 @@ async function generateFix(issueIndex) {
         const data = await response.json();
 
         if (data.success) {
+            // Debug logging
+            console.log('generateFix response:', {
+                section_type: mappedSection,
+                field_updates: data.field_updates,
+                rewritten_content: data.rewritten_content?.substring(0, 200)
+            });
+
             // Update AI usage banner if info provided
             if (data.ai_usage_display) {
                 updateAIUsageBanner(data.ai_usage_display);
@@ -1879,6 +1886,12 @@ async function applyFix() {
     `;
 
     try {
+        // Debug logging
+        console.log('applyFix sending:', {
+            section_type: pendingFix.section_type,
+            field_updates: pendingFix.field_updates
+        });
+
         const response = await fetch(`/documents/{{ document.id }}/apply-fix/`, {
             method: 'POST',
             headers: {
@@ -1892,6 +1905,7 @@ async function applyFix() {
         });
 
         const data = await response.json();
+        console.log('applyFix response:', data);
 
         if (data.success) {
             appliedChanges.push({
@@ -1904,9 +1918,12 @@ async function applyFix() {
 
             // For structured sections (incident_overview, plaintiff_info),
             // the visual update doesn't work well because the content format
-            // doesn't match the prose display. Just track the change.
+            // doesn't match the prose display. Reload the page immediately
+            // so the user can see the updated data from the database.
             const structuredSections = ['incident_overview', 'plaintiff_info', 'relief_sought'];
-            if (!structuredSections.includes(sectionType)) {
+            const isStructuredSection = structuredSections.includes(sectionType);
+
+            if (!isStructuredSection) {
                 // Update the main document section visually
                 updateSectionContent(sectionType, newContent);
                 // Update the side-by-side comparison view
@@ -1916,17 +1933,32 @@ async function applyFix() {
             pendingFix = null;
             currentIssueIndex++;
 
-            // If this was the last issue, reload to show all changes
-            if (currentIssueIndex >= aiReviewResults.issues.length) {
+            // Reload page for structured sections OR if this was the last issue
+            if (isStructuredSection || currentIssueIndex >= aiReviewResults.issues.length) {
+                const updatedFields = data.updated_fields || [];
+                let alertClass = 'alert-success';
+                let fieldsText = '';
+
+                if (updatedFields.length > 0) {
+                    fieldsText = `Updated: ${updatedFields.join(', ')}`;
+                } else if (data.message) {
+                    // No automatic updates available
+                    alertClass = 'alert-warning';
+                    fieldsText = data.message;
+                } else {
+                    alertClass = 'alert-warning';
+                    fieldsText = 'No fields were updated (AI may not have provided specific field changes)';
+                }
+
                 fixArea.innerHTML = `
-                    <div class="alert alert-success">
-                        <i class="bi bi-check-circle me-1"></i>
-                        All fixes applied! Reloading to show changes...
+                    <div class="alert ${alertClass}">
+                        <i class="bi bi-${alertClass === 'alert-success' ? 'check-circle' : 'exclamation-triangle'} me-1"></i>
+                        ${escapeHtml(fieldsText)}. Reloading...
                     </div>
                 `;
                 setTimeout(() => {
                     window.location.reload();
-                }, 1500);
+                }, 2000);
             } else {
                 showCurrentIssue();
             }
