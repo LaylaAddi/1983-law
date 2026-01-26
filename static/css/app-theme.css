@@ -2304,3 +2304,18 @@ a:hover {
     color: var(--dark-text-muted) !important;
 }
 
+/* Video Evidence Sidebar Card */
+[data-theme="dark"] .card.border-danger .list-group-item {
+    background: var(--dark-bg-secondary) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .card.border-danger .list-group-item .text-muted {
+    color: var(--dark-text-muted) !important;
+}
+
+[data-theme="dark"] .card.border-danger .list-group-item .text-truncate {
+    color: var(--dark-text) !important;
+}
+

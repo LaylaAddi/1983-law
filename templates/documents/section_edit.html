@@ -1188,6 +1188,42 @@
                 </a>
             </div>
         </div>
+
+        {% if section.section_type == 'evidence' and video_evidences %}
+        <!-- Video Evidence Summary -->
+        <div class="card mt-4 border-danger">
+            <div class="card-header bg-danger text-white py-2">
+                <small><i class="bi bi-youtube me-1"></i>Video Evidence ({{ video_evidences|length }})</small>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for video in video_evidences %}
+                    <div class="list-group-item py-2 px-3">
+                        <div class="d-flex align-items-center">
+                            <img src="https://img.youtube.com/vi/{{ video.video_id }}/default.jpg"
+                                 alt="" class="rounded me-2" style="width: 60px; height: 45px; object-fit: cover;">
+                            <div class="flex-grow-1 min-width-0">
+                                <p class="mb-0 small text-truncate" title="{{ video.video_title }}">
+                                    {{ video.video_title|truncatechars:25 }}
+                                </p>
+                                <small class="text-muted">
+                                    {% with clips=video.captures.count %}
+                                    {{ clips }} clip{{ clips|pluralize }}
+                                    {% endwith %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="p-2 border-top">
+                    <a href="{% url 'documents:video_analysis' document.id %}" class="btn btn-outline-danger btn-sm w-100">
+                        <i class="bi bi-pencil me-1"></i>Manage Videos
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 

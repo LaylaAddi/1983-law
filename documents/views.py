@@ -469,6 +469,13 @@ def section_edit(request, document_id, section_type):
     if is_profile_based:
         context['user_profile'] = request.user
 
+    # For evidence section, add video evidences for sidebar display
+    if section_type == 'evidence' and request.user.can_use_video_analysis():
+        video_evidences = VideoEvidence.objects.filter(
+            evidence__section=section
+        ).prefetch_related('captures').select_related('evidence')
+        context['video_evidences'] = video_evidences
+
     return render(request, 'documents/section_edit.html', context)
 
 
