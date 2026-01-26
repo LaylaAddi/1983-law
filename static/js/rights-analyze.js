@@ -436,6 +436,63 @@
         }
     }
 
+    // Custom modal for Replace/Append choice
+    function showReplaceAppendModal(callback) {
+        // Create modal if it doesn't exist
+        let modal = document.getElementById('replaceAppendModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'replaceAppendModal';
+            modal.className = 'modal fade';
+            modal.tabIndex = -1;
+            modal.innerHTML = `
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="bi bi-question-circle me-2"></i>Field Has Content</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>This field already has content. What would you like to do?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-action="cancel">Cancel</button>
+                            <button type="button" class="btn btn-outline-primary" data-action="append">
+                                <i class="bi bi-plus-lg me-1"></i>Append
+                            </button>
+                            <button type="button" class="btn btn-primary" data-action="replace">
+                                <i class="bi bi-arrow-repeat me-1"></i>Replace
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        const bsModal = new bootstrap.Modal(modal);
+
+        // Handle button clicks
+        const handleClick = function(e) {
+            const action = e.target.closest('[data-action]')?.getAttribute('data-action');
+            if (action) {
+                bsModal.hide();
+                modal.removeEventListener('click', handleClick);
+                callback(action);
+            }
+        };
+
+        modal.addEventListener('click', handleClick);
+
+        // Handle modal close without action (X button or backdrop)
+        modal.addEventListener('hidden.bs.modal', function onHidden() {
+            modal.removeEventListener('hidden.bs.modal', onHidden);
+            modal.removeEventListener('click', handleClick);
+        }, { once: true });
+
+        bsModal.show();
+    }
+
     function handleCopyExplanation(button) {
         const detailsId = button.getAttribute('data-details-id');
         const explanation = button.getAttribute('data-explanation');
@@ -444,49 +501,49 @@
         if (detailsField && explanation) {
             // Check if field already has content
             if (detailsField.value.trim()) {
-                // Show confirmation dialog
-                const choice = confirm(
-                    'This field already has content.\n\n' +
-                    'Click OK to REPLACE the existing text.\n' +
-                    'Click Cancel to APPEND to the existing text.'
-                );
-
-                if (choice) {
-                    // Replace
-                    detailsField.value = explanation;
-                } else {
-                    // Append
-                    detailsField.value += '\n\n' + explanation;
-                }
+                // Show custom modal with Replace/Append/Cancel options
+                showReplaceAppendModal(function(action) {
+                    if (action === 'replace') {
+                        detailsField.value = explanation;
+                        finishCopy(button, detailsField);
+                    } else if (action === 'append') {
+                        detailsField.value += '\n\n' + explanation;
+                        finishCopy(button, detailsField);
+                    }
+                    // Cancel does nothing
+                });
             } else {
                 // Field is empty, just set the value
                 detailsField.value = explanation;
+                finishCopy(button, detailsField);
             }
-
-            detailsField.dispatchEvent(new Event('change', { bubbles: true }));
-            detailsField.dispatchEvent(new Event('input', { bubbles: true }));
-
-            // Update button
-            button.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied!';
-            button.classList.remove('btn-outline-secondary');
-            button.classList.add('btn-success');
-
-            // Reset button after 2 seconds
-            setTimeout(function() {
-                button.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy to Details';
-                button.classList.remove('btn-success');
-                button.classList.add('btn-outline-secondary');
-            }, 2000);
-
-            // Scroll to the details field
-            detailsField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-            // Highlight briefly
-            detailsField.style.backgroundColor = '#d1e7dd';
-            setTimeout(function() {
-                detailsField.style.backgroundColor = '';
-            }, 1000);
         }
+    }
+
+    function finishCopy(button, detailsField) {
+        detailsField.dispatchEvent(new Event('change', { bubbles: true }));
+        detailsField.dispatchEvent(new Event('input', { bubbles: true }));
+
+        // Update button
+        button.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied!';
+        button.classList.remove('btn-outline-secondary');
+        button.classList.add('btn-success');
+
+        // Reset button after 2 seconds
+        setTimeout(function() {
+            button.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy to Details';
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-secondary');
+        }, 2000);
+
+        // Scroll to the details field
+        detailsField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Highlight briefly
+        detailsField.style.backgroundColor = '#d1e7dd';
+        setTimeout(function() {
+            detailsField.style.backgroundColor = '';
+        }, 1000);
     }
 
     function showError(panel, message) {
