@@ -1895,15 +1895,34 @@ async function applyFix() {
                 applied: true,
             });
 
-            // Update the main document section visually
-            updateSectionContent(sectionType, newContent);
-
-            // Update the side-by-side comparison view
-            updateComparisonView(sectionType, newContent);
+            // For structured sections (incident_overview, plaintiff_info),
+            // the visual update doesn't work well because the content format
+            // doesn't match the prose display. Just track the change.
+            const structuredSections = ['incident_overview', 'plaintiff_info', 'relief_sought'];
+            if (!structuredSections.includes(sectionType)) {
+                // Update the main document section visually
+                updateSectionContent(sectionType, newContent);
+                // Update the side-by-side comparison view
+                updateComparisonView(sectionType, newContent);
+            }
 
             pendingFix = null;
             currentIssueIndex++;
-            showCurrentIssue();
+
+            // If this was the last issue, reload to show all changes
+            if (currentIssueIndex >= aiReviewResults.issues.length) {
+                fixArea.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-1"></i>
+                        All fixes applied! Reloading to show changes...
+                    </div>
+                `;
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showCurrentIssue();
+            }
         } else {
             fixArea.innerHTML = `
                 <div class="alert alert-danger">
