@@ -2803,6 +2803,20 @@ When applying AI fixes to structured sections (incident_overview, plaintiff_info
 - `templates/documents/document_review.html` - Skip visual updates for structured sections, auto-reload after fixes
 - `documents/views.py` - Format time in AM/PM in `_get_section_content`
 
+**Issue 6: Empty values overwriting existing data**
+
+When applying AI fixes, the time field was being cleared because empty values were being saved to the database.
+
+**Root cause:** When parsing AI-generated content, empty values were included in `field_updates`, causing existing data to be overwritten with nothing.
+
+**Solution:**
+- Skip empty values when parsing rewritten content in `generate_fix`
+- Skip empty values and failed conversions in `apply_fix`
+- Only update fields that have actual non-empty values
+
+**Files modified:**
+- `documents/views.py` - Added empty value checks in both `generate_fix` and `apply_fix`
+
 ---
 
 ## Instructions for Next Claude Session
