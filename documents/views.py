@@ -952,7 +952,7 @@ def _collect_document_data(document):
         io = incident_section.incident_overview
         data['incident'] = {
             'incident_date': str(io.incident_date) if io.incident_date else '',
-            'incident_time': str(io.incident_time) if io.incident_time else '',
+            'incident_time': io.incident_time,  # Keep as time object for template filter
             'incident_location': io.incident_location,
             'city': io.city,
             'state': io.state,
