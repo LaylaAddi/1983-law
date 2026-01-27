@@ -452,6 +452,11 @@ def section_edit(request, document_id, section_type):
     # Get help content for this section
     help_content = get_section_help(section_type)
 
+    # Get ordered sections for sidebar navigation
+    sections_queryset = document.sections.all()
+    section_type_order = [choice[0] for choice in DocumentSection.SECTION_TYPES]
+    ordered_sections = sorted(sections_queryset, key=lambda s: section_type_order.index(s.section_type) if s.section_type in section_type_order else 999)
+
     context = {
         'document': document,
         'section': section,
@@ -466,6 +471,7 @@ def section_edit(request, document_id, section_type):
         'profile_prefilled': profile_prefilled,
         'is_profile_based': is_profile_based,
         'can_use_video_analysis': request.user.can_use_video_analysis(),
+        'ordered_sections': ordered_sections,
     }
 
     # For profile-based sections, add user profile data for read-only display
@@ -835,9 +841,11 @@ def document_review(request, document_id):
     # Collect all document data from the database
     document_data = _collect_document_data(document)
 
-    # Load section data with forms for editing
+    # Load section data with forms for editing (in SECTION_TYPES order)
     sections_data = {}
-    for section in document.sections.all():
+    section_type_order = [choice[0] for choice in DocumentSection.SECTION_TYPES]
+    ordered_sections = sorted(document.sections.all(), key=lambda s: section_type_order.index(s.section_type) if s.section_type in section_type_order else 999)
+    for section in ordered_sections:
         config = SECTION_CONFIG.get(section.section_type, {})
         Model = config.get('model')
         Form = config.get('form')
@@ -2951,9 +2959,14 @@ def finalize_document(request, document_id):
         messages.error(request, 'You must complete payment before finalizing your document.')
         return redirect('documents:checkout', document_id=document.id)
 
-    # Check for incomplete sections
-    sections = document.sections.all()
-    incomplete_sections = sections.exclude(status__in=['completed', 'not_applicable'])
+    # Check for incomplete sections (ordered by SECTION_TYPES)
+    section_type_order = [choice[0] for choice in DocumentSection.SECTION_TYPES]
+    all_sections = list(document.sections.all())
+    incomplete_sections = sorted(
+        [s for s in all_sections if s.status not in ['completed', 'not_applicable']],
+        key=lambda s: section_type_order.index(s.section_type) if s.section_type in section_type_order else 999
+    )
+    sections = document.sections.all()  # Keep for filter operations below
 
     # Check for defendants missing addresses
     from django.db.models import Q
@@ -2980,7 +2993,7 @@ def finalize_document(request, document_id):
             court_district_issue = "Incident overview incomplete"
 
     # Determine if document can be finalized
-    can_finalize = not incomplete_sections.exists() and not defendants_missing_address and not court_district_issue
+    can_finalize = not incomplete_sections and not defendants_missing_address and not court_district_issue
 
     if request.method == 'POST':
         # Block finalization if sections are incomplete
