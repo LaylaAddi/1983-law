@@ -3125,7 +3125,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             ${s.youtube_link ? `<p class="mb-2"><small><a href="${escapeHtml(s.youtube_link)}" target="_blank" class="text-decoration-none"><i class="bi bi-youtube me-1"></i>Watch clip</a></small></p>` : ''}
                             <p class="text-muted small mb-2"><i class="bi bi-lightbulb me-1"></i>${escapeHtml(s.explanation || '')}</p>
-                            <div class="d-flex gap-2">
+                            <div class="d-flex gap-2 flex-wrap">
                                 <button type="button" class="btn btn-success btn-sm apply-suggestion-btn"
                                         data-section="${s.section}"
                                         data-text="${escapeHtml(s.suggested_text || '')}"
@@ -3135,6 +3135,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <button type="button" class="btn btn-outline-secondary btn-sm copy-suggestion-btn"
                                         data-text="${escapeHtml(s.suggested_text || '')}">
                                     <i class="bi bi-clipboard me-1"></i>Copy
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm dismiss-suggestion-btn" title="Dismiss this suggestion">
+                                    <i class="bi bi-x-lg me-1"></i>Dismiss
                                 </button>
                             </div>
                         </div>
@@ -3160,6 +3163,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             this.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy';
                         }, 2000);
                     });
+                });
+            });
+
+            // Add click handlers for dismiss buttons
+            suggestionsList.querySelectorAll('.dismiss-suggestion-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const card = this.closest('.video-suggestion-card');
+                    card.style.transition = 'opacity 0.3s, transform 0.3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateX(-20px)';
+                    setTimeout(() => {
+                        card.remove();
+                        // Check if any suggestions remain
+                        const remaining = suggestionsList.querySelectorAll('.video-suggestion-card').length;
+                        if (remaining === 0) {
+                            suggestionsList.innerHTML = '<p class="text-muted">All suggestions dismissed. Click "Analyze Video Evidence" to generate new suggestions.</p>';
+                        }
+                    }, 300);
                 });
             });
 
