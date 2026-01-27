@@ -674,8 +674,11 @@ def edit_evidence(request, document_id, evidence_id):
     evidence = get_object_or_404(Evidence, id=evidence_id, section__document=document)
     section = evidence.section
 
-    # Get incident location for "Use Incident Location" button
+    # Get incident location, date, and time for "Use Incident" buttons
     incident_location_str = ''
+    incident_date = None
+    incident_time = None
+    incident_time_display = ''
     try:
         overview_section = document.sections.get(section_type='incident_overview')
         incident_overview = IncidentOverview.objects.get(section=overview_section)
@@ -687,6 +690,10 @@ def edit_evidence(request, document_id, evidence_id):
         if incident_overview.state:
             location_parts.append(incident_overview.state)
         incident_location_str = ', '.join(location_parts) if location_parts else ''
+        incident_date = incident_overview.incident_date
+        incident_time = incident_overview.incident_time
+        if incident_time:
+            incident_time_display = incident_time.strftime('%I:%M %p').lstrip('0')
     except (DocumentSection.DoesNotExist, IncidentOverview.DoesNotExist):
         pass
 
@@ -714,6 +721,9 @@ def edit_evidence(request, document_id, evidence_id):
         'form': form,
         'section': section,
         'incident_location': incident_location_str,
+        'incident_date': incident_date,
+        'incident_time': incident_time,
+        'incident_time_display': incident_time_display,
         'video_evidence': video_evidence,
         'can_use_video_analysis': request.user.can_use_video_analysis(),
     })

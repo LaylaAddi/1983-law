@@ -366,6 +366,7 @@ class EvidenceForm(forms.ModelForm):
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., My recording of the incident'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Describe this evidence'}),
             'date_created': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'time_created': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
             'location_obtained': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Where was this obtained?'}),
             'is_in_possession': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'needs_subpoena': forms.CheckboxInput(attrs={'class': 'form-check-input'}),

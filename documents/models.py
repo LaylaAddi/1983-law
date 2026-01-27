@@ -509,6 +509,7 @@ class Evidence(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     date_created = models.DateField(null=True, blank=True)
+    time_created = models.TimeField(null=True, blank=True)
     location_obtained = models.CharField(max_length=255, blank=True)
     is_in_possession = models.BooleanField(default=True)
     needs_subpoena = models.BooleanField(default=False)

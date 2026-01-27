@@ -43,17 +43,49 @@
                             {% if field.name == 'date_created' %}
                             <div class="mb-3">
                                 <label for="{{ field.id_for_label }}" class="form-label">
-                                    {{ field.label }}
+                                    {{ field.label }}{% if video_evidence %} <span class="text-danger">*</span>{% endif %}
                                 </label>
-                                {{ field }}
-                                {% if field.help_text %}
-                                    <div class="form-text">{{ field.help_text }}</div>
+                                <div class="input-group">
+                                    {{ field }}
+                                    {% if incident_date %}
+                                    <button type="button" class="btn btn-outline-secondary" id="useIncidentDate" title="Use the incident date from your case">
+                                        <i class="bi bi-calendar me-1"></i>Use Incident Date
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                {% if incident_date %}
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>Incident date: {{ incident_date|date:"F j, Y" }}
+                                </div>
+                                {% else %}
+                                <div class="form-text">When was this evidence created?</div>
+                                {% endif %}
+                            </div>
+                            {% elif field.name == 'time_created' %}
+                            <div class="mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label">
+                                    {{ field.label }}{% if video_evidence %} <span class="text-danger">*</span>{% endif %}
+                                </label>
+                                <div class="input-group">
+                                    {{ field }}
+                                    {% if incident_time %}
+                                    <button type="button" class="btn btn-outline-secondary" id="useIncidentTime" title="Use the incident time from your case">
+                                        <i class="bi bi-clock me-1"></i>Use Incident Time
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                {% if incident_time %}
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>Incident time: {{ incident_time_display }}
+                                </div>
+                                {% else %}
+                                <div class="form-text">What time was this evidence created?</div>
                                 {% endif %}
                             </div>
                             {% elif field.name == 'location_obtained' %}
                             <div class="mb-3">
                                 <label for="{{ field.id_for_label }}" class="form-label">
-                                    {{ field.label }}
+                                    {{ field.label }}{% if video_evidence %} <span class="text-danger">*</span>{% endif %}
                                 </label>
                                 <div class="input-group">
                                     {{ field }}
@@ -235,6 +267,7 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Use Incident Location button
     const useLocationBtn = document.getElementById('useIncidentLocation');
     if (useLocationBtn) {
         useLocationBtn.addEventListener('click', function() {
@@ -242,7 +275,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (locationField) {
                 locationField.value = '{{ incident_location|escapejs }}';
                 locationField.focus();
-                // Highlight the field briefly
                 locationField.style.backgroundColor = '#d4edda';
                 setTimeout(function() {
                     locationField.style.backgroundColor = '';
@@ -250,6 +282,79 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Use Incident Date button
+    const useDateBtn = document.getElementById('useIncidentDate');
+    if (useDateBtn) {
+        useDateBtn.addEventListener('click', function() {
+            const dateField = document.getElementById('id_date_created');
+            if (dateField) {
+                dateField.value = '{{ incident_date|date:"Y-m-d" }}';
+                dateField.focus();
+                dateField.style.backgroundColor = '#d4edda';
+                setTimeout(function() {
+                    dateField.style.backgroundColor = '';
+                }, 1500);
+            }
+        });
+    }
+
+    // Use Incident Time button
+    const useTimeBtn = document.getElementById('useIncidentTime');
+    if (useTimeBtn) {
+        useTimeBtn.addEventListener('click', function() {
+            const timeField = document.getElementById('id_time_created');
+            if (timeField) {
+                timeField.value = '{{ incident_time|time:"H:i" }}';
+                timeField.focus();
+                timeField.style.backgroundColor = '#d4edda';
+                setTimeout(function() {
+                    timeField.style.backgroundColor = '';
+                }, 1500);
+            }
+        });
+    }
+
+    {% if video_evidence %}
+    // Form validation for video evidence - require date, time, location
+    const evidenceForm = document.getElementById('evidenceForm');
+    if (evidenceForm) {
+        evidenceForm.addEventListener('submit', function(e) {
+            const dateField = document.getElementById('id_date_created');
+            const timeField = document.getElementById('id_time_created');
+            const locationField = document.getElementById('id_location_obtained');
+
+            let errors = [];
+
+            if (!dateField.value) {
+                errors.push('Date is required for video evidence');
+                dateField.classList.add('is-invalid');
+            } else {
+                dateField.classList.remove('is-invalid');
+            }
+
+            if (!timeField.value) {
+                errors.push('Time is required for video evidence');
+                timeField.classList.add('is-invalid');
+            } else {
+                timeField.classList.remove('is-invalid');
+            }
+
+            if (!locationField.value.trim()) {
+                errors.push('Location is required for video evidence');
+                locationField.classList.add('is-invalid');
+            } else {
+                locationField.classList.remove('is-invalid');
+            }
+
+            if (errors.length > 0) {
+                e.preventDefault();
+                alert('Please fill in required fields:\n\n• ' + errors.join('\n• '));
+                return false;
+            }
+        });
+    }
+    {% endif %}
 
     // YouTube linking functionality
     const linkYouTubeBtn = document.getElementById('linkYouTubeBtn');
