@@ -4462,7 +4462,11 @@ def apply_video_suggestion(request, document_id):
     try:
         if section_type == 'narrative':
             section = document.sections.get(section_type='incident_narrative')
-            narrative = section.incident_narrative
+            # Get or create IncidentNarrative model if it doesn't exist
+            try:
+                narrative = section.incident_narrative
+            except IncidentNarrative.DoesNotExist:
+                narrative = IncidentNarrative.objects.create(section=section)
             if narrative.detailed_narrative:
                 narrative.detailed_narrative += '\n\n' + text
             else:
@@ -4476,7 +4480,11 @@ def apply_video_suggestion(request, document_id):
 
         elif section_type == 'damages':
             section = document.sections.get(section_type='damages')
-            damages = section.damages
+            # Get or create Damages model if it doesn't exist
+            try:
+                damages = section.damages
+            except Damages.DoesNotExist:
+                damages = Damages.objects.create(section=section)
             # Append to emotional distress field (most common for video evidence)
             if damages.emotional_distress:
                 damages.emotional_distress += '\n\n' + text
@@ -4491,7 +4499,11 @@ def apply_video_suggestion(request, document_id):
 
         elif section_type == 'rights_violated':
             section = document.sections.get(section_type='rights_violated')
-            rights = section.rights_violated
+            # Get or create RightsViolated model if it doesn't exist
+            try:
+                rights = section.rights_violated
+            except RightsViolated.DoesNotExist:
+                rights = RightsViolated.objects.create(section=section)
 
             # Try to find the most appropriate amendment details field
             # Check which amendments are checked and append to the first one
