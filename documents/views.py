@@ -276,12 +276,15 @@ def document_detail(request, document_id):
         messages.info(request, 'Please tell your story first. This helps us understand your case and pre-fill relevant sections.')
         return redirect('documents:tell_your_story', document_id=document.id)
 
-    sections = document.sections.all()
+    # Get sections and order them according to SECTION_TYPES
+    sections_queryset = document.sections.all()
+    section_type_order = [choice[0] for choice in DocumentSection.SECTION_TYPES]
+    sections = sorted(sections_queryset, key=lambda s: section_type_order.index(s.section_type) if s.section_type in section_type_order else 999)
 
     # Check for defendants with AI-inferred agencies that need review
     defendants_needing_review = []
     defendants_missing_address = []
-    defendants_section = sections.filter(section_type='defendants').first()
+    defendants_section = sections_queryset.filter(section_type='defendants').first()
     if defendants_section:
         defendants_needing_review = defendants_section.defendants.filter(agency_inferred=True)
         # Check for defendants missing address (required for serving legal documents)
@@ -294,7 +297,7 @@ def document_detail(request, document_id):
     court_district_filled = False
     court_district_confirmed = False
     court_district_issue = False
-    incident_section = sections.filter(section_type='incident_overview').first()
+    incident_section = sections_queryset.filter(section_type='incident_overview').first()
     if incident_section:
         try:
             incident_overview = incident_section.incident_overview
