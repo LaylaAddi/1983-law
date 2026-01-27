@@ -3099,9 +3099,29 @@ document.addEventListener('DOMContentLoaded', function() {
                             <blockquote class="blockquote mb-2" style="font-size: 0.9rem; border-left: 3px solid #6c757d; padding-left: 1rem;">
                                 "${escapeHtml(s.quote || '')}"
                             </blockquote>
-                            <p class="mb-2"><strong>Suggested text:</strong></p>
+                            <div class="row mb-2">
+                                <div class="col-auto">
+                                    <label class="form-label small mb-1"><strong>Speaker:</strong></label>
+                                    <select class="form-select form-select-sm speaker-select" style="width: auto;">
+                                        <option value="">-- Select --</option>
+                                        <option value="me">Me (Plaintiff)</option>
+                                        <option value="officer">Officer/Defendant</option>
+                                        <option value="witness">Witness</option>
+                                        <option value="unknown">Unknown/Unclear</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <p class="mb-2"><strong>Suggested text:</strong> <button type="button" class="btn btn-link btn-sm p-0 ms-2 edit-suggestion-btn"><i class="bi bi-pencil"></i> Edit</button></p>
                             <div class="suggested-text-preview p-2 bg-light rounded mb-2" style="font-size: 0.9rem;">
                                 ${escapeHtml(s.suggested_text || '')}
+                            </div>
+                            <div class="suggested-text-edit d-none mb-2">
+                                <textarea class="form-control suggestion-textarea" rows="4" style="font-size: 0.9rem;">${escapeHtml(s.suggested_text || '')}</textarea>
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-sm btn-primary save-edit-btn">Save Edit</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary cancel-edit-btn">Cancel</button>
+                                </div>
                             </div>
                             ${s.youtube_link ? `<p class="mb-2"><small><a href="${escapeHtml(s.youtube_link)}" target="_blank" class="text-decoration-none"><i class="bi bi-youtube me-1"></i>Watch clip</a></small></p>` : ''}
                             <p class="text-muted small mb-2"><i class="bi bi-lightbulb me-1"></i>${escapeHtml(s.explanation || '')}</p>
@@ -3140,6 +3160,101 @@ document.addEventListener('DOMContentLoaded', function() {
                             this.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy';
                         }, 2000);
                     });
+                });
+            });
+
+            // Add click handlers for edit buttons
+            suggestionsList.querySelectorAll('.edit-suggestion-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const card = this.closest('.video-suggestion-card');
+                    const previewDiv = card.querySelector('.suggested-text-preview');
+                    const editDiv = card.querySelector('.suggested-text-edit');
+                    previewDiv.classList.add('d-none');
+                    editDiv.classList.remove('d-none');
+                    this.classList.add('d-none');
+                });
+            });
+
+            // Add click handlers for save edit buttons
+            suggestionsList.querySelectorAll('.save-edit-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const card = this.closest('.video-suggestion-card');
+                    const textarea = card.querySelector('.suggestion-textarea');
+                    const previewDiv = card.querySelector('.suggested-text-preview');
+                    const editDiv = card.querySelector('.suggested-text-edit');
+                    const editBtn = card.querySelector('.edit-suggestion-btn');
+                    const applyBtn = card.querySelector('.apply-suggestion-btn');
+                    const copyBtn = card.querySelector('.copy-suggestion-btn');
+
+                    const newText = textarea.value;
+                    previewDiv.textContent = newText;
+                    applyBtn.setAttribute('data-text', newText);
+                    copyBtn.setAttribute('data-text', newText);
+
+                    previewDiv.classList.remove('d-none');
+                    editDiv.classList.add('d-none');
+                    editBtn.classList.remove('d-none');
+                    previewDiv.classList.add('border', 'border-success');
+                    setTimeout(() => previewDiv.classList.remove('border', 'border-success'), 2000);
+                });
+            });
+
+            // Add click handlers for cancel edit buttons
+            suggestionsList.querySelectorAll('.cancel-edit-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const card = this.closest('.video-suggestion-card');
+                    const previewDiv = card.querySelector('.suggested-text-preview');
+                    const editDiv = card.querySelector('.suggested-text-edit');
+                    const editBtn = card.querySelector('.edit-suggestion-btn');
+                    const textarea = card.querySelector('.suggestion-textarea');
+                    const applyBtn = card.querySelector('.apply-suggestion-btn');
+
+                    // Reset textarea to current apply button value
+                    textarea.value = applyBtn.getAttribute('data-text');
+
+                    previewDiv.classList.remove('d-none');
+                    editDiv.classList.add('d-none');
+                    editBtn.classList.remove('d-none');
+                });
+            });
+
+            // Add change handlers for speaker dropdown
+            suggestionsList.querySelectorAll('.speaker-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const card = this.closest('.video-suggestion-card');
+                    const applyBtn = card.querySelector('.apply-suggestion-btn');
+                    const currentText = applyBtn.getAttribute('data-text');
+                    const speaker = this.value;
+
+                    // Add speaker prefix to the text if selected
+                    let speakerLabel = '';
+                    switch(speaker) {
+                        case 'me': speakerLabel = '[Plaintiff statement] '; break;
+                        case 'officer': speakerLabel = '[Officer/Defendant action] '; break;
+                        case 'witness': speakerLabel = '[Witness observation] '; break;
+                        case 'unknown': speakerLabel = '[Speaker unclear] '; break;
+                        case 'other': speakerLabel = '[Third party] '; break;
+                    }
+
+                    // Update preview to show speaker attribution
+                    if (speakerLabel) {
+                        const previewDiv = card.querySelector('.suggested-text-preview');
+                        const textarea = card.querySelector('.suggestion-textarea');
+                        const copyBtn = card.querySelector('.copy-suggestion-btn');
+
+                        // Remove any existing speaker prefix
+                        let cleanText = currentText.replace(/^\[(Plaintiff statement|Officer\/Defendant action|Witness observation|Speaker unclear|Third party)\] /, '');
+                        const newText = speakerLabel + cleanText;
+
+                        previewDiv.textContent = newText;
+                        textarea.value = newText;
+                        applyBtn.setAttribute('data-text', newText);
+                        copyBtn.setAttribute('data-text', newText);
+
+                        // Visual feedback
+                        this.classList.add('border-success');
+                        setTimeout(() => this.classList.remove('border-success'), 1000);
+                    }
                 });
             });
         }
