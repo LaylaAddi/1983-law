@@ -2803,6 +2803,48 @@ When applying AI fixes to structured sections (incident_overview, plaintiff_info
 - `templates/documents/document_review.html` - Skip visual updates for structured sections, auto-reload after fixes
 - `documents/views.py` - Format time in AM/PM in `_get_section_content`
 
+### Codebase Reverted to bea9bf0 (January 27, 2026)
+
+Issues were discovered after commit `bea9bf0`, so the codebase was reverted to that stable point.
+
+**Commits removed (9 total):**
+- `95892ba` Show fix preview in right comparison panel before applying
+- `cf0aa2e` Update HANDOFF.md - mark all AI Review fix issues as resolved
+- `aa55eb4` Update HANDOFF.md with time extraction fix
+- `7967d0f` Extract time from issue suggestion when AI doesn't return it
+- `66d2499` Update HANDOFF.md with document not updating fix
+- `607a4e3` Add debug logging and improve fix feedback for AI review
+- `ac58824` Fix section routing for time/date issues and improve AI context
+- `0984a54` Update HANDOFF.md with empty values fix
+- `01eff34` Fix empty values overwriting existing data in AI fix mode
+
+**How to revert:** `git reset --hard bea9bf0 && git push --force origin master`
+
+### Subscription AI Limit Not Enforced on Paid Documents (FIXED - January 27, 2026)
+
+Pro subscribers who exceeded their monthly AI limit (e.g., 57/50 uses) could still use AI features.
+
+**Root cause:** In `Document.can_use_ai()`, when `can_use_subscription_ai()` returned False (limit exceeded), the code fell through to check `payment_status == 'paid'`, which allowed AI usage via the per-document 100-use limit.
+
+```python
+# BEFORE (buggy):
+if self.user.can_use_subscription_ai():  # Returns False when over limit
+    return True
+elif self.payment_status == 'paid':  # Falls through here!
+    return self.ai_generations_used < settings.PAID_AI_USES  # 100 uses
+```
+
+**Solution:** If user has an active subscription, ALWAYS enforce subscription limits regardless of document payment status:
+
+```python
+# AFTER (fixed):
+if self.user.has_active_subscription():
+    return self.user.can_use_subscription_ai()  # Enforces limit
+```
+
+**Files modified:**
+- `documents/models.py` - Updated `can_use_ai()` to enforce subscription limits for all subscribers
+
 ---
 
 ## Instructions for Next Claude Session
