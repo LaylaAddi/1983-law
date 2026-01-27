@@ -207,9 +207,9 @@ class Document(models.Model):
         # Admin/staff have unlimited access
         if self.user.has_unlimited_access():
             return True
-        # Subscribers get AI based on their plan
-        if self.user.can_use_subscription_ai():
-            return True
+        # Subscribers MUST use subscription limits (enforced even on paid documents)
+        if self.user.has_active_subscription():
+            return self.user.can_use_subscription_ai()
         if self.payment_status == 'draft':
             # Check USER-level free AI limit (across all documents)
             return self.user.can_use_free_ai()
