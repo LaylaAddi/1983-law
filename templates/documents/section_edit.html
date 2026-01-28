@@ -1820,9 +1820,17 @@ function stopAITerminalAnimation() {
 }
 
 function suggestSectionContent(sectionType) {
-    const btn = document.getElementById('aiSuggestBtn');
+    // Find the correct button based on section type
+    const btn = sectionType === 'evidence'
+        ? document.getElementById('aiSuggestEvidenceBtn')
+        : document.getElementById('aiSuggestBtn');
     const container = document.getElementById('aiSuggestionsContainer');
     const body = document.getElementById('aiSuggestionsBody');
+
+    if (!btn || !container || !body) {
+        console.error('Required elements not found');
+        return;
+    }
 
     // Show terminal-style loading
     btn.disabled = true;
@@ -1870,7 +1878,9 @@ function suggestSectionContent(sectionType) {
         stopAITerminalAnimation();
 
         btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-magic me-1"></i>Analyze Story & Suggest';
+        btn.innerHTML = sectionType === 'evidence'
+            ? '<i class="bi bi-magic me-1"></i>Analyze Story for Evidence'
+            : '<i class="bi bi-magic me-1"></i>Analyze Story & Suggest';
 
         // Check for either old format (suggestions) or new evidence format (evidence_you_have/evidence_to_obtain)
         const hasOldSuggestions = data.suggestions && data.suggestions.length > 0;
@@ -2091,7 +2101,9 @@ function suggestSectionContent(sectionType) {
     .catch(error => {
         stopAITerminalAnimation();
         btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-magic me-1"></i>Analyze Story & Suggest';
+        btn.innerHTML = sectionType === 'evidence'
+            ? '<i class="bi bi-magic me-1"></i>Analyze Story for Evidence'
+            : '<i class="bi bi-magic me-1"></i>Analyze Story & Suggest';
         body.innerHTML = `<div class="alert alert-danger mb-0"><i class="bi bi-x-circle me-1"></i>Error: ${escapeHtml(error.message)}</div>`;
     });
 }
