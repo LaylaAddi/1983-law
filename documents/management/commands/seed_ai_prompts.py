@@ -554,7 +554,7 @@ Be accurate - this is for legal filings.''',
                 'title': 'Review Legal Document',
                 'description': '''Comprehensive AI review of the Section 1983 complaint document.
 
-Analyzes:
+Analyzes the ACTUAL RENDERED DOCUMENT TEXT as displayed to the user:
 - Cross-document consistency (dates, times, names, locations)
 - Missing required information
 - Legal document formatting
@@ -564,40 +564,37 @@ Called when: User clicks "AI Review" on the document review page.''',
                 'system_message': '''You are a legal document proofreader checking a Section 1983 complaint for errors and inconsistencies.
 Your job is to find PRACTICAL issues that can be fixed - not to critique legal strategy.
 Focus on: inconsistent facts, missing information, formatting problems, and unclear writing.
-Compare information ACROSS all sections to find contradictions.
+You are reviewing the ACTUAL DOCUMENT TEXT as it appears to the user, not raw database fields.
 Always respond with valid JSON.''',
                 'user_prompt_template': '''Review this Section 1983 civil rights complaint for errors, inconsistencies, and missing information.
 
-DOCUMENT DATA:
+This is the ACTUAL DOCUMENT as it will appear when filed. Review the text below:
+
 {document_json}
 
-PRIORITY 1 - CROSS-DOCUMENT CONSISTENCY (check these carefully):
-- Does the incident TIME match in all sections? (e.g., narrative says "9:30 AM" but damages says "2:30 PM")
-- Does the incident DATE match in all sections?
-- Does the incident LOCATION match in all sections?
-- Are defendant NAMES spelled consistently throughout?
-- Are officer BADGE NUMBERS consistent if mentioned multiple times?
-- Do the FACTS in the narrative match what's described in damages and rights violated?
+PRIORITY 1 - DOCUMENT COMPLETENESS:
+- Are there any placeholder texts like "[DATE]", "[LOCATION]", "[NAME]", "[CITY, STATE]", etc.?
+- Is the incident date and time clearly stated?
+- Is the incident location specific?
+- Are all defendants properly identified?
+- Is the narrative complete and coherent?
 
-PRIORITY 2 - MISSING REQUIRED INFORMATION:
-- Is the incident date specified? (not just "on or about")
-- Is the incident time specified with AM/PM?
-- Is the incident location specific (address or clear description)?
-- Are defendants identified with name OR badge number OR physical description?
-- Is at least one constitutional right violation selected?
-- Is at least one type of damage described?
-- Is the plaintiff's county of residence stated?
-
-PRIORITY 3 - FORMATTING AND CLARITY:
-- Is the narrative written in third person? (should say "Plaintiff" not "I")
-- Are paragraphs properly structured for a legal document?
+PRIORITY 2 - FORMATTING AND CLARITY:
+- Is the narrative written in third person? (should say "Plaintiff" not "I", "me", "my")
+- Is the writing clear and professional for a legal document?
 - Is the chronology of events clear?
-- Are there any placeholder texts like "[insert]", "[DATE]", "[TIME]", "TBD", etc.?
+- Are the causes of action properly connected to the facts?
+
+PRIORITY 3 - LEGAL DOCUMENT REQUIREMENTS:
+- Is at least one constitutional right violation clearly stated?
+- Is at least one type of damage described?
+- Is the relief sought section complete?
 
 DO NOT flag these as issues:
 - Legal strategy opinions (e.g., "claims may be weak")
 - Suggestions to add more evidence (user may not have more)
-- Requests for information that isn't required for filing
+- Minor stylistic preferences
+- Information that isn't required for filing
 
 Return a JSON object with issues found:
 {{
@@ -607,17 +604,11 @@ Return a JSON object with issues found:
             "section": "incident_overview|incident_narrative|defendants|damages|rights_violated|relief_sought|plaintiff_info",
             "severity": "error|warning|suggestion",
             "title": "Brief issue title (5-10 words)",
-            "description": "Specific explanation - quote the inconsistent text if applicable",
+            "description": "Specific explanation - quote the problematic text if applicable",
             "suggestion": "Exact fix needed (be specific, not vague)"
         }}
     ],
-    "consistency_check": {{
-        "times_match": true/false,
-        "dates_match": true/false,
-        "locations_match": true/false,
-        "names_match": true/false
-    }},
-    "missing_fields": ["List of required fields that are empty or missing"],
+    "strengths": ["List 1-3 things the document does well"],
     "summary": "1-2 sentence summary focusing on the most important fixes needed"
 }}
 
