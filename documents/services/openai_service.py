@@ -1027,3 +1027,81 @@ If no clear court can be determined, return:
                 'success': False,
                 'error': str(e),
             }
+
+    def review_final_document(self, document) -> dict:
+        """
+        Review the actual generated document text (not raw input data).
+
+        Used on the Final Review page to analyze the complete legal document
+        that has been generated and potentially edited by the user.
+
+        Args:
+            document: Document model instance with final_* fields populated
+
+        Returns:
+            dict with 'success', 'review' containing assessment, strengths, issues
+        """
+        import json
+
+        if not document.has_final_document():
+            return {
+                'success': False,
+                'error': 'Please generate the document first before requesting AI review.',
+            }
+
+        # Build the full document text for review
+        document_text = f"""
+INTRODUCTION:
+{document.final_introduction}
+
+{document.final_jurisdiction}
+
+{document.final_parties}
+
+{document.final_facts}
+
+"""
+        # Add causes of action
+        for cause in document.final_causes_of_action or []:
+            document_text += f"\n{cause.get('content', '')}\n"
+
+        document_text += f"""
+{document.final_prayer}
+
+{document.final_jury_demand}
+
+{document.final_signature}
+"""
+
+        try:
+            prompt = self._get_prompt('review_final_document')
+            user_prompt = prompt['user_prompt_template'].format(document_text=document_text)
+
+            response = self.client.chat.completions.create(
+                model=prompt['model_name'],
+                messages=[
+                    {"role": "system", "content": prompt['system_message']},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=prompt['temperature'],
+                max_tokens=prompt['max_tokens'],
+                response_format={"type": "json_object"}
+            )
+
+            result = json.loads(response.choices[0].message.content)
+
+            return {
+                'success': True,
+                'review': {
+                    'overall_assessment': result.get('overall_assessment', ''),
+                    'strengths': result.get('strengths', []),
+                    'issues': result.get('issues', []),
+                    'ready_for_filing': result.get('ready_for_filing', False),
+                },
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+            }

@@ -5109,6 +5109,7 @@ def ai_review_final(request, document_id):
     """
     AI reviews the actual final document text and suggests improvements.
     Reviews the generated/edited text, not the raw input data.
+    Uses OpenAIService with prompts from database.
     """
     document = get_object_or_404(Document, id=document_id, user=request.user)
 
@@ -5126,102 +5127,23 @@ def ai_review_final(request, document_id):
         })
 
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        from .services.openai_service import OpenAIService
+        service = OpenAIService()
 
-        # Build the full document text for review
-        full_document = f"""
-INTRODUCTION:
-{document.final_introduction}
+        result = service.review_final_document(document)
 
-{document.final_jurisdiction}
-
-{document.final_parties}
-
-{document.final_facts}
-
-"""
-        # Add causes of action
-        for cause in document.final_causes_of_action or []:
-            full_document += f"\n{cause.get('content', '')}\n"
-
-        full_document += f"""
-{document.final_prayer}
-
-{document.final_jury_demand}
-
-{document.final_signature}
-"""
-
-        # Get AI review
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": """You are an expert civil rights attorney reviewing a Section 1983 federal complaint.
-Review the document for:
-1. Legal sufficiency - Does it state a valid claim under 42 U.S.C. § 1983?
-2. Factual specificity - Are the facts specific enough to survive a motion to dismiss?
-3. Legal arguments - Are the constitutional violations properly pled with supporting case law?
-4. Prayer for relief - Is the relief requested appropriate and comprehensive?
-5. Technical issues - Formatting, numbering, signature block completeness
-
-Provide specific, actionable suggestions for improvement. For each issue found, specify:
-- The section where the issue is located
-- What the problem is
-- Suggested fix with example text if applicable
-
-Format your response as JSON with this structure:
-{
-    "overall_assessment": "brief overall assessment",
-    "strengths": ["list of strengths"],
-    "issues": [
-        {
-            "section": "section name",
-            "severity": "high/medium/low",
-            "issue": "description of issue",
-            "suggestion": "how to fix it",
-            "example_text": "optional example of improved text"
-        }
-    ],
-    "ready_for_filing": true/false
-}"""
-                },
-                {
-                    "role": "user",
-                    "content": f"Please review this Section 1983 federal complaint:\n\n{full_document}"
-                }
-            ],
-            temperature=0.3,
-            max_tokens=3000,
-        )
-
-        review_text = response.choices[0].message.content.strip()
-
-        # Try to parse as JSON
-        try:
-            # Clean up potential markdown code blocks
-            if review_text.startswith('```'):
-                review_text = review_text.split('```')[1]
-                if review_text.startswith('json'):
-                    review_text = review_text[4:]
-            review_data = json.loads(review_text)
-        except json.JSONDecodeError:
-            # If not valid JSON, wrap in a structure
-            review_data = {
-                'overall_assessment': review_text,
-                'strengths': [],
-                'issues': [],
-                'ready_for_filing': False
-            }
+        if not result.get('success'):
+            return JsonResponse({
+                'success': False,
+                'error': result.get('error', 'AI review failed.')
+            })
 
         # Record AI usage
         document.record_ai_usage()
 
         return JsonResponse({
             'success': True,
-            'review': review_data,
+            'review': result.get('review', {}),
             **get_ai_usage_info(document)
         })
 
