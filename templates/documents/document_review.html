@@ -1261,15 +1261,15 @@ function editSection(sectionType) {
 
     currentSection = sectionType;
 
-    // Update panel title
+    // Update panel title - these must match the actual document headings
     const titles = {
-        'plaintiff_info': 'Plaintiff Information',
-        'incident_overview': 'Incident Overview',
-        'defendants': 'Government Defendants',
-        'incident_narrative': 'Incident Narrative',
-        'rights_violated': 'Rights Violated',
-        'damages': 'Damages',
-        'relief_sought': 'Relief Sought',
+        'plaintiff_info': 'Parties',
+        'incident_overview': 'Statement of Facts',
+        'defendants': 'Parties',
+        'incident_narrative': 'Statement of Facts',
+        'rights_violated': 'Causes of Action',
+        'damages': 'Statement of Facts',
+        'relief_sought': 'Prayer for Relief',
         'witnesses': 'Witnesses',
         'evidence': 'Evidence',
         'prior_complaints': 'Prior Complaints'
@@ -1677,6 +1677,7 @@ function displayAIReview(data) {
                                  severity === 'warning' ? 'exclamation-triangle text-warning' :
                                  'lightbulb text-info';
             const sectionTitle = getSectionTitle(issue.section);
+            const subLabel = getSectionSubLabel(issue.section);
 
             // Initialize suggestion tracking
             aiSuggestions[index] = {
@@ -1691,7 +1692,7 @@ function displayAIReview(data) {
                     <div class="ai-suggestion-header" onclick="scrollToIssue('${issue.section}', ${index})">
                         <span class="section-name">
                             <i class="bi bi-${severityIcon} me-1"></i>
-                            ${escapeHtml(sectionTitle)}
+                            ${escapeHtml(sectionTitle)}${subLabel ? ` <small style="opacity:0.7;">› ${escapeHtml(subLabel)}</small>` : ''}
                         </span>
                         <span class="badge bg-warning text-dark status-badge" id="status-${index}">Pending</span>
                     </div>
@@ -1757,21 +1758,35 @@ function getSectionTitle(sectionName) {
     // First normalize to get the mapped database section name
     const mappedSection = getMappedSection(sectionName);
 
-    // Map database section types to document-facing headings
-    // These match the actual headings shown in the legal document
+    // Map database section types to EXACT document headings as they appear in the complaint.
+    // These are the actual <div class="section-header"> values in the template.
     const titles = {
         'plaintiff_info': 'Parties',
         'incident_overview': 'Statement of Facts',
-        'defendants': 'Parties (Defendants)',
+        'defendants': 'Parties',
         'incident_narrative': 'Statement of Facts',
         'rights_violated': 'Causes of Action',
-        'damages': 'Statement of Facts (Damages)',
+        'damages': 'Statement of Facts',
         'relief_sought': 'Prayer for Relief',
         'witnesses': 'Witnesses',
         'evidence': 'Evidence',
         'prior_complaints': 'Prior Complaints',
     };
     return titles[mappedSection] || sectionName;
+}
+
+// Get a more specific sub-label for sections that share the same document heading.
+// This helps distinguish e.g. "Statement of Facts > Date/Location" vs "Statement of Facts > Narrative".
+function getSectionSubLabel(sectionName) {
+    const mappedSection = getMappedSection(sectionName);
+    const subLabels = {
+        'incident_overview': 'Date, Time & Location',
+        'incident_narrative': 'Narrative',
+        'damages': 'Damages',
+        'plaintiff_info': 'Plaintiff',
+        'defendants': 'Defendants',
+    };
+    return subLabels[mappedSection] || '';
 }
 
 async function generateSuggestionFix(index) {
