@@ -281,6 +281,9 @@ def pricing(request):
     """Display pricing page with all options."""
     from .models import Subscription
 
+    # Capture document_id if user came from a specific document
+    document_id = request.GET.get('document_id')
+
     context = {
         # One-time prices
         'price_single': django_settings.DOCUMENT_PRICE_SINGLE,
@@ -301,12 +304,15 @@ def pricing(request):
         # User subscription status
         'has_subscription': False,
         'subscription': None,
+
+        # Document context for redirecting after purchase
+        'document_id': document_id,
     }
 
     if request.user.is_authenticated:
         try:
             context['subscription'] = request.user.subscription
-            context['has_subscription'] = request.user.subscription.is_active()
+            context['has_subscription'] = request.user.subscription.is_active
         except Subscription.DoesNotExist:
             pass
 

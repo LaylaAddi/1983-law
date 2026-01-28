@@ -19,7 +19,7 @@
         <i class="bi bi-robot me-1"></i><span id="aiUsageDisplay">{{ document.get_ai_usage_display }}</span>
     </div>
     {% if not user.has_unlimited_access and not user.has_active_subscription %}
-    <a href="{% url 'accounts:pricing' %}" class="btn btn-primary btn-sm">
+    <a href="{% url 'accounts:pricing' %}?document_id={{ document.id }}" class="btn btn-primary btn-sm">
         <i class="bi bi-star me-1"></i>View Plans
     </a>
     {% endif %}
@@ -32,7 +32,7 @@
         <strong>EXPIRED</strong> - Document is locked
     </div>
     {% if not user.has_unlimited_access and not user.has_active_subscription %}
-    <a href="{% url 'accounts:pricing' %}" class="btn btn-danger btn-sm">
+    <a href="{% url 'accounts:pricing' %}?document_id={{ document.id }}" class="btn btn-danger btn-sm">
         <i class="bi bi-unlock me-1"></i>Unlock - View Plans
     </a>
     {% endif %}

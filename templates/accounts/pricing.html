@@ -203,9 +203,15 @@
                         <li><i class="bi bi-check-circle-fill"></i> Email support</li>
                     </ul>
                     {% if user.is_authenticated %}
-                    <a href="{% url 'documents:document_list' %}" class="btn btn-outline-primary w-100">
-                        Go to My Documents
-                    </a>
+                        {% if document_id %}
+                        <a href="{% url 'documents:checkout' document_id %}" class="btn btn-outline-primary w-100">
+                            Purchase for This Document
+                        </a>
+                        {% else %}
+                        <a href="{% url 'documents:document_list' %}" class="btn btn-outline-primary w-100">
+                            Go to My Documents
+                        </a>
+                        {% endif %}
                     {% else %}
                     <a href="{% url 'accounts:register' %}" class="btn btn-outline-primary w-100">
                         Get Started
