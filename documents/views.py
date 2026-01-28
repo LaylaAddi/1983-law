@@ -1885,11 +1885,27 @@ def generate_fix(request, document_id):
         # Include the original content for diff comparison
         result['original_content'] = current_content
 
-        # If field_updates is empty, create a default based on section_type
-        # Only for sections with primary text fields - NOT for boolean/structured sections
-        if result.get('success') and not result.get('field_updates'):
+        # Validate and fix field_updates - the AI often returns wrong field names
+        # because it doesn't know the actual database field names.
+        # Always ensure field_updates uses correct model field names.
+        if result.get('success'):
             rewritten = result.get('rewritten_content', '')
-            if rewritten:
+            ai_field_updates = result.get('field_updates', {})
+
+            # Check if AI-provided field_updates use valid model field names
+            valid_ai_updates = {}
+            if ai_field_updates and section_type in SECTION_CONFIG:
+                Model = SECTION_CONFIG[section_type].get('model')
+                if Model:
+                    model_fields = {f.name for f in Model._meta.get_fields()}
+                    for k, v in ai_field_updates.items():
+                        if k in model_fields:
+                            valid_ai_updates[k] = v
+
+            # If AI provided valid field names, use those; otherwise build from defaults
+            if valid_ai_updates:
+                result['field_updates'] = valid_ai_updates
+            elif rewritten:
                 # Map section types to their primary TEXT field only
                 default_field_map = {
                     'incident_narrative': 'detailed_narrative',
@@ -2016,6 +2032,7 @@ def apply_fix(request, document_id):
 
             # Apply field updates
             updated_fields = []
+            skipped_fields = []
             for field_name, new_value in field_updates.items():
                 if hasattr(instance, field_name):
                     # Convert time formats like "09:30 AM" to "09:30:00" for TimeField
@@ -2026,16 +2043,33 @@ def apply_fix(request, document_id):
                         new_value = _convert_date_format(new_value)
                     setattr(instance, field_name, new_value)
                     updated_fields.append(field_name)
+                else:
+                    skipped_fields.append(field_name)
 
             if updated_fields:
                 instance.save()
                 # Invalidate cached complaint
                 document.invalidate_generated_complaint()
 
-            return JsonResponse({
+            response_data = {
                 'success': True,
                 'updated_fields': updated_fields,
-            })
+            }
+            if skipped_fields:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f'apply_fix: Skipped invalid field names for {section_type}: {skipped_fields}. '
+                    f'Requested: {list(field_updates.keys())}. '
+                    f'Valid: {[f.name for f in Model._meta.get_fields()]}'
+                )
+                if not updated_fields:
+                    response_data['success'] = False
+                    response_data['error'] = (
+                        f'Could not update fields: {", ".join(skipped_fields)}. '
+                        f'These field names do not match the {section_type} model.'
+                    )
+            return JsonResponse(response_data)
 
         except DocumentSection.DoesNotExist:
             return JsonResponse({
