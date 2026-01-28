@@ -901,7 +901,7 @@
                     <form method="post" id="sectionForm">
                         {% csrf_token %}
 
-                        {% if section.section_type in 'damages,rights_violated' %}
+                        {% if section.section_type == 'damages' %}
                         <!-- AI Suggest Section - At Top -->
                         <div class="card bg-light mb-4">
                             <div class="card-body">

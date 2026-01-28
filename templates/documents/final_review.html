@@ -648,6 +648,7 @@ document.querySelectorAll('.cancel-btn').forEach(btn => {
         section.classList.remove('editing');
         section.querySelector('.section-content').style.display = 'block';
         section.querySelector('.section-edit').style.display = 'none';
+        section.querySelector('.section-toolbar').style.display = '';
     });
 });
 
@@ -669,6 +670,7 @@ document.querySelectorAll('.save-btn').forEach(btn => {
                 section.classList.remove('editing');
                 section.querySelector('.section-content').style.display = 'block';
                 section.querySelector('.section-edit').style.display = 'none';
+                section.querySelector('.section-toolbar').style.display = '';
             } else alert(data.error || 'Save failed');
         } catch (e) { alert('Error: ' + e.message); }
     });
