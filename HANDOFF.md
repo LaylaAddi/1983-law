@@ -3036,3 +3036,101 @@ The Django admin is NOT at `/admin/` by default. It uses a randomized path to pr
 3. Redeploy
 
 **Note:** All admin links in the app use Django's `{% url 'admin:index' %}` so they automatically update when the path changes.
+
+---
+
+## Final Document Review (NEW - January 2026)
+
+### Overview
+
+A new pathway for reviewing and editing the **actual document text** (not raw input data). This allows users to:
+1. Generate a complete legal document from their section data
+2. Review the actual text that will appear in the PDF
+3. Edit any section inline
+4. Get AI review of the actual document text
+5. Regenerate individual sections
+6. Download the final PDF
+
+### URL Structure
+
+| URL | View | Purpose |
+|-----|------|---------|
+| `/documents/{id}/final/` | `final_review` | Main page - view/edit document text |
+| `/documents/{id}/final/generate/` | `generate_final_document` | Generate all sections (AJAX) |
+| `/documents/{id}/final/save-section/` | `save_final_section` | Save edited section (AJAX) |
+| `/documents/{id}/final/ai-review/` | `ai_review_final` | AI reviews actual text (AJAX) |
+| `/documents/{id}/final/regenerate-section/` | `regenerate_final_section` | Regenerate one section (AJAX) |
+| `/documents/{id}/final/download-pdf/` | `download_final_pdf` | Download PDF from final fields |
+
+### New Database Fields
+
+Added to `Document` model:
+```python
+# Final document text fields - editable by user
+final_introduction = TextField(blank=True)
+final_jurisdiction = TextField(blank=True)
+final_parties = TextField(blank=True)
+final_facts = TextField(blank=True)
+final_causes_of_action = JSONField(default=list)  # List of {number, amendment, violation_type, content}
+final_prayer = TextField(blank=True)
+final_jury_demand = TextField(blank=True)
+final_signature = TextField(blank=True)
+final_generated_at = DateTimeField(null=True)
+final_edited_at = DateTimeField(null=True)
+```
+
+Helper methods:
+- `document.has_final_document()` - Check if document has been generated
+- `document.invalidate_final_document()` - Clear all final fields
+
+### Workflow
+
+1. **Complete Sections** - User fills out interview sections (old flow still works)
+2. **Generate Document** - Click "Generate Document" on final review page
+   - Requires at least 50% completion
+   - Uses AI to write legal text
+   - Saves to `final_*` fields
+3. **Review & Edit** - View full document with inline editing
+   - Click edit button on any section
+   - Edit in textarea
+   - Save changes
+4. **AI Review** - Get AI feedback on actual document text
+   - Reviews legal sufficiency
+   - Checks factual specificity
+   - Suggests improvements with severity (high/medium/low)
+5. **Download PDF** - Generate PDF from `final_*` fields
+
+### Navigation Changes
+
+- **Document Detail Page**: New "Final Review" button (primary), "Edit Sections" button (secondary)
+- **Document Preview**: "Final Review" button instead of "Review & Edit"
+- **Redirect**: `/documents/{id}/preview/` now redirects to `/documents/{id}/final/` for non-finalized documents
+
+### Templates
+
+- `templates/documents/final_review.html` - Main review page with inline editing
+- `templates/documents/final_pdf.html` - PDF template using final_* fields
+
+### Migration
+
+Migration `0006_add_final_document_fields.py` adds the new fields. Run:
+```bash
+python manage.py migrate documents
+```
+
+### Key Differences from Old Review Page
+
+| Feature | Old `/review/` | New `/final/` |
+|---------|----------------|---------------|
+| What's shown | Raw form data formatted | Actual document text |
+| Editing | Edit form fields | Edit text directly |
+| AI Review | Reviews input data | Reviews actual text |
+| Document generation | On PDF generation | On "Generate Document" button |
+| Fields stored | Section models | Document.final_* fields |
+
+### Permissions
+
+- `can_edit()` - Required for editing text
+- `can_use_ai()` - Required for AI review and generation
+- Payment status checks still apply
+- Finalized documents redirect to preview (no editing)

@@ -804,7 +804,7 @@ def fill_test_data(request, document_id):
 
 @login_required
 def document_preview(request, document_id):
-    """Show preview for finalized documents, redirect others to document_review."""
+    """Show preview for finalized documents, redirect others to final_review."""
     document = get_object_or_404(Document, id=document_id, user=request.user)
 
     # Finalized documents show the preview/PDF view (read-only)
@@ -820,8 +820,8 @@ def document_preview(request, document_id):
             'generate_pdf': generate_pdf,
         })
 
-    # Non-finalized documents go to review for editing
-    return redirect('documents:document_review', document_id=document_id)
+    # Non-finalized documents go to final review for editing
+    return redirect('documents:final_review', document_id=document_id)
 
 
 @login_required
@@ -4904,3 +4904,461 @@ def apply_video_suggestion(request, document_id):
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ============================================================================
+# FINAL DOCUMENT REVIEW - New pathway for reviewing/editing actual document text
+# ============================================================================
+
+@login_required
+def final_review(request, document_id):
+    """
+    Final document review page where users can:
+    1. View the complete generated legal document
+    2. Edit any section text inline
+    3. Get AI review of the actual document text
+    4. Download the final PDF
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Check and update expiry status
+    document.check_and_update_expiry()
+
+    # Collect document data for context
+    document_data = _collect_document_data(document)
+
+    # Check completion percentage
+    completion_pct = document.get_completion_percentage()
+
+    # Define the sections for display
+    final_sections = [
+        {'key': 'introduction', 'title': 'Introduction', 'field': 'final_introduction'},
+        {'key': 'jurisdiction', 'title': 'Jurisdiction and Venue', 'field': 'final_jurisdiction'},
+        {'key': 'parties', 'title': 'Parties', 'field': 'final_parties'},
+        {'key': 'facts', 'title': 'Statement of Facts', 'field': 'final_facts'},
+        {'key': 'causes_of_action', 'title': 'Causes of Action', 'field': 'final_causes_of_action', 'is_list': True},
+        {'key': 'prayer', 'title': 'Prayer for Relief', 'field': 'final_prayer'},
+        {'key': 'jury_demand', 'title': 'Jury Demand', 'field': 'final_jury_demand'},
+        {'key': 'signature', 'title': 'Signature Block', 'field': 'final_signature'},
+    ]
+
+    # Add current values to sections
+    for section in final_sections:
+        if section.get('is_list'):
+            section['value'] = getattr(document, section['field'], []) or []
+        else:
+            section['value'] = getattr(document, section['field'], '') or ''
+
+    context = {
+        'document': document,
+        'document_data': document_data,
+        'final_sections': final_sections,
+        'completion_pct': completion_pct,
+        'has_final_document': document.has_final_document(),
+        'can_edit': document.can_edit(),
+        'can_use_ai': document.can_use_ai(),
+    }
+
+    return render(request, 'documents/final_review.html', context)
+
+
+@login_required
+@require_POST
+def generate_final_document(request, document_id):
+    """
+    Generate all final document sections using AI.
+    Populates the final_* fields on the Document model.
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Check permissions
+    if not document.can_edit():
+        return JsonResponse({
+            'success': False,
+            'error': 'Document cannot be edited.'
+        })
+
+    # Check AI limit
+    if not document.can_use_ai():
+        return JsonResponse({
+            'success': False,
+            'limit_reached': True,
+            'error': 'AI limit reached. Please upgrade to continue.'
+        })
+
+    try:
+        # Import generator
+        from .services.document_generator import DocumentGenerator
+
+        # Collect all document data
+        document_data = _collect_document_data(document)
+
+        # Generate the complaint
+        generator = DocumentGenerator()
+        result = generator.generate_complaint(document_data)
+
+        if not result.get('success'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to generate document.'
+            })
+
+        sections = result.get('document', {})
+
+        # Save to final fields
+        document.final_introduction = sections.get('introduction', '')
+        document.final_jurisdiction = sections.get('jurisdiction', '')
+        document.final_parties = sections.get('parties', '')
+        document.final_facts = sections.get('facts', '')
+        document.final_prayer = sections.get('prayer', '')
+        document.final_jury_demand = sections.get('jury_demand', '')
+        document.final_signature = sections.get('signature', '')
+
+        # Causes of action is a list of dicts
+        causes = sections.get('causes_of_action', [])
+        document.final_causes_of_action = causes
+
+        document.final_generated_at = timezone.now()
+        document.final_edited_at = None  # Reset edited time
+        document.save()
+
+        # Record AI usage
+        document.record_ai_usage()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Document generated successfully.',
+            **get_ai_usage_info(document)
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error generating document: {str(e)}'
+        })
+
+
+@login_required
+@require_POST
+def save_final_section(request, document_id):
+    """
+    Save a single section of the final document.
+    AJAX endpoint for inline editing.
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    if not document.can_edit():
+        return JsonResponse({
+            'success': False,
+            'error': 'Document cannot be edited.'
+        })
+
+    try:
+        data = json.loads(request.body)
+        section_key = data.get('section', '').strip()
+        content = data.get('content', '')
+        cause_index = data.get('cause_index')  # For causes of action list
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid request format.'})
+
+    if not section_key:
+        return JsonResponse({'success': False, 'error': 'Section key is required.'})
+
+    # Map section keys to model fields
+    field_map = {
+        'introduction': 'final_introduction',
+        'jurisdiction': 'final_jurisdiction',
+        'parties': 'final_parties',
+        'facts': 'final_facts',
+        'prayer': 'final_prayer',
+        'jury_demand': 'final_jury_demand',
+        'signature': 'final_signature',
+    }
+
+    try:
+        if section_key == 'causes_of_action':
+            # Handle causes of action (list)
+            if cause_index is not None:
+                causes = document.final_causes_of_action or []
+                if 0 <= cause_index < len(causes):
+                    causes[cause_index]['content'] = content
+                    document.final_causes_of_action = causes
+        elif section_key in field_map:
+            setattr(document, field_map[section_key], content)
+        else:
+            return JsonResponse({'success': False, 'error': f'Unknown section: {section_key}'})
+
+        document.final_edited_at = timezone.now()
+        document.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Section saved successfully.'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error saving section: {str(e)}'
+        })
+
+
+@login_required
+@require_POST
+def ai_review_final(request, document_id):
+    """
+    AI reviews the actual final document text and suggests improvements.
+    Reviews the generated/edited text, not the raw input data.
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    if not document.can_use_ai():
+        return JsonResponse({
+            'success': False,
+            'limit_reached': True,
+            'error': 'AI limit reached. Please upgrade to continue.'
+        })
+
+    if not document.has_final_document():
+        return JsonResponse({
+            'success': False,
+            'error': 'Please generate the document first before requesting AI review.'
+        })
+
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+        # Build the full document text for review
+        full_document = f"""
+INTRODUCTION:
+{document.final_introduction}
+
+{document.final_jurisdiction}
+
+{document.final_parties}
+
+{document.final_facts}
+
+"""
+        # Add causes of action
+        for cause in document.final_causes_of_action or []:
+            full_document += f"\n{cause.get('content', '')}\n"
+
+        full_document += f"""
+{document.final_prayer}
+
+{document.final_jury_demand}
+
+{document.final_signature}
+"""
+
+        # Get AI review
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You are an expert civil rights attorney reviewing a Section 1983 federal complaint.
+Review the document for:
+1. Legal sufficiency - Does it state a valid claim under 42 U.S.C. § 1983?
+2. Factual specificity - Are the facts specific enough to survive a motion to dismiss?
+3. Legal arguments - Are the constitutional violations properly pled with supporting case law?
+4. Prayer for relief - Is the relief requested appropriate and comprehensive?
+5. Technical issues - Formatting, numbering, signature block completeness
+
+Provide specific, actionable suggestions for improvement. For each issue found, specify:
+- The section where the issue is located
+- What the problem is
+- Suggested fix with example text if applicable
+
+Format your response as JSON with this structure:
+{
+    "overall_assessment": "brief overall assessment",
+    "strengths": ["list of strengths"],
+    "issues": [
+        {
+            "section": "section name",
+            "severity": "high/medium/low",
+            "issue": "description of issue",
+            "suggestion": "how to fix it",
+            "example_text": "optional example of improved text"
+        }
+    ],
+    "ready_for_filing": true/false
+}"""
+                },
+                {
+                    "role": "user",
+                    "content": f"Please review this Section 1983 federal complaint:\n\n{full_document}"
+                }
+            ],
+            temperature=0.3,
+            max_tokens=3000,
+        )
+
+        review_text = response.choices[0].message.content.strip()
+
+        # Try to parse as JSON
+        try:
+            # Clean up potential markdown code blocks
+            if review_text.startswith('```'):
+                review_text = review_text.split('```')[1]
+                if review_text.startswith('json'):
+                    review_text = review_text[4:]
+            review_data = json.loads(review_text)
+        except json.JSONDecodeError:
+            # If not valid JSON, wrap in a structure
+            review_data = {
+                'overall_assessment': review_text,
+                'strengths': [],
+                'issues': [],
+                'ready_for_filing': False
+            }
+
+        # Record AI usage
+        document.record_ai_usage()
+
+        return JsonResponse({
+            'success': True,
+            'review': review_data,
+            **get_ai_usage_info(document)
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error during AI review: {str(e)}'
+        })
+
+
+@login_required
+@require_POST
+def regenerate_final_section(request, document_id):
+    """
+    Regenerate a single section of the final document using AI.
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    if not document.can_edit():
+        return JsonResponse({
+            'success': False,
+            'error': 'Document cannot be edited.'
+        })
+
+    if not document.can_use_ai():
+        return JsonResponse({
+            'success': False,
+            'limit_reached': True,
+            'error': 'AI limit reached. Please upgrade to continue.'
+        })
+
+    try:
+        data = json.loads(request.body)
+        section_key = data.get('section', '').strip()
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid request format.'})
+
+    if not section_key:
+        return JsonResponse({'success': False, 'error': 'Section key is required.'})
+
+    try:
+        from .services.document_generator import DocumentGenerator
+
+        # Collect document data
+        document_data = _collect_document_data(document)
+        generator = DocumentGenerator()
+
+        # Regenerate specific section
+        if section_key == 'introduction':
+            new_content = generator._generate_introduction(document_data)
+            document.final_introduction = new_content
+        elif section_key == 'jurisdiction':
+            new_content = generator._generate_jurisdiction(document_data)
+            document.final_jurisdiction = new_content
+        elif section_key == 'parties':
+            new_content = generator._generate_parties(document_data)
+            document.final_parties = new_content
+        elif section_key == 'facts':
+            new_content = generator._generate_facts(document_data)
+            document.final_facts = new_content
+        elif section_key == 'prayer':
+            new_content = generator._generate_prayer(document_data)
+            document.final_prayer = new_content
+        elif section_key == 'jury_demand':
+            new_content = generator._generate_jury_demand(document_data)
+            document.final_jury_demand = new_content
+        elif section_key == 'signature':
+            new_content = generator._generate_signature(document_data)
+            document.final_signature = new_content
+        elif section_key == 'causes_of_action':
+            new_content = generator._generate_causes_of_action(document_data)
+            document.final_causes_of_action = new_content
+        else:
+            return JsonResponse({'success': False, 'error': f'Unknown section: {section_key}'})
+
+        document.final_edited_at = timezone.now()
+        document.save()
+
+        # Record AI usage
+        document.record_ai_usage()
+
+        return JsonResponse({
+            'success': True,
+            'content': new_content,
+            'message': f'{section_key.replace("_", " ").title()} regenerated successfully.',
+            **get_ai_usage_info(document)
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error regenerating section: {str(e)}'
+        })
+
+
+@login_required
+def download_final_pdf(request, document_id):
+    """
+    Generate and download PDF from the final document fields.
+    """
+    document = get_object_or_404(Document, id=document_id, user=request.user)
+
+    if not document.has_final_document():
+        messages.error(request, 'Please generate the document first.')
+        return redirect('documents:final_review', document_id=document_id)
+
+    # Check payment status for watermark
+    is_draft = document.payment_status in ('draft', 'expired')
+
+    try:
+        from weasyprint import HTML
+        from django.template.loader import render_to_string
+
+        # Build caption from document data
+        document_data = _collect_document_data(document)
+        from .services.document_generator import DocumentGenerator
+        generator = DocumentGenerator()
+        caption = generator._generate_caption(document_data)
+
+        # Render PDF template
+        html_content = render_to_string('documents/final_pdf.html', {
+            'document': document,
+            'caption': caption,
+            'is_draft': is_draft,
+            'app_name': settings.APP_NAME,
+        })
+
+        # Generate PDF
+        pdf = HTML(string=html_content).write_pdf()
+
+        # Create response
+        response = HttpResponse(pdf, content_type='application/pdf')
+        filename = f"complaint_{document.id}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        return response
+
+    except Exception as e:
+        messages.error(request, f'Error generating PDF: {str(e)}')
+        return redirect('documents:final_review', document_id=document_id)

@@ -103,6 +103,49 @@ class Document(models.Model):
         help_text='When the complaint was last generated'
     )
 
+    # Final document text fields - editable by user in final review
+    final_introduction = models.TextField(
+        blank=True,
+        help_text='Introduction paragraph for the complaint'
+    )
+    final_jurisdiction = models.TextField(
+        blank=True,
+        help_text='Jurisdiction and Venue section text'
+    )
+    final_parties = models.TextField(
+        blank=True,
+        help_text='Parties section describing plaintiff and defendants'
+    )
+    final_facts = models.TextField(
+        blank=True,
+        help_text='Statement of Facts section'
+    )
+    final_causes_of_action = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='List of causes of action (each with title and text)'
+    )
+    final_prayer = models.TextField(
+        blank=True,
+        help_text='Prayer for Relief section'
+    )
+    final_jury_demand = models.TextField(
+        blank=True,
+        help_text='Jury Demand section (if applicable)'
+    )
+    final_signature = models.TextField(
+        blank=True,
+        help_text='Signature block text'
+    )
+    final_generated_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='When final document text was generated'
+    )
+    final_edited_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='When final document text was last edited by user'
+    )
+
     class Meta:
         ordering = ['-updated_at']
 
@@ -132,6 +175,30 @@ class Document(models.Model):
             self.generated_complaint = ''
             self.generated_at = None
             self.save(update_fields=['generated_complaint', 'generated_at'])
+
+    def has_final_document(self):
+        """Check if final document text has been generated."""
+        return bool(self.final_generated_at and self.final_introduction)
+
+    def invalidate_final_document(self):
+        """Clear final document when source data changes."""
+        if self.final_generated_at:
+            self.final_introduction = ''
+            self.final_jurisdiction = ''
+            self.final_parties = ''
+            self.final_facts = ''
+            self.final_causes_of_action = []
+            self.final_prayer = ''
+            self.final_jury_demand = ''
+            self.final_signature = ''
+            self.final_generated_at = None
+            self.final_edited_at = None
+            self.save(update_fields=[
+                'final_introduction', 'final_jurisdiction', 'final_parties',
+                'final_facts', 'final_causes_of_action', 'final_prayer',
+                'final_jury_demand', 'final_signature', 'final_generated_at',
+                'final_edited_at'
+            ])
 
     # Payment and access control methods
 

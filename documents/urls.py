@@ -13,6 +13,14 @@ urlpatterns = [
     path('<int:document_id>/preview/', views.document_preview, name='document_preview'),
     path('<int:document_id>/review/', views.document_review, name='document_review'),
     path('<int:document_id>/download-pdf/', views.download_pdf, name='download_pdf'),
+
+    # Final Document Review - new pathway for editing actual document text
+    path('<int:document_id>/final/', views.final_review, name='final_review'),
+    path('<int:document_id>/final/generate/', views.generate_final_document, name='generate_final_document'),
+    path('<int:document_id>/final/save-section/', views.save_final_section, name='save_final_section'),
+    path('<int:document_id>/final/ai-review/', views.ai_review_final, name='ai_review_final'),
+    path('<int:document_id>/final/regenerate-section/', views.regenerate_final_section, name='regenerate_final_section'),
+    path('<int:document_id>/final/download-pdf/', views.download_final_pdf, name='download_final_pdf'),
     path('<int:document_id>/generate-pdf/', views.start_pdf_generation, name='start_pdf_generation'),
     path('<int:document_id>/generate-pdf/status/', views.pdf_generation_status, name='pdf_generation_status'),
 
