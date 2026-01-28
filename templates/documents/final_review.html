@@ -311,14 +311,23 @@
         </div>
         {% endif %}
 
+        {% if data_changed %}
+        <div class="alert alert-info d-flex justify-content-between align-items-center" id="dataChangedBanner">
+            <span>
+                <i class="bi bi-info-circle me-2"></i>
+                Your information has changed since this document was generated.
+            </span>
+            <button id="regenerateFromBannerBtn" class="btn btn-primary btn-sm">
+                <i class="bi bi-arrow-clockwise"></i> Regenerate Document
+            </button>
+        </div>
+        {% endif %}
+
         {% if has_final_document %}
         <!-- Action Bar -->
         <div class="action-bar">
             <button id="aiReviewBtn" class="btn btn-info btn-sm text-white" {% if not can_use_ai %}disabled{% endif %}>
                 <i class="bi bi-robot"></i> AI Review
-            </button>
-            <button id="regenerateAllBtn" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-clockwise"></i> Regenerate All
             </button>
             <a href="{% url 'documents:download_final_pdf' document.id %}" class="btn btn-success btn-sm">
                 <i class="bi bi-file-earmark-pdf"></i> Download PDF
@@ -552,9 +561,9 @@
 const documentId = {{ document.id }};
 const csrfToken = '{{ csrf_token }}';
 
-// Regenerate all
-document.getElementById('regenerateAllBtn')?.addEventListener('click', async function() {
-    if (!confirm('Regenerate entire document? All manual edits will be lost.')) return;
+// Regenerate from banner (when data has changed)
+document.getElementById('regenerateFromBannerBtn')?.addEventListener('click', async function() {
+    if (!confirm('Regenerate document with your updated information? All manual edits will be lost.')) return;
     showLoading('Regenerating document...');
     try {
         const response = await fetch(`/documents/${documentId}/final/generate/`, {

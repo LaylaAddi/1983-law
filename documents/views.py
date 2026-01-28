@@ -4975,6 +4975,12 @@ def final_review(request, document_id):
         else:
             section['value'] = getattr(document, section['field'], '') or ''
 
+    # Check if interview data changed since document was generated
+    data_changed = False
+    if document.has_final_document() and document.final_generated_at:
+        if document.updated_at > document.final_generated_at:
+            data_changed = True
+
     context = {
         'document': document,
         'document_data': document_data,
@@ -4984,6 +4990,7 @@ def final_review(request, document_id):
         'can_edit': document.can_edit(),
         'can_use_ai': document.can_use_ai(),
         'auto_generate_error': auto_generate_error,
+        'data_changed': data_changed,
     }
 
     return render(request, 'documents/final_review.html', context)
