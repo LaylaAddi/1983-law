@@ -96,13 +96,25 @@
         position: absolute;
         top: 0;
         right: 0;
-        opacity: 0;
+        opacity: 0.6;
         transition: opacity 0.2s ease;
         z-index: 10;
     }
 
     .editable-section:hover .edit-btn {
         opacity: 1;
+    }
+
+    /* Dark mode for edit buttons */
+    [data-theme="dark"] .editable-section .edit-btn {
+        background: #383838;
+        border-color: #6f42c1;
+        color: #a78bfa;
+    }
+
+    [data-theme="dark"] .editable-section:hover .edit-btn {
+        background: #6f42c1;
+        color: white;
     }
 
     /* Edit panel styling */
@@ -480,6 +492,115 @@
         justify-content: space-between;
         font-size: 0.8rem;
         color: #6b7280;
+    }
+
+    /* Dark mode support for AI suggestion cards */
+    [data-theme="dark"] .ai-suggestion-card {
+        background: #2d2d2d;
+        border-color: #444;
+    }
+
+    [data-theme="dark"] .ai-suggestion-card.generating {
+        background: #3d2d4d;
+        border-color: #6f42c1;
+    }
+
+    [data-theme="dark"] .ai-suggestion-card.ready {
+        border-color: #10b981;
+    }
+
+    [data-theme="dark"] .ai-suggestion-card.accepted {
+        background: #1b3d1b;
+        border-color: #10b981;
+    }
+
+    [data-theme="dark"] .ai-suggestion-card.rejected {
+        background: #3d3d3d;
+        border-color: #6b7280;
+    }
+
+    [data-theme="dark"] .ai-suggestion-header {
+        background: #383838;
+        border-color: #444;
+    }
+
+    [data-theme="dark"] .ai-suggestion-header .section-name {
+        color: #e4e4e4;
+    }
+
+    [data-theme="dark"] .ai-suggestion-body {
+        color: #e4e4e4;
+    }
+
+    [data-theme="dark"] .ai-suggestion-issue {
+        background: #4a3f2a;
+        border-color: #f59e0b;
+        color: #fcd34d;
+    }
+
+    [data-theme="dark"] .ai-suggestion-content {
+        background: #1b3d1b;
+        border-color: #22c55e;
+        color: #bbf7d0;
+    }
+
+    [data-theme="dark"] .ai-suggestion-edit {
+        background: #2d2d2d;
+        border-color: #444;
+        color: #e4e4e4;
+    }
+
+    [data-theme="dark"] .ai-suggestion-actions {
+        background: #383838;
+        border-color: #444;
+    }
+
+    [data-theme="dark"] .ai-review-progress {
+        background: #2d2d2d;
+    }
+
+    [data-theme="dark"] .ai-review-stats {
+        color: #9ca3af;
+    }
+
+    [data-theme="dark"] .edit-panel-card {
+        background: #2d2d2d;
+        border-color: #444;
+    }
+
+    [data-theme="dark"] .edit-panel-header {
+        background: #383838;
+        border-color: #444;
+    }
+
+    [data-theme="dark"] .edit-panel-body {
+        color: #e4e4e4;
+    }
+
+    [data-theme="dark"] .alert-light {
+        background: #383838 !important;
+        border-color: #444 !important;
+        color: #e4e4e4 !important;
+    }
+
+    /* Dark mode for legal document */
+    [data-theme="dark"] .legal-document {
+        background: #1e1e1e;
+        color: #e4e4e4;
+        box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    }
+
+    [data-theme="dark"] .legal-document .text-muted {
+        color: #9ca3af !important;
+    }
+
+    [data-theme="dark"] .editable-section:hover {
+        background: rgba(111, 66, 193, 0.15);
+    }
+
+    [data-theme="dark"] .editable-section.editing {
+        background: rgba(111, 66, 193, 0.2);
+        outline-color: #6f42c1;
     }
 
     @keyframes pulse-fix {
