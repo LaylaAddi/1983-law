@@ -239,22 +239,16 @@
                         <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
                     </a>
                 {% else %}
-                    <a href="{% url 'documents:final_review' document.id %}" class="btn btn-primary me-2">
-                        <i class="bi bi-file-text me-1"></i>Final Review
-                    </a>
-                    {% if document.has_final_document %}
-                        {% if document.payment_status == 'paid' or user.has_unlimited_access or user.has_active_subscription %}
-                        <a href="{% url 'documents:finalize' document.id %}" class="btn btn-success">
-                            <i class="bi bi-file-earmark-pdf me-1"></i>Finalize & Generate PDF
+                    {% if document.get_completion_percentage == 100 %}
+                        <a href="{% url 'documents:final_review' document.id %}" class="btn btn-primary">
+                            <i class="bi bi-file-text me-1"></i>Final Review
                         </a>
-                        {% else %}
-                        <a href="{% url 'documents:checkout' document.id %}" class="btn btn-success">
-                            <i class="bi bi-credit-card me-1"></i>Pay & Generate PDF
-                        </a>
-                        {% endif %}
                     {% else %}
-                        <span class="text-muted align-self-center ms-2">
-                            <i class="bi bi-info-circle me-1"></i>Complete Final Review to generate PDF
+                        <button class="btn btn-primary disabled" disabled title="Complete all sections first">
+                            <i class="bi bi-file-text me-1"></i>Final Review
+                        </button>
+                        <span class="text-muted ms-2 small">
+                            <i class="bi bi-info-circle me-1"></i>Complete all sections (or mark N/A) to enable
                         </span>
                     {% endif %}
                 {% endif %}
