@@ -213,34 +213,6 @@
                     {% endif %}
                 </div>
             </div>
-
-            <!-- 3-Pack -->
-            <div class="col-md-5 col-lg-4">
-                <div class="pricing-card">
-                    <div class="text-center mb-4">
-                        <h3>3-Document Pack</h3>
-                        <div class="price-amount">${{ price_3pack|floatformat:0 }}</div>
-                        <div class="price-period">one-time <span class="savings-badge ms-2">Save $48</span></div>
-                        <small class="text-muted">${{ price_3pack_per|floatformat:0 }} per document</small>
-                    </div>
-                    <ul class="pricing-features">
-                        <li><i class="bi bi-check-circle-fill"></i> <strong>3</strong> complete documents</li>
-                        <li><i class="bi bi-check-circle-fill"></i> <strong>100</strong> AI assists per document</li>
-                        <li><i class="bi bi-check-circle-fill"></i> 45 days each to complete</li>
-                        <li><i class="bi bi-check-circle-fill"></i> PDF downloads</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Email support</li>
-                    </ul>
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'documents:document_list' %}" class="btn btn-outline-primary w-100">
-                        Go to My Documents
-                    </a>
-                    {% else %}
-                    <a href="{% url 'accounts:register' %}" class="btn btn-outline-primary w-100">
-                        Get 3-Pack
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
         </div>
     </div>
 </section>

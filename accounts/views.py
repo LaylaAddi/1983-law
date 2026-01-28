@@ -284,9 +284,6 @@ def pricing(request):
     context = {
         # One-time prices
         'price_single': django_settings.DOCUMENT_PRICE_SINGLE,
-        'price_3pack': django_settings.DOCUMENT_PRICE_3PACK,
-        'price_single_per': django_settings.DOCUMENT_PRICE_SINGLE,
-        'price_3pack_per': round(django_settings.DOCUMENT_PRICE_3PACK / 3, 2),
 
         # Subscription prices
         'price_monthly': django_settings.SUBSCRIPTION_PRICE_MONTHLY,
