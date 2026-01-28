@@ -1730,6 +1730,9 @@ function displayAIReview(data) {
 }
 
 function getSectionTitle(sectionName) {
+    // First normalize to get the mapped section name
+    const mappedSection = getMappedSection(sectionName);
+
     const titles = {
         'plaintiff_info': 'Plaintiff Information',
         'incident_overview': 'Incident Overview',
@@ -1747,7 +1750,7 @@ function getSectionTitle(sectionName) {
         'jurisdiction': 'Jurisdiction',
         'causes_of_action': 'Causes of Action'
     };
-    return titles[sectionName.toLowerCase()] || sectionName;
+    return titles[mappedSection] || sectionName;
 }
 
 async function generateSuggestionFix(index) {
