@@ -1111,6 +1111,242 @@ def _collect_document_data(document):
     return data
 
 
+def _generate_rendered_document_text(document_data):
+    """
+    Generate the actual rendered document text that appears to the user.
+    This mirrors what's displayed in the document_review.html template.
+    """
+    sections = {}
+
+    # CAPTION - Court and parties
+    caption_parts = []
+    if document_data.get('court'):
+        caption_parts.append(document_data['court'])
+
+    plaintiff = document_data.get('plaintiff', {})
+    if plaintiff.get('first_name'):
+        plaintiff_name = f"{plaintiff.get('first_name', '')} {plaintiff.get('middle_name', '')} {plaintiff.get('last_name', '')}".strip()
+        plaintiff_name = ' '.join(plaintiff_name.split())  # Remove extra spaces
+        caption_parts.append(f"{plaintiff_name.upper()}, Plaintiff")
+
+    defendants = document_data.get('defendants', [])
+    if defendants:
+        if len(defendants) == 1:
+            caption_parts.append(f"{defendants[0].get('name', '').upper()}, Defendant")
+        else:
+            caption_parts.append(f"{defendants[0].get('name', '').upper()}, et al., Defendants")
+
+    sections['caption'] = '\n'.join(caption_parts)
+
+    # PARTIES section
+    parties_parts = []
+    if plaintiff.get('first_name'):
+        plaintiff_full = f"{plaintiff.get('first_name', '')} {plaintiff.get('middle_name', '')} {plaintiff.get('last_name', '')}".strip()
+        plaintiff_full = ' '.join(plaintiff_full.split())
+        address_parts = [plaintiff.get('street_address', '')]
+        if plaintiff.get('city') and plaintiff.get('state'):
+            address_parts.append(f"{plaintiff.get('city')}, {plaintiff.get('state')} {plaintiff.get('zip_code', '')}")
+        address = ', '.join([p for p in address_parts if p])
+        parties_parts.append(f"Plaintiff {plaintiff_full} is an individual residing at {address}.")
+
+    for i, d in enumerate(defendants):
+        name = d.get('name', '')
+        title = d.get('title_rank', '')
+        agency = d.get('agency_name', '')
+        address = d.get('address', '')
+
+        if title and agency:
+            parties_parts.append(f"Defendant {name} is an individual who, at all times relevant hereto, held the position of {title} by {agency}. Defendant may be served at {address}.")
+        elif agency:
+            parties_parts.append(f"Defendant {name} is associated with {agency}. Defendant may be served at {address}.")
+        else:
+            parties_parts.append(f"Defendant {name} may be served at {address}.")
+
+    sections['parties'] = '\n\n'.join(parties_parts)
+
+    # JURISDICTION section
+    incident = document_data.get('incident', {})
+    jurisdiction_parts = [
+        "This Court has jurisdiction pursuant to 28 U.S.C. §§ 1331 and 1343."
+    ]
+    if incident.get('city') and incident.get('state'):
+        jurisdiction_parts.append(f"Venue is proper in this district pursuant to 28 U.S.C. § 1391(b) because the events occurred in {incident.get('city')}, {incident.get('state')}.")
+    sections['jurisdiction'] = '\n\n'.join(jurisdiction_parts)
+
+    # STATEMENT OF FACTS section
+    facts_parts = []
+
+    # Incident overview paragraph
+    date_str = incident.get('incident_date', '')
+    time_obj = incident.get('incident_time')
+    location = incident.get('incident_location', '')
+    city = incident.get('city', '')
+    state = incident.get('state', '')
+
+    fact_sentence = "On or about "
+    if date_str:
+        fact_sentence += date_str
+    else:
+        fact_sentence += "[DATE]"
+
+    if time_obj:
+        try:
+            if hasattr(time_obj, 'strftime'):
+                time_str = time_obj.strftime("%-I:%M %p")
+            else:
+                time_str = str(time_obj)
+            fact_sentence += f", at approximately {time_str}"
+        except:
+            pass
+
+    fact_sentence += ", Plaintiff was located at "
+    if location:
+        fact_sentence += location
+    else:
+        fact_sentence += "[LOCATION]"
+
+    if city and state:
+        fact_sentence += f", {city}, {state}"
+
+    fact_sentence += "."
+    facts_parts.append(fact_sentence)
+
+    # Narrative
+    narrative = document_data.get('narrative', {})
+    if narrative.get('detailed_narrative'):
+        facts_parts.append(narrative.get('detailed_narrative'))
+
+    # Damages in facts
+    damages = document_data.get('damages', {})
+    if damages.get('physical_injury') or damages.get('emotional_distress'):
+        damage_text = "As a result of Defendants' actions, Plaintiff suffered "
+        damage_parts = []
+        if damages.get('physical_injury'):
+            desc = damages.get('physical_injury_description', '')
+            if desc:
+                damage_parts.append(f"physical injuries, specifically: {desc}")
+            else:
+                damage_parts.append("physical injuries")
+        if damages.get('emotional_distress'):
+            desc = damages.get('emotional_distress_description', '')
+            if desc:
+                damage_parts.append(f"emotional distress, including {desc}")
+            else:
+                damage_parts.append("emotional distress")
+        damage_text += " and ".join(damage_parts) + "."
+        facts_parts.append(damage_text)
+
+    sections['statement_of_facts'] = '\n\n'.join(facts_parts)
+
+    # CAUSES OF ACTION section
+    rights = document_data.get('rights_violated', {})
+    causes_parts = []
+
+    if rights.get('fourth_amendment'):
+        fourth_text = "FOURTH AMENDMENT VIOLATION\n\nDefendants violated Plaintiff's Fourth Amendment rights by: "
+        violations = []
+        if rights.get('fourth_amendment_search'):
+            violations.append("unreasonable search")
+        if rights.get('fourth_amendment_seizure'):
+            violations.append("unlawful seizure")
+        if rights.get('fourth_amendment_arrest'):
+            violations.append("arrest without probable cause")
+        if rights.get('fourth_amendment_force'):
+            violations.append("excessive force")
+        fourth_text += "; ".join(violations) if violations else "constitutional violations"
+        if rights.get('fourth_amendment_details'):
+            fourth_text += f"\n\n{rights.get('fourth_amendment_details')}"
+        causes_parts.append(fourth_text)
+
+    if rights.get('first_amendment'):
+        first_text = "FIRST AMENDMENT VIOLATION\n\nDefendants violated Plaintiff's First Amendment rights by: "
+        violations = []
+        if rights.get('first_amendment_speech'):
+            violations.append("suppressing free speech")
+        if rights.get('first_amendment_press'):
+            violations.append("interfering with right to record")
+        if rights.get('first_amendment_assembly'):
+            violations.append("restricting peaceful assembly")
+        if rights.get('first_amendment_petition'):
+            violations.append("retaliating for exercising petition rights")
+        first_text += "; ".join(violations) if violations else "constitutional violations"
+        if rights.get('first_amendment_details'):
+            first_text += f"\n\n{rights.get('first_amendment_details')}"
+        causes_parts.append(first_text)
+
+    if rights.get('fifth_amendment'):
+        fifth_text = "FIFTH AMENDMENT VIOLATION\n\nDefendants violated Plaintiff's Fifth Amendment rights by: "
+        violations = []
+        if rights.get('fifth_amendment_self_incrimination'):
+            violations.append("compelling self-incrimination")
+        if rights.get('fifth_amendment_due_process'):
+            violations.append("denying due process")
+        fifth_text += "; ".join(violations) if violations else "constitutional violations"
+        if rights.get('fifth_amendment_details'):
+            fifth_text += f"\n\n{rights.get('fifth_amendment_details')}"
+        causes_parts.append(fifth_text)
+
+    if rights.get('fourteenth_amendment'):
+        fourteenth_text = "FOURTEENTH AMENDMENT VIOLATION\n\nDefendants violated Plaintiff's Fourteenth Amendment rights by: "
+        violations = []
+        if rights.get('fourteenth_amendment_due_process'):
+            violations.append("denying due process")
+        if rights.get('fourteenth_amendment_equal_protection'):
+            violations.append("denying equal protection")
+        fourteenth_text += "; ".join(violations) if violations else "constitutional violations"
+        if rights.get('fourteenth_amendment_details'):
+            fourteenth_text += f"\n\n{rights.get('fourteenth_amendment_details')}"
+        causes_parts.append(fourteenth_text)
+
+    sections['causes_of_action'] = '\n\n'.join(causes_parts)
+
+    # PRAYER FOR RELIEF section
+    relief = document_data.get('relief', {})
+    relief_parts = ["WHEREFORE, Plaintiff requests:"]
+    relief_parts.append("A. A declaration that Defendants' actions violated Plaintiff's constitutional rights;")
+
+    if relief.get('compensatory_damages'):
+        amount = relief.get('compensatory_amount')
+        if amount:
+            relief_parts.append(f"B. Compensatory damages in the amount of ${amount:,.2f};")
+        else:
+            relief_parts.append("B. Compensatory damages;")
+
+    if relief.get('punitive_damages'):
+        relief_parts.append("C. Punitive damages;")
+
+    if relief.get('attorney_fees'):
+        relief_parts.append("D. Attorney's fees pursuant to 42 U.S.C. § 1988;")
+
+    if relief.get('injunctive_relief') and relief.get('injunctive_description'):
+        relief_parts.append(f"E. Injunctive relief: {relief.get('injunctive_description')};")
+
+    relief_parts.append("F. Such other relief as the Court deems just.")
+
+    if relief.get('jury_trial_demanded'):
+        relief_parts.append("\nJURY DEMAND: Plaintiff demands trial by jury.")
+
+    sections['relief_sought'] = '\n\n'.join(relief_parts)
+
+    # SIGNATURE section
+    sig_parts = ["Respectfully submitted,"]
+    if plaintiff.get('first_name'):
+        plaintiff_full = f"{plaintiff.get('first_name', '')} {plaintiff.get('last_name', '')}".strip()
+        if plaintiff.get('is_pro_se'):
+            sig_parts.append(f"\n{plaintiff_full}, Pro Se")
+        else:
+            sig_parts.append(f"\n{plaintiff_full}")
+
+        if plaintiff.get('street_address'):
+            sig_parts.append(plaintiff.get('street_address'))
+        if plaintiff.get('city') and plaintiff.get('state'):
+            sig_parts.append(f"{plaintiff.get('city')}, {plaintiff.get('state')} {plaintiff.get('zip_code', '')}")
+
+    sections['signature'] = '\n'.join(sig_parts)
+
+    return sections
+
+
 def _update_section_relevance(document, extracted_data):
     """
     Update story_relevance field for sections based on what was extracted from the story.
@@ -1545,12 +1781,48 @@ def ai_review_document(request, document_id):
         # Collect all document data
         document_data = _collect_document_data(document)
 
-        # Also include story text for context
-        document_data['story_text'] = document.story_text or ''
+        # Generate the actual rendered document text that the user sees
+        rendered_sections = _generate_rendered_document_text(document_data)
+
+        # Build the full document text as it appears to the user
+        full_document_text = f"""
+UNITED STATES DISTRICT COURT
+{rendered_sections.get('caption', '')}
+
+COMPLAINT FOR VIOLATION OF CIVIL RIGHTS UNDER 42 U.S.C. § 1983
+
+PARTIES
+
+{rendered_sections.get('parties', '')}
+
+JURISDICTION AND VENUE
+
+{rendered_sections.get('jurisdiction', '')}
+
+STATEMENT OF FACTS
+
+{rendered_sections.get('statement_of_facts', '')}
+
+CAUSES OF ACTION
+
+{rendered_sections.get('causes_of_action', '')}
+
+PRAYER FOR RELIEF
+
+{rendered_sections.get('relief_sought', '')}
+
+{rendered_sections.get('signature', '')}
+"""
+
+        # Pass the rendered document text to the AI, not raw database fields
+        review_data = {
+            'rendered_document': full_document_text,
+            'sections': rendered_sections,
+        }
 
         from .services.openai_service import OpenAIService
         service = OpenAIService()
-        result = service.review_document(document_data)
+        result = service.review_document(review_data)
 
         # Record AI usage on success and include updated usage info
         if result.get('success'):
