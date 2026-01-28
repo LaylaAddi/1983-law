@@ -1402,41 +1402,39 @@ document.addEventListener('keydown', function(e) {
 let aiReviewResults = null;
 
 // Map section names from AI response to data-section attributes
+// Maps AI section names to database section types.
+// Keys must use spaces (not underscores) since normalizeSection() converts _ to spaces.
 const sectionNameMap = {
     'caption': 'incident_overview',
     'parties': 'plaintiff_info',
     'jurisdiction': 'incident_overview',
+    'jurisdiction and venue': 'incident_overview',
     'facts': 'incident_narrative',
     'factual allegations': 'incident_narrative',
     'allegations': 'incident_narrative',
     'statement of facts': 'incident_narrative',
     'damages': 'damages',
     'damage': 'damages',
-    'causes_of_action': 'rights_violated',
     'causes of action': 'rights_violated',
     'legal claims': 'rights_violated',
     'claims': 'rights_violated',
     'constitutional violations': 'rights_violated',
     'legal basis': 'rights_violated',
     'relief': 'relief_sought',
-    'relief_sought': 'relief_sought',
+    'relief sought': 'relief_sought',
     'prayer for relief': 'relief_sought',
     'signature': 'plaintiff_info',
     'defendants': 'defendants',
     'defendant': 'defendants',
     'plaintiff': 'plaintiff_info',
-    'plaintiff_info': 'plaintiff_info',
     'plaintiff info': 'plaintiff_info',
     'incident': 'incident_overview',
-    'incident_overview': 'incident_overview',
     'incident overview': 'incident_overview',
     'narrative': 'incident_narrative',
-    'incident_narrative': 'incident_narrative',
     'incident narrative': 'incident_narrative',
     'story': 'incident_narrative',
     'story text': 'incident_narrative',
     'rights': 'rights_violated',
-    'rights_violated': 'rights_violated',
     'rights violated': 'rights_violated',
     'witnesses': 'witnesses',
     'witness': 'witnesses',
@@ -1756,25 +1754,22 @@ function displayAIReview(data) {
 }
 
 function getSectionTitle(sectionName) {
-    // First normalize to get the mapped section name
+    // First normalize to get the mapped database section name
     const mappedSection = getMappedSection(sectionName);
 
+    // Map database section types to document-facing headings
+    // These match the actual headings shown in the legal document
     const titles = {
-        'plaintiff_info': 'Plaintiff Information',
-        'incident_overview': 'Incident Overview',
-        'defendants': 'Defendants',
-        'incident_narrative': 'Incident Narrative',
-        'rights_violated': 'Rights Violated',
-        'damages': 'Damages',
-        'relief_sought': 'Relief Sought',
+        'plaintiff_info': 'Parties',
+        'incident_overview': 'Statement of Facts',
+        'defendants': 'Parties (Defendants)',
+        'incident_narrative': 'Statement of Facts',
+        'rights_violated': 'Causes of Action',
+        'damages': 'Statement of Facts (Damages)',
+        'relief_sought': 'Prayer for Relief',
         'witnesses': 'Witnesses',
         'evidence': 'Evidence',
         'prior_complaints': 'Prior Complaints',
-        'facts': 'Statement of Facts',
-        'caption': 'Caption',
-        'parties': 'Parties',
-        'jurisdiction': 'Jurisdiction',
-        'causes_of_action': 'Causes of Action'
     };
     return titles[mappedSection] || sectionName;
 }
@@ -1882,15 +1877,33 @@ function showSuggestionContent(index) {
 
     // Show the suggested content
     const displayContent = suggestion.editedContent || fix.rewritten_content;
+    // Friendly field names for display
+    const friendlyFieldNames = {
+        'detailed_narrative': 'Narrative Text',
+        'story_text': 'Story Text',
+        'incident_location': 'Location',
+        'incident_date': 'Date',
+        'incident_time': 'Time',
+        'location_description': 'Location Description',
+        'physical_injury_description': 'Physical Injuries',
+        'emotional_injury_description': 'Emotional Injuries',
+        'financial_losses': 'Financial Losses',
+        'first_name': 'First Name',
+        'last_name': 'Last Name',
+    };
+    const friendlyFieldDisplay = fieldNames.length > 0
+        ? fieldNames.map(f => friendlyFieldNames[f] || f.replace(/_/g, ' ')).join(', ')
+        : 'text content';
+
     contentArea.innerHTML = `
         <div class="ai-field-indicator">
             <div class="d-flex align-items-center gap-2 mb-1">
                 <span class="badge" style="background: #6f42c1 !important;">
-                    <i class="bi bi-pencil-square me-1"></i>${escapeHtml(sectionTitle)}
+                    <i class="bi bi-geo-alt me-1"></i>${escapeHtml(sectionTitle)}
                 </span>
             </div>
             <small class="text-muted d-block">
-                <strong>Editing:</strong> <span class="field-value">${escapeHtml(fieldDisplay)}</span>
+                <strong>Editing field:</strong> <span class="field-value">${escapeHtml(friendlyFieldDisplay)}</span>
             </small>
             <small class="text-muted d-block mt-1"><strong>Summary:</strong> ${escapeHtml(fix.changes_summary)}</small>
         </div>
