@@ -4,96 +4,154 @@
 
 {% block extra_css %}
 <style>
-    /* Final review layout */
+    /* Page layout */
     .final-review-container {
-        max-width: 1200px;
+        max-width: 900px;
         margin: 0 auto;
     }
 
-    /* Status header */
+    /* Header bar */
     .review-header {
         background: linear-gradient(135deg, #1a365d 0%, #2d4a7c 100%);
         color: white;
-        padding: 1.5rem;
+        padding: 1rem 1.5rem;
         border-radius: 8px;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
     }
 
     .review-header h1 {
-        margin: 0 0 0.5rem 0;
-        font-size: 1.5rem;
-    }
-
-    .review-header .meta {
-        font-size: 0.9rem;
-        opacity: 0.9;
+        margin: 0;
+        font-size: 1.25rem;
     }
 
     /* Action buttons */
     .action-bar {
         display: flex;
-        gap: 1rem;
+        gap: 0.75rem;
         flex-wrap: wrap;
-        margin-bottom: 1.5rem;
-        padding: 1rem;
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
         background: #f8f9fa;
         border-radius: 8px;
+        align-items: center;
     }
 
-    /* Legal document styling */
+    /* Legal document styling - court format */
     .legal-document {
         font-family: 'Times New Roman', Times, serif;
-        font-size: 14px;
-        line-height: 1.8;
+        font-size: 13pt;
+        line-height: 2;
         background: white;
-        padding: 50px 60px;
-        box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        border-radius: 4px;
-        margin-bottom: 2rem;
+        padding: 1in;
+        box-shadow: 0 0 20px rgba(0,0,0,0.15);
+        border: 1px solid #ddd;
+        min-height: 11in;
     }
 
-    .legal-document .section-header {
+    /* Caption - centered court header */
+    .court-caption {
+        text-align: center;
+        margin-bottom: 36pt;
+    }
+
+    .court-name {
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 13pt;
+        margin-bottom: 24pt;
+    }
+
+    .case-caption {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 24pt;
+    }
+
+    .case-caption-box {
+        border: 2px solid black;
+        padding: 12pt 24pt;
+        text-align: left;
+        min-width: 400px;
+    }
+
+    .case-caption-box .party {
+        margin-bottom: 6pt;
+    }
+
+    .case-caption-box .vs {
+        text-align: center;
+        font-weight: bold;
+        margin: 12pt 0;
+    }
+
+    .case-caption-box .case-number {
+        text-align: right;
+        margin-top: 12pt;
+    }
+
+    .document-title {
+        text-align: center;
+        font-weight: bold;
+        text-transform: uppercase;
+        text-decoration: underline;
+        margin-bottom: 24pt;
+        font-size: 13pt;
+    }
+
+    /* Section headers */
+    .section-header {
         text-align: center;
         font-weight: bold;
         text-decoration: underline;
-        margin: 2rem 0 1rem 0;
-        font-size: 14px;
+        margin: 24pt 0 12pt 0;
+        font-size: 13pt;
     }
 
+    /* Paragraphs with proper indentation */
     .legal-document p {
         text-indent: 0.5in;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0;
         text-align: justify;
     }
 
-    .legal-document .no-indent {
+    .legal-document p.no-indent {
         text-indent: 0;
     }
 
-    .legal-document pre {
-        font-family: 'Times New Roman', Times, serif;
-        white-space: pre-wrap;
-        font-size: 14px;
-        line-height: 1.8;
-        margin: 0;
-        background: transparent;
-        border: none;
-        padding: 0;
+    .legal-document .numbered-para {
+        text-indent: 0;
+        margin-left: 0.5in;
+        position: relative;
     }
 
-    /* Editable section styling */
+    .legal-document .numbered-para .para-num {
+        position: absolute;
+        left: -0.5in;
+        width: 0.4in;
+        text-align: right;
+    }
+
+    /* Section content */
+    .section-content {
+        white-space: pre-wrap;
+        font-family: 'Times New Roman', Times, serif;
+        font-size: 13pt;
+        line-height: 2;
+    }
+
+    /* Editable section */
     .document-section {
         position: relative;
-        padding: 1rem;
-        margin: 1rem -1rem;
+        padding: 8pt;
+        margin: 4pt -8pt;
         border-radius: 4px;
-        transition: all 0.2s ease;
         border: 2px solid transparent;
+        transition: all 0.2s ease;
     }
 
     .document-section:hover {
-        background: rgba(13, 110, 253, 0.03);
-        border-color: rgba(13, 110, 253, 0.2);
+        background: rgba(13, 110, 253, 0.02);
+        border-color: rgba(13, 110, 253, 0.15);
     }
 
     .document-section.editing {
@@ -103,10 +161,11 @@
 
     .section-toolbar {
         position: absolute;
-        top: 0.5rem;
-        right: 0.5rem;
+        top: 4pt;
+        right: 4pt;
         display: none;
-        gap: 0.5rem;
+        gap: 4pt;
+        z-index: 10;
     }
 
     .document-section:hover .section-toolbar {
@@ -114,18 +173,18 @@
     }
 
     .section-toolbar .btn {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.75rem;
+        padding: 2px 6px;
+        font-size: 11px;
     }
 
     /* Edit mode */
     .edit-textarea {
         width: 100%;
-        min-height: 200px;
+        min-height: 150px;
         font-family: 'Times New Roman', Times, serif;
-        font-size: 14px;
-        line-height: 1.8;
-        padding: 1rem;
+        font-size: 13pt;
+        line-height: 2;
+        padding: 12pt;
         border: 1px solid #dee2e6;
         border-radius: 4px;
         resize: vertical;
@@ -133,8 +192,8 @@
 
     .edit-actions {
         display: flex;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
+        gap: 8pt;
+        margin-top: 8pt;
     }
 
     /* AI Review Panel */
@@ -143,18 +202,14 @@
         border-radius: 8px;
         box-shadow: 0 0 15px rgba(0,0,0,0.1);
         padding: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .ai-review-panel h3 {
         margin-bottom: 1rem;
-        font-size: 1.1rem;
     }
 
     .review-issue {
-        padding: 1rem;
+        padding: 0.75rem;
         border-radius: 4px;
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.9rem;
     }
 
     .review-issue.severity-high {
@@ -173,36 +228,18 @@
     }
 
     .review-strength {
-        padding: 0.75rem;
+        padding: 0.5rem 0.75rem;
         background: #d4edda;
         border-left: 4px solid #28a745;
         border-radius: 4px;
         margin-bottom: 0.5rem;
+        font-size: 0.9rem;
     }
 
-    /* Caption styling */
-    .caption {
-        text-align: center;
-        margin-bottom: 2rem;
-        font-family: 'Times New Roman', Times, serif;
-    }
-
-    .caption-court {
-        font-weight: bold;
-        text-transform: uppercase;
-        margin-bottom: 1rem;
-    }
-
-    .caption-box {
-        text-align: left;
-        white-space: pre-wrap;
-    }
-
-    /* Cause of Action */
-    .cause-of-action {
-        margin-bottom: 2rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px dashed #dee2e6;
+    /* Signature block */
+    .signature-block {
+        margin-top: 48pt;
+        margin-left: 50%;
     }
 
     /* Loading overlay */
@@ -212,7 +249,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(255,255,255,0.9);
+        background: rgba(255,255,255,0.95);
         display: none;
         justify-content: center;
         align-items: center;
@@ -224,143 +261,121 @@
         display: flex;
     }
 
-    /* No document state */
-    .no-document-message {
+    /* Error/info messages */
+    .generation-message {
         text-align: center;
-        padding: 3rem;
+        padding: 2rem;
         background: #f8f9fa;
         border-radius: 8px;
+        margin: 1rem 0;
     }
 
-    .no-document-message h3 {
-        margin-bottom: 1rem;
+    /* Print styles */
+    @media print {
+        .action-bar, .review-header, .section-toolbar, .ai-review-panel {
+            display: none !important;
+        }
+        .legal-document {
+            box-shadow: none;
+            border: none;
+            padding: 0;
+        }
     }
 
-    /* Progress info */
-    .completion-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 1rem;
-        background: rgba(255,255,255,0.2);
-        border-radius: 20px;
-        font-size: 0.9rem;
-    }
-
-    /* Responsive */
     @media (max-width: 768px) {
         .legal-document {
-            padding: 30px 20px;
-        }
-
-        .action-bar {
-            flex-direction: column;
+            padding: 0.5in;
+            font-size: 12pt;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container py-3">
     <div class="final-review-container">
-        <!-- Status Header -->
+        <!-- Header -->
         <div class="review-header">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                <div>
-                    <h1>{{ document.title }}</h1>
-                    <div class="meta">
-                        <span class="me-3"><i class="bi bi-calendar"></i> Created: {{ document.created_at|date:"M j, Y" }}</span>
-                        {% if document.final_generated_at %}
-                        <span class="me-3"><i class="bi bi-file-earmark-text"></i> Generated: {{ document.final_generated_at|date:"M j, Y g:i A" }}</span>
-                        {% endif %}
-                        {% if document.final_edited_at %}
-                        <span><i class="bi bi-pencil"></i> Edited: {{ document.final_edited_at|date:"M j, Y g:i A" }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="completion-badge">
-                    <i class="bi bi-pie-chart"></i>
-                    {{ completion_pct }}% Complete
-                </div>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h1>{{ document.title }}</h1>
+                <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-sm btn-outline-light">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
             </div>
         </div>
 
+        {% if auto_generate_error %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Auto-generation failed: {{ auto_generate_error }}
+        </div>
+        {% endif %}
+
+        {% if has_final_document %}
         <!-- Action Bar -->
         <div class="action-bar">
-            {% if not has_final_document %}
-            <button id="generateBtn" class="btn btn-primary" {% if completion_pct < 50 %}disabled{% endif %}>
-                <i class="bi bi-magic"></i> Generate Document
-            </button>
-            {% if completion_pct < 50 %}
-            <span class="text-muted align-self-center">Complete at least 50% of sections before generating</span>
-            {% endif %}
-            {% else %}
-            <button id="regenerateAllBtn" class="btn btn-outline-primary">
-                <i class="bi bi-arrow-clockwise"></i> Regenerate All
-            </button>
-            <button id="aiReviewBtn" class="btn btn-info text-white" {% if not can_use_ai %}disabled{% endif %}>
+            <button id="aiReviewBtn" class="btn btn-info btn-sm text-white" {% if not can_use_ai %}disabled{% endif %}>
                 <i class="bi bi-robot"></i> AI Review
             </button>
-            <a href="{% url 'documents:download_final_pdf' document.id %}" class="btn btn-success">
+            <button id="regenerateAllBtn" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-clockwise"></i> Regenerate All
+            </button>
+            <a href="{% url 'documents:download_final_pdf' document.id %}" class="btn btn-success btn-sm">
                 <i class="bi bi-file-earmark-pdf"></i> Download PDF
             </a>
-            {% endif %}
-            <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-secondary ms-auto">
-                <i class="bi bi-arrow-left"></i> Back to Document
-            </a>
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print
+            </button>
         </div>
 
         <!-- AI Review Results Panel (hidden by default) -->
         <div id="aiReviewPanel" class="ai-review-panel" style="display: none;">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3><i class="bi bi-robot"></i> AI Review Results</h3>
+                <h5 class="mb-0"><i class="bi bi-robot"></i> AI Review</h5>
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('aiReviewPanel').style.display='none'">
-                    <i class="bi bi-x"></i> Close
+                    <i class="bi bi-x"></i>
                 </button>
             </div>
-            <div id="aiReviewContent">
-                <!-- AI review content will be inserted here -->
-            </div>
+            <div id="aiReviewContent"></div>
         </div>
 
-        {% if has_final_document %}
         <!-- The Legal Document -->
         <div class="legal-document">
-            <!-- Caption (generated from data, not editable here) -->
-            <div class="caption">
-                <div class="caption-court">{{ document_data.court|default:"UNITED STATES DISTRICT COURT" }}</div>
-                <div class="caption-box">
-                    <pre>{{ document_data.plaintiff.first_name|upper }} {{ document_data.plaintiff.last_name|upper }},
-    Plaintiff,
+            <!-- Court Caption -->
+            <div class="court-caption">
+                <div class="court-name">
+                    {{ document_data.court|default:"UNITED STATES DISTRICT COURT" }}<br>
+                    FOR THE {{ document_data.district|default:"[DISTRICT]" }} DISTRICT OF {{ document_data.state_name|default:document_data.incident.state|upper }}
+                </div>
 
-v.                                          Case No. ________________
+                <div class="case-caption">
+                    <div class="case-caption-box">
+                        <div class="party">{{ document_data.plaintiff.first_name|upper }} {{ document_data.plaintiff.last_name|upper }},</div>
+                        <div class="party" style="margin-left: 2em;">Plaintiff,</div>
+                        <div class="vs">v.</div>
+                        {% for defendant in document_data.defendants %}
+                        <div class="party">{{ defendant.name|upper }}{% if not forloop.last %},{% else %},{% endif %}</div>
+                        {% empty %}
+                        <div class="party">[DEFENDANTS],</div>
+                        {% endfor %}
+                        <div class="party" style="margin-left: 2em;">Defendant{% if document_data.defendants|length > 1 %}s{% endif %}.</div>
+                        <div class="case-number">Case No. ________________</div>
+                    </div>
+                </div>
 
-{% for defendant in document_data.defendants %}{{ defendant.name|upper }}{% if not forloop.last %},
-{% endif %}{% empty %}UNKNOWN DEFENDANTS{% endfor %},
-    Defendants.
-
-________________________________________
-
-COMPLAINT FOR VIOLATION OF CIVIL RIGHTS
-PURSUANT TO 42 U.S.C. § 1983
-
-________________________________________</pre>
+                <div class="document-title">
+                    COMPLAINT FOR VIOLATION OF CIVIL RIGHTS<br>
+                    PURSUANT TO 42 U.S.C. § 1983
                 </div>
             </div>
 
             <!-- Introduction -->
             <div class="document-section" data-section="introduction">
                 <div class="section-toolbar">
-                    <button class="btn btn-sm btn-outline-primary edit-section-btn" title="Edit">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary regenerate-btn" title="Regenerate">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
+                    <button class="btn btn-outline-primary edit-section-btn" title="Edit"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-outline-secondary regenerate-btn" title="Regenerate"><i class="bi bi-arrow-clockwise"></i></button>
                 </div>
-                <div class="section-content">
-                    <pre>{{ document.final_introduction }}</pre>
-                </div>
+                <div class="section-content">{{ document.final_introduction }}</div>
                 <div class="section-edit" style="display: none;">
                     <textarea class="edit-textarea">{{ document.final_introduction }}</textarea>
                     <div class="edit-actions">
@@ -371,18 +386,13 @@ ________________________________________</pre>
             </div>
 
             <!-- Jurisdiction -->
+            <div class="section-header">JURISDICTION AND VENUE</div>
             <div class="document-section" data-section="jurisdiction">
                 <div class="section-toolbar">
-                    <button class="btn btn-sm btn-outline-primary edit-section-btn" title="Edit">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary regenerate-btn" title="Regenerate">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
+                    <button class="btn btn-outline-primary edit-section-btn" title="Edit"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-outline-secondary regenerate-btn" title="Regenerate"><i class="bi bi-arrow-clockwise"></i></button>
                 </div>
-                <div class="section-content">
-                    <pre>{{ document.final_jurisdiction }}</pre>
-                </div>
+                <div class="section-content">{{ document.final_jurisdiction }}</div>
                 <div class="section-edit" style="display: none;">
                     <textarea class="edit-textarea">{{ document.final_jurisdiction }}</textarea>
                     <div class="edit-actions">
@@ -393,18 +403,13 @@ ________________________________________</pre>
             </div>
 
             <!-- Parties -->
+            <div class="section-header">PARTIES</div>
             <div class="document-section" data-section="parties">
                 <div class="section-toolbar">
-                    <button class="btn btn-sm btn-outline-primary edit-section-btn" title="Edit">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary regenerate-btn" title="Regenerate">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
+                    <button class="btn btn-outline-primary edit-section-btn" title="Edit"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-outline-secondary regenerate-btn" title="Regenerate"><i class="bi bi-arrow-clockwise"></i></button>
                 </div>
-                <div class="section-content">
-                    <pre>{{ document.final_parties }}</pre>
-                </div>
+                <div class="section-content">{{ document.final_parties }}</div>
                 <div class="section-edit" style="display: none;">
                     <textarea class="edit-textarea">{{ document.final_parties }}</textarea>
                     <div class="edit-actions">
@@ -415,20 +420,15 @@ ________________________________________</pre>
             </div>
 
             <!-- Statement of Facts -->
+            <div class="section-header">STATEMENT OF FACTS</div>
             <div class="document-section" data-section="facts">
                 <div class="section-toolbar">
-                    <button class="btn btn-sm btn-outline-primary edit-section-btn" title="Edit">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary regenerate-btn" title="Regenerate">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
+                    <button class="btn btn-outline-primary edit-section-btn" title="Edit"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-outline-secondary regenerate-btn" title="Regenerate"><i class="bi bi-arrow-clockwise"></i></button>
                 </div>
-                <div class="section-content">
-                    <pre>{{ document.final_facts }}</pre>
-                </div>
+                <div class="section-content">{{ document.final_facts }}</div>
                 <div class="section-edit" style="display: none;">
-                    <textarea class="edit-textarea" style="min-height: 400px;">{{ document.final_facts }}</textarea>
+                    <textarea class="edit-textarea" style="min-height: 300px;">{{ document.final_facts }}</textarea>
                     <div class="edit-actions">
                         <button class="btn btn-sm btn-primary save-btn">Save</button>
                         <button class="btn btn-sm btn-outline-secondary cancel-btn">Cancel</button>
@@ -437,18 +437,15 @@ ________________________________________</pre>
             </div>
 
             <!-- Causes of Action -->
+            <div class="section-header">CAUSES OF ACTION</div>
             {% for cause in document.final_causes_of_action %}
             <div class="document-section cause-of-action" data-section="causes_of_action" data-cause-index="{{ forloop.counter0 }}">
                 <div class="section-toolbar">
-                    <button class="btn btn-sm btn-outline-primary edit-section-btn" title="Edit">
-                        <i class="bi bi-pencil"></i>
-                    </button>
+                    <button class="btn btn-outline-primary edit-section-btn" title="Edit"><i class="bi bi-pencil"></i></button>
                 </div>
-                <div class="section-content">
-                    <pre>{{ cause.content }}</pre>
-                </div>
+                <div class="section-content">{{ cause.content }}</div>
                 <div class="section-edit" style="display: none;">
-                    <textarea class="edit-textarea" style="min-height: 400px;">{{ cause.content }}</textarea>
+                    <textarea class="edit-textarea" style="min-height: 250px;">{{ cause.content }}</textarea>
                     <div class="edit-actions">
                         <button class="btn btn-sm btn-primary save-btn">Save</button>
                         <button class="btn btn-sm btn-outline-secondary cancel-btn">Cancel</button>
@@ -456,23 +453,17 @@ ________________________________________</pre>
                 </div>
             </div>
             {% empty %}
-            <div class="section-header">CAUSES OF ACTION</div>
-            <p class="text-muted no-indent">[No causes of action generated. Please ensure Rights Violated section is complete.]</p>
+            <p class="text-muted">[No causes of action generated]</p>
             {% endfor %}
 
             <!-- Prayer for Relief -->
+            <div class="section-header">PRAYER FOR RELIEF</div>
             <div class="document-section" data-section="prayer">
                 <div class="section-toolbar">
-                    <button class="btn btn-sm btn-outline-primary edit-section-btn" title="Edit">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary regenerate-btn" title="Regenerate">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
+                    <button class="btn btn-outline-primary edit-section-btn" title="Edit"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-outline-secondary regenerate-btn" title="Regenerate"><i class="bi bi-arrow-clockwise"></i></button>
                 </div>
-                <div class="section-content">
-                    <pre>{{ document.final_prayer }}</pre>
-                </div>
+                <div class="section-content">{{ document.final_prayer }}</div>
                 <div class="section-edit" style="display: none;">
                     <textarea class="edit-textarea">{{ document.final_prayer }}</textarea>
                     <div class="edit-actions">
@@ -484,15 +475,12 @@ ________________________________________</pre>
 
             <!-- Jury Demand -->
             {% if document.final_jury_demand %}
+            <div class="section-header">JURY DEMAND</div>
             <div class="document-section" data-section="jury_demand">
                 <div class="section-toolbar">
-                    <button class="btn btn-sm btn-outline-primary edit-section-btn" title="Edit">
-                        <i class="bi bi-pencil"></i>
-                    </button>
+                    <button class="btn btn-outline-primary edit-section-btn" title="Edit"><i class="bi bi-pencil"></i></button>
                 </div>
-                <div class="section-content">
-                    <pre>{{ document.final_jury_demand }}</pre>
-                </div>
+                <div class="section-content">{{ document.final_jury_demand }}</div>
                 <div class="section-edit" style="display: none;">
                     <textarea class="edit-textarea">{{ document.final_jury_demand }}</textarea>
                     <div class="edit-actions">
@@ -504,42 +492,47 @@ ________________________________________</pre>
             {% endif %}
 
             <!-- Signature -->
-            <div class="document-section" data-section="signature">
-                <div class="section-toolbar">
-                    <button class="btn btn-sm btn-outline-primary edit-section-btn" title="Edit">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary regenerate-btn" title="Regenerate">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
-                </div>
-                <div class="section-content">
-                    <pre>{{ document.final_signature }}</pre>
-                </div>
-                <div class="section-edit" style="display: none;">
-                    <textarea class="edit-textarea">{{ document.final_signature }}</textarea>
-                    <div class="edit-actions">
-                        <button class="btn btn-sm btn-primary save-btn">Save</button>
-                        <button class="btn btn-sm btn-outline-secondary cancel-btn">Cancel</button>
+            <div class="signature-block">
+                <div class="document-section" data-section="signature">
+                    <div class="section-toolbar">
+                        <button class="btn btn-outline-primary edit-section-btn" title="Edit"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-outline-secondary regenerate-btn" title="Regenerate"><i class="bi bi-arrow-clockwise"></i></button>
+                    </div>
+                    <div class="section-content">{{ document.final_signature }}</div>
+                    <div class="section-edit" style="display: none;">
+                        <textarea class="edit-textarea">{{ document.final_signature }}</textarea>
+                        <div class="edit-actions">
+                            <button class="btn btn-sm btn-primary save-btn">Save</button>
+                            <button class="btn btn-sm btn-outline-secondary cancel-btn">Cancel</button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         {% else %}
-        <!-- No document generated yet -->
-        <div class="no-document-message">
-            <h3><i class="bi bi-file-earmark-text text-muted"></i></h3>
-            <h3>Document Not Yet Generated</h3>
-            <p class="text-muted mb-4">
-                Click "Generate Document" above to create your legal complaint from the information you've entered.
-                {% if completion_pct < 50 %}
-                <br><strong>Note:</strong> Please complete at least 50% of the sections before generating.
-                {% endif %}
+        <!-- Document not yet generated -->
+        <div class="generation-message">
+            {% if completion_pct < 50 %}
+            <h4><i class="bi bi-exclamation-circle text-warning"></i> More Information Needed</h4>
+            <p class="text-muted mb-3">
+                Please complete at least 50% of the document sections before generating.
+                <br>Current progress: <strong>{{ completion_pct }}%</strong>
             </p>
-            <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-primary">
+            <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-primary">
                 <i class="bi bi-arrow-left"></i> Return to Edit Sections
             </a>
+            {% elif not can_use_ai %}
+            <h4><i class="bi bi-exclamation-circle text-warning"></i> AI Limit Reached</h4>
+            <p class="text-muted mb-3">Please upgrade your subscription to generate the document.</p>
+            {% else %}
+            <h4><i class="bi bi-hourglass-split"></i> Generating Document...</h4>
+            <p class="text-muted">Please wait while we generate your legal document.</p>
+            <div class="spinner-border text-primary mt-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <script>location.reload();</script>
+            {% endif %}
         </div>
         {% endif %}
     </div>
@@ -550,7 +543,7 @@ ________________________________________</pre>
     <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
         <span class="visually-hidden">Loading...</span>
     </div>
-    <div id="loadingMessage">Generating document...</div>
+    <div id="loadingMessage">Processing...</div>
 </div>
 {% endblock %}
 
@@ -559,136 +552,53 @@ ________________________________________</pre>
 const documentId = {{ document.id }};
 const csrfToken = '{{ csrf_token }}';
 
-// Generate document
-document.getElementById('generateBtn')?.addEventListener('click', async function() {
-    showLoading('Generating your legal document...');
-
-    try {
-        const response = await fetch(`/documents/${documentId}/final/generate/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            location.reload();
-        } else if (data.limit_reached) {
-            hideLoading();
-            alert('AI limit reached. Please upgrade to continue.');
-        } else {
-            hideLoading();
-            alert(data.error || 'Failed to generate document');
-        }
-    } catch (error) {
-        hideLoading();
-        alert('Error: ' + error.message);
-    }
-});
-
 // Regenerate all
 document.getElementById('regenerateAllBtn')?.addEventListener('click', async function() {
-    if (!confirm('This will regenerate all sections. Any manual edits will be lost. Continue?')) {
-        return;
-    }
-
+    if (!confirm('Regenerate entire document? All manual edits will be lost.')) return;
     showLoading('Regenerating document...');
-
     try {
         const response = await fetch(`/documents/${documentId}/final/generate/`, {
             method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken,
-                'Content-Type': 'application/json'
-            }
+            headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' }
         });
-
         const data = await response.json();
-
-        if (data.success) {
-            location.reload();
-        } else {
-            hideLoading();
-            alert(data.error || 'Failed to regenerate document');
-        }
-    } catch (error) {
-        hideLoading();
-        alert('Error: ' + error.message);
-    }
+        if (data.success) location.reload();
+        else { hideLoading(); alert(data.error || 'Failed'); }
+    } catch (e) { hideLoading(); alert('Error: ' + e.message); }
 });
 
 // AI Review
 document.getElementById('aiReviewBtn')?.addEventListener('click', async function() {
-    showLoading('AI is reviewing your document...');
-
+    showLoading('AI reviewing document...');
     try {
         const response = await fetch(`/documents/${documentId}/final/ai-review/`, {
             method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken,
-                'Content-Type': 'application/json'
-            }
+            headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' }
         });
-
         const data = await response.json();
         hideLoading();
-
-        if (data.success) {
-            displayAIReview(data.review);
-        } else if (data.limit_reached) {
-            alert('AI limit reached. Please upgrade to continue.');
-        } else {
-            alert(data.error || 'Failed to get AI review');
-        }
-    } catch (error) {
-        hideLoading();
-        alert('Error: ' + error.message);
-    }
+        if (data.success) displayAIReview(data.review);
+        else alert(data.error || 'Review failed');
+    } catch (e) { hideLoading(); alert('Error: ' + e.message); }
 });
 
 function displayAIReview(review) {
     const panel = document.getElementById('aiReviewPanel');
     const content = document.getElementById('aiReviewContent');
-
-    let html = '';
-
-    // Overall assessment
-    html += `<div class="mb-3"><strong>Overall Assessment:</strong> ${review.overall_assessment || 'N/A'}</div>`;
-
-    // Ready for filing badge
+    let html = `<p><strong>Assessment:</strong> ${review.overall_assessment || 'N/A'}</p>`;
     if (review.ready_for_filing !== undefined) {
-        const badge = review.ready_for_filing
-            ? '<span class="badge bg-success">Ready for Filing</span>'
-            : '<span class="badge bg-warning text-dark">Needs Attention</span>';
-        html += `<div class="mb-3">${badge}</div>`;
+        html += review.ready_for_filing
+            ? '<p><span class="badge bg-success">Ready for Filing</span></p>'
+            : '<p><span class="badge bg-warning text-dark">Needs Attention</span></p>';
     }
-
-    // Strengths
-    if (review.strengths && review.strengths.length > 0) {
-        html += '<h5 class="mt-3">Strengths</h5>';
-        review.strengths.forEach(strength => {
-            html += `<div class="review-strength"><i class="bi bi-check-circle text-success"></i> ${strength}</div>`;
-        });
+    if (review.strengths?.length) {
+        html += '<h6>Strengths</h6>';
+        review.strengths.forEach(s => html += `<div class="review-strength"><i class="bi bi-check-circle text-success"></i> ${s}</div>`);
     }
-
-    // Issues
-    if (review.issues && review.issues.length > 0) {
-        html += '<h5 class="mt-3">Issues to Address</h5>';
-        review.issues.forEach(issue => {
-            html += `
-                <div class="review-issue severity-${issue.severity || 'medium'}">
-                    <div><strong>${issue.section || 'General'}</strong> <span class="badge bg-${issue.severity === 'high' ? 'danger' : issue.severity === 'medium' ? 'warning' : 'info'}">${issue.severity || 'medium'}</span></div>
-                    <div class="mt-1">${issue.issue}</div>
-                    ${issue.suggestion ? `<div class="mt-1 text-muted"><em>Suggestion: ${issue.suggestion}</em></div>` : ''}
-                    ${issue.example_text ? `<div class="mt-2 p-2 bg-light border-start border-3 border-primary"><small><strong>Example:</strong> ${issue.example_text}</small></div>` : ''}
-                </div>
-            `;
-        });
+    if (review.issues?.length) {
+        html += '<h6 class="mt-3">Issues</h6>';
+        review.issues.forEach(i => html += `<div class="review-issue severity-${i.severity||'medium'}"><strong>${i.section||'General'}</strong>: ${i.issue}${i.suggestion ? `<br><em>Fix: ${i.suggestion}</em>` : ''}</div>`);
     }
-
     content.innerHTML = html;
     panel.style.display = 'block';
     panel.scrollIntoView({ behavior: 'smooth' });
@@ -720,35 +630,20 @@ document.querySelectorAll('.save-btn').forEach(btn => {
         const sectionKey = section.dataset.section;
         const causeIndex = section.dataset.causeIndex;
         const content = section.querySelector('.edit-textarea').value;
-
         try {
             const response = await fetch(`/documents/${documentId}/final/save-section/`, {
                 method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    section: sectionKey,
-                    content: content,
-                    cause_index: causeIndex !== undefined ? parseInt(causeIndex) : null
-                })
+                headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ section: sectionKey, content: content, cause_index: causeIndex !== undefined ? parseInt(causeIndex) : null })
             });
-
             const data = await response.json();
-
             if (data.success) {
-                // Update displayed content
-                section.querySelector('.section-content pre').textContent = content;
+                section.querySelector('.section-content').textContent = content;
                 section.classList.remove('editing');
                 section.querySelector('.section-content').style.display = 'block';
                 section.querySelector('.section-edit').style.display = 'none';
-            } else {
-                alert(data.error || 'Failed to save');
-            }
-        } catch (error) {
-            alert('Error: ' + error.message);
-        }
+            } else alert(data.error || 'Save failed');
+        } catch (e) { alert('Error: ' + e.message); }
     });
 });
 
@@ -757,44 +652,28 @@ document.querySelectorAll('.regenerate-btn').forEach(btn => {
     btn.addEventListener('click', async function() {
         const section = this.closest('.document-section');
         const sectionKey = section.dataset.section;
-
-        if (!confirm(`Regenerate ${sectionKey.replace(/_/g, ' ')}? Any edits will be lost.`)) {
-            return;
-        }
-
-        showLoading('Regenerating section...');
-
+        if (!confirm(`Regenerate this section? Edits will be lost.`)) return;
+        showLoading('Regenerating...');
         try {
             const response = await fetch(`/documents/${documentId}/final/regenerate-section/`, {
                 method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ section: sectionKey })
             });
-
             const data = await response.json();
             hideLoading();
-
             if (data.success) {
-                section.querySelector('.section-content pre').textContent = data.content;
+                section.querySelector('.section-content').textContent = data.content;
                 section.querySelector('.edit-textarea').value = data.content;
-            } else {
-                alert(data.error || 'Failed to regenerate');
-            }
-        } catch (error) {
-            hideLoading();
-            alert('Error: ' + error.message);
-        }
+            } else alert(data.error || 'Failed');
+        } catch (e) { hideLoading(); alert('Error: ' + e.message); }
     });
 });
 
-function showLoading(message) {
-    document.getElementById('loadingMessage').textContent = message;
+function showLoading(msg) {
+    document.getElementById('loadingMessage').textContent = msg;
     document.getElementById('loadingOverlay').classList.add('active');
 }
-
 function hideLoading() {
     document.getElementById('loadingOverlay').classList.remove('active');
 }

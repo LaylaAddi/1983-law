@@ -234,47 +234,28 @@
                 {% endif %}
             </div>
             <div>
-                {% if document.payment_status != 'finalized' %}
-                <a href="{% url 'documents:final_review' document.id %}" class="btn btn-primary me-2">
-                    <i class="bi bi-file-text me-1"></i>Final Review
-                </a>
-                <a href="{% url 'documents:document_review' document.id %}" class="btn btn-outline-secondary me-2">
-                    <i class="bi bi-pencil-square me-1"></i>Edit Sections
-                </a>
-                {% endif %}
                 {% if document.payment_status == 'finalized' %}
-                    <a href="{% url 'documents:document_preview' document.id %}?generate=true" class="btn btn-success">
+                    <a href="{% url 'documents:download_final_pdf' document.id %}" class="btn btn-success">
                         <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
                     </a>
-                {% elif document.payment_status == 'paid' or user.has_unlimited_access or user.has_active_subscription %}
-                    {% if document.get_completion_percentage == 100 or user.has_unlimited_access or user.has_active_subscription %}
-                    <a href="{% url 'documents:finalize' document.id %}" class="btn btn-success">
-                        <i class="bi bi-file-earmark-pdf me-1"></i>{% if user.has_unlimited_access and document.get_completion_percentage < 100 %}Preview PDF (Admin){% else %}Finalize & Generate PDF{% endif %}
-                    </a>
-                    {% else %}
-                    <div class="d-inline-block text-end">
-                        <button class="btn btn-secondary" disabled title="Complete all sections first">
-                            <i class="bi bi-file-earmark-pdf me-1"></i>Generate PDF
-                        </button>
-                        <div class="small text-muted mt-1">
-                            <i class="bi bi-lock me-1"></i>{{ document.get_completion_percentage }}% complete — finish all sections to unlock
-                        </div>
-                    </div>
-                    {% endif %}
                 {% else %}
-                    {% if document.get_completion_percentage == 100 %}
-                    <a href="{% url 'documents:checkout' document.id %}" class="btn btn-success">
-                        <i class="bi bi-credit-card me-1"></i>Pay & Generate PDF
+                    <a href="{% url 'documents:final_review' document.id %}" class="btn btn-primary me-2">
+                        <i class="bi bi-file-text me-1"></i>Final Review
                     </a>
+                    {% if document.has_final_document %}
+                        {% if document.payment_status == 'paid' or user.has_unlimited_access or user.has_active_subscription %}
+                        <a href="{% url 'documents:finalize' document.id %}" class="btn btn-success">
+                            <i class="bi bi-file-earmark-pdf me-1"></i>Finalize & Generate PDF
+                        </a>
+                        {% else %}
+                        <a href="{% url 'documents:checkout' document.id %}" class="btn btn-success">
+                            <i class="bi bi-credit-card me-1"></i>Pay & Generate PDF
+                        </a>
+                        {% endif %}
                     {% else %}
-                    <div class="d-inline-block text-end">
-                        <button class="btn btn-secondary" disabled title="Complete all sections first">
-                            <i class="bi bi-file-earmark-pdf me-1"></i>Generate PDF
-                        </button>
-                        <div class="small text-muted mt-1">
-                            <i class="bi bi-lock me-1"></i>{{ document.get_completion_percentage }}% complete — finish all sections to unlock
-                        </div>
-                    </div>
+                        <span class="text-muted align-self-center ms-2">
+                            <i class="bi bi-info-circle me-1"></i>Complete Final Review to generate PDF
+                        </span>
                     {% endif %}
                 {% endif %}
             </div>

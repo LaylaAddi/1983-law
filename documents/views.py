@@ -4918,6 +4918,8 @@ def final_review(request, document_id):
     2. Edit any section text inline
     3. Get AI review of the actual document text
     4. Download the final PDF
+
+    Auto-generates document on first visit if not already generated.
     """
     document = get_object_or_404(Document, id=document_id, user=request.user)
 
@@ -4929,6 +4931,30 @@ def final_review(request, document_id):
 
     # Check completion percentage
     completion_pct = document.get_completion_percentage()
+
+    # Auto-generate if not generated and completion is sufficient
+    auto_generate_error = None
+    if not document.has_final_document() and completion_pct >= 50 and document.can_use_ai():
+        try:
+            from .services.document_generator import DocumentGenerator
+            generator = DocumentGenerator()
+            result = generator.generate_complaint(document_data)
+
+            if result.get('success'):
+                sections = result.get('document', {})
+                document.final_introduction = sections.get('introduction', '')
+                document.final_jurisdiction = sections.get('jurisdiction', '')
+                document.final_parties = sections.get('parties', '')
+                document.final_facts = sections.get('facts', '')
+                document.final_prayer = sections.get('prayer', '')
+                document.final_jury_demand = sections.get('jury_demand', '')
+                document.final_signature = sections.get('signature', '')
+                document.final_causes_of_action = sections.get('causes_of_action', [])
+                document.final_generated_at = timezone.now()
+                document.save()
+                document.record_ai_usage()
+        except Exception as e:
+            auto_generate_error = str(e)
 
     # Define the sections for display
     final_sections = [
@@ -4957,6 +4983,7 @@ def final_review(request, document_id):
         'has_final_document': document.has_final_document(),
         'can_edit': document.can_edit(),
         'can_use_ai': document.can_use_ai(),
+        'auto_generate_error': auto_generate_error,
     }
 
     return render(request, 'documents/final_review.html', context)
