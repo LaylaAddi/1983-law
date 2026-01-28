@@ -350,6 +350,29 @@
             <div id="aiReviewContent"></div>
         </div>
 
+        <!-- Regeneration Terminal Panel (hidden by default) -->
+        <div id="regeneratePanel" class="card shadow-sm mb-4" style="display: none;">
+            <div class="card-header bg-dark text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-terminal me-2"></i>Generating Document</h5>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="terminal-container" style="border-radius: 0;">
+                    <div class="terminal-body" id="terminalBody" style="min-height: 300px;">
+                        <!-- Commands will be added here dynamically -->
+                    </div>
+                    <div class="terminal-progress-bar">
+                        <div class="terminal-progress-fill" id="terminalProgressFill"></div>
+                    </div>
+                    <div class="terminal-status">
+                        <span class="terminal-status-text" id="terminalStatusText">Initializing...</span>
+                        <span class="terminal-percentage" id="terminalPercentage">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- The Legal Document -->
         <div class="legal-document">
             <!-- Court Caption -->
@@ -549,29 +572,6 @@
     </div>
 </div>
 
-<!-- Loading Overlay with Terminal Animation -->
-<div class="loading-overlay" id="loadingOverlay">
-    <div class="terminal-container" style="width: 90%; max-width: 600px;">
-        <div class="terminal-header">
-            <div class="terminal-buttons">
-                <span class="terminal-btn close"></span>
-                <span class="terminal-btn minimize"></span>
-                <span class="terminal-btn maximize"></span>
-            </div>
-            <div class="terminal-title">1983law — generating complaint</div>
-        </div>
-        <div class="terminal-body" id="terminalBody">
-            <!-- Commands will be added here dynamically -->
-        </div>
-        <div class="terminal-progress-bar">
-            <div class="terminal-progress-fill" id="terminalProgressFill"></div>
-        </div>
-        <div class="terminal-status">
-            <span class="terminal-status-text" id="terminalStatusText">Initializing...</span>
-            <span class="terminal-percentage" id="terminalPercentage">0%</span>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -845,13 +845,20 @@ function stopTerminalAnimation() {
 }
 
 function showLoading(msg) {
-    document.getElementById('loadingOverlay').classList.add('active');
+    const panel = document.getElementById('regeneratePanel');
+    if (panel) {
+        panel.style.display = 'block';
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     startTerminalAnimation();
 }
 
 function hideLoading() {
     stopTerminalAnimation();
-    document.getElementById('loadingOverlay').classList.remove('active');
+    const panel = document.getElementById('regeneratePanel');
+    if (panel) {
+        panel.style.display = 'none';
+    }
 }
 </script>
 {% endblock %}
