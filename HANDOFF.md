@@ -113,6 +113,26 @@ Register → Complete Profile → Create Document → Tell Your Story → Fill S
 
 ## Recent Changes (January 28, 2026)
 
+### Session 2 Updates
+
+1. **Smart Regenerate Detection** - Final review page now shows a banner only when interview data has changed since the document was generated (compares `document.updated_at` vs `document.final_generated_at`), instead of always showing a Regenerate All button
+
+2. **Terminal Animation for Regeneration** - Added inline terminal-style animation with document-specific data (plaintiff name, defendants, court) when regenerating the document on final review page, matching the tell-your-story page experience
+
+3. **Fixed Subscription Display** - Added `@property` decorator to `Subscription.is_active` in `accounts/models.py` so templates can use `subscription.is_active` without parentheses
+
+4. **Fixed Dark Mode Table Styling** - Added CSS for Purchase History table links on profile page to show proper blue color in dark mode
+
+5. **Fixed Pricing Page Flow** - For logged-in users, one-time purchase buttons now show "Go to My Documents" instead of "Get Started" (which redirected to register page)
+
+6. **Removed 3-Document Pack** - Removed from pricing page, purchase_required page, and pricing view context. Kept in model/profile for backward compatibility with existing purchases
+
+7. **Fixed Analyze Story Evidence Button** - Button had id `aiSuggestEvidenceBtn` but JS function looked for `aiSuggestBtn`. Updated `suggestSectionContent()` function in section_edit.html to find correct button based on section type
+
+8. **Document ID Through Pricing Flow** - "View Plans" links from document pages now include `?document_id=X`. Pricing page captures this and shows "Purchase for This Document" button that links directly to `/documents/{id}/checkout/` instead of generic documents list
+
+### Session 1 Updates
+
 1. **Final Review Button** - Only clickable at 100% completion
 2. **Removed Finalize button** from document detail page (moved to final review)
 3. **PDF Template** - Proper legal document format with court caption
