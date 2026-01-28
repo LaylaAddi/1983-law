@@ -2,6 +2,21 @@
 
 {% block title %}Profile - {{ header_app_name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Dark mode table fixes */
+    [data-bs-theme="dark"] .table {
+        --bs-table-bg: transparent;
+    }
+    [data-bs-theme="dark"] .table td a {
+        color: #6ea8fe;
+    }
+    [data-bs-theme="dark"] .table td a:hover {
+        color: #9ec5fe;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">

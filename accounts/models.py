@@ -697,6 +697,7 @@ class Subscription(models.Model):
     def __str__(self):
         return f"{self.user.email} - {self.get_plan_display()} ({self.status})"
 
+    @property
     def is_active(self):
         """Check if subscription is currently active."""
         return self.status in ['active', 'trialing']
