@@ -2845,6 +2845,90 @@ if self.user.has_active_subscription():
 **Files modified:**
 - `documents/models.py` - Updated `can_use_ai()` to enforce subscription limits for all subscribers
 
+### AI Review Suggestion Cards & Section Mapping Fixes (January 28, 2026)
+
+Major overhaul of the AI Review suggestion system to fix multiple issues with section mapping, field persistence, and UI clarity.
+
+**Problem 1: Section titles didn't match document headings**
+
+AI suggestion cards showed internal database names like "Incident Narrative" or "relief_sought" instead of document headings like "STATEMENT OF FACTS" or "PRAYER FOR RELIEF".
+
+**Solution:**
+- Updated `getSectionTitle()` to return exact document headings
+- Updated edit panel titles to match
+- Added sub-labels for disambiguation (e.g., "Statement of Facts › Narrative" vs "Statement of Facts › Date, Time & Location")
+
+**Section Title Mapping:**
+| Database Section | Document Heading |
+|-----------------|------------------|
+| `incident_overview` | Statement of Facts |
+| `incident_narrative` | Statement of Facts |
+| `damages` | Statement of Facts |
+| `plaintiff_info` | Parties |
+| `defendants` | Parties |
+| `rights_violated` | Causes of Action |
+| `relief_sought` | Prayer for Relief |
+
+**Problem 2: AI suggestions not persisting to database**
+
+Clicking "Accept" showed visual changes but data wasn't saved - changes disappeared on page reload.
+
+**Root cause:** AI returned `field_updates` with made-up field names (e.g., `{"narrative": "..."}`) instead of actual database field names (e.g., `{"detailed_narrative": "..."}`). The `hasattr()` check silently skipped invalid names.
+
+**Solution:**
+1. In `generate_fix`: Validate AI-provided field names against actual Django model fields
+2. If invalid, fall back to default field mapping (e.g., `incident_narrative` → `detailed_narrative`)
+3. In `apply_fix`: Log skipped fields and return explicit error when no fields updated
+
+**Problem 3: "Unknown section type: statement_of_facts" error**
+
+The `normalizeSection()` function converted underscores to spaces, but `sectionNameMap` still had underscore-based keys.
+
+**Solution:**
+- Removed underscore keys from `sectionNameMap` (all keys now use spaces)
+- Added backend section mapping in `apply_fix` as fallback
+
+**Problem 4: Checkbox sections (relief_sought, rights_violated) caused errors**
+
+Trying to auto-apply text fixes to checkbox-based sections failed because there's no text field to update.
+
+**Solution:**
+- Detect checkbox sections before calling generate-fix API
+- Show "Manual edit required" message with AI suggestion as guidance
+- Add "Open Editor to Fix Manually" button that opens the form
+- Handle `manual_only` flag in `acceptSuggestion()` to mark as reviewed without API call
+
+**Manual-only sections:** `relief_sought`, `rights_violated`, `plaintiff_info`, `defendants`
+
+**Problem 5: AI reviewing raw database fields instead of rendered document**
+
+AI was analyzing raw database data (e.g., `incident_time: "18:30:00"`) instead of the actual document text the user sees (e.g., "at approximately 6:30 PM").
+
+**Solution:**
+- Created `_generate_rendered_document_text()` function that generates actual document text
+- Updated `ai_review_document()` to send rendered document to AI
+- Updated `review_document` prompt in seed file
+
+**Files modified:**
+- `documents/views.py`:
+  - Added section mapping in `apply_fix` (line 1951-1971)
+  - Added field name validation in `generate_fix` (line 1895-1907)
+  - Added logging for skipped fields (line 2058-2071)
+  - Added `_generate_rendered_document_text()` function
+- `templates/documents/document_review.html`:
+  - Updated `normalizeSection()` to replace underscores with spaces
+  - Cleaned up `sectionNameMap` to use space-based keys only
+  - Updated `getSectionTitle()` with document-facing headings
+  - Added `getSectionSubLabel()` for disambiguation
+  - Added manual-only section handling in `generateSuggestionFix()`
+  - Added `manual_only` handling in `acceptSuggestion()`
+  - Added CSS for `.ai-field-indicator` with dark mode support
+  - Added friendly field names display
+- `documents/management/commands/seed_ai_prompts.py`:
+  - Updated `review_document` prompt to review rendered document text
+
+**Note:** Run `python manage.py seed_ai_prompts` after deploying to update the AI prompts.
+
 ---
 
 ## Instructions for Next Claude Session
