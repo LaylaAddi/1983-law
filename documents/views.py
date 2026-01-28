@@ -5284,16 +5284,13 @@ def download_final_pdf(request, document_id):
         from weasyprint import HTML
         from django.template.loader import render_to_string
 
-        # Build caption from document data
+        # Collect document data for caption
         document_data = _collect_document_data(document)
-        from .services.document_generator import DocumentGenerator
-        generator = DocumentGenerator()
-        caption = generator._generate_caption(document_data)
 
         # Render PDF template
         html_content = render_to_string('documents/final_pdf.html', {
             'document': document,
-            'caption': caption,
+            'document_data': document_data,
             'is_draft': is_draft,
             'app_name': settings.APP_NAME,
         })

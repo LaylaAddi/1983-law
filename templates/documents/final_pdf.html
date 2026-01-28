@@ -38,25 +38,59 @@
         }
         {% endif %}
 
-        .caption {
+        /* Court caption */
+        .court-caption {
             text-align: center;
             margin-bottom: 24pt;
             line-height: 1.5;
         }
 
-        .caption-court {
+        .court-name {
             font-weight: bold;
             text-transform: uppercase;
+            font-size: 12pt;
             margin-bottom: 18pt;
         }
 
-        .caption-box {
+        .case-caption-box {
+            border: 2px solid black;
+            padding: 12pt 18pt;
+            margin: 18pt auto;
             text-align: left;
-            white-space: pre-wrap;
-            font-size: 12pt;
-            line-height: 1.5;
+            max-width: 450pt;
         }
 
+        .party-line {
+            margin-bottom: 3pt;
+        }
+
+        .party-label {
+            margin-left: 24pt;
+            margin-bottom: 6pt;
+        }
+
+        .vs-line {
+            text-align: center;
+            font-weight: bold;
+            margin: 12pt 0;
+        }
+
+        .case-number {
+            text-align: right;
+            margin-top: 12pt;
+            font-style: italic;
+        }
+
+        .document-title {
+            text-align: center;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-decoration: underline;
+            margin: 24pt 0;
+            font-size: 12pt;
+        }
+
+        /* Section headers */
         .section-header {
             text-align: center;
             font-weight: bold;
@@ -65,40 +99,27 @@
             margin-bottom: 12pt;
         }
 
-        p {
-            text-indent: 0.5in;
-            margin-bottom: 0;
-            text-align: justify;
-        }
-
-        .no-indent {
-            text-indent: 0;
-        }
-
-        pre {
-            font-family: 'Times New Roman', Times, serif;
+        /* Section content - preserve whitespace and formatting */
+        .section-content {
             white-space: pre-wrap;
+            font-family: 'Times New Roman', Times, serif;
             font-size: 12pt;
             line-height: 2;
-            margin: 0;
-        }
-
-        .signature-block {
-            margin-top: 48pt;
-        }
-
-        .signature-block pre {
-            line-height: 1.5;
         }
 
         /* Cause of action styling */
         .cause-of-action {
-            margin-top: 24pt;
+            margin-top: 18pt;
         }
 
-        /* Prayer items */
-        .prayer-section {
-            margin-top: 24pt;
+        /* Signature block */
+        .signature-block {
+            margin-top: 48pt;
+            margin-left: 50%;
+        }
+
+        .signature-block .section-content {
+            line-height: 1.5;
         }
 
         /* Page break hints */
@@ -127,43 +148,68 @@
     </div>
     {% endif %}
 
-    <!-- Caption -->
-    <div class="caption">
-        <div class="caption-box"><pre>{{ caption }}</pre></div>
+    <!-- Court Caption -->
+    <div class="court-caption">
+        <div class="court-name">
+            {{ document_data.court|default:"UNITED STATES DISTRICT COURT" }}<br>
+            FOR THE {{ document_data.district|default:"" }} DISTRICT OF {{ document_data.state_name|default:document_data.incident.state|upper }}
+        </div>
+
+        <div class="case-caption-box">
+            <div class="party-line">{{ document_data.plaintiff.first_name|upper }} {{ document_data.plaintiff.last_name|upper }},</div>
+            <div class="party-label">Plaintiff,</div>
+            <div class="vs-line">v.</div>
+            {% for defendant in document_data.defendants %}
+            <div class="party-line">{{ defendant.name|upper }}{% if defendant.title_rank %}, {{ defendant.title_rank }}{% endif %}{% if not forloop.last %},{% else %},{% endif %}</div>
+            {% empty %}
+            <div class="party-line">[DEFENDANTS],</div>
+            {% endfor %}
+            <div class="party-label">Defendant{% if document_data.defendants|length > 1 %}s{% endif %}.</div>
+            <div class="case-number">Case No. ________________</div>
+        </div>
+
+        <div class="document-title">
+            COMPLAINT FOR VIOLATION OF CIVIL RIGHTS<br>
+            PURSUANT TO 42 U.S.C. § 1983
+        </div>
     </div>
 
     <!-- Introduction -->
-    <pre>{{ document.final_introduction }}</pre>
+    <div class="section-content">{{ document.final_introduction }}</div>
 
     <!-- Jurisdiction and Venue -->
-    <pre>{{ document.final_jurisdiction }}</pre>
+    <div class="section-header">JURISDICTION AND VENUE</div>
+    <div class="section-content">{{ document.final_jurisdiction }}</div>
 
     <!-- Parties -->
-    <pre>{{ document.final_parties }}</pre>
+    <div class="section-header">PARTIES</div>
+    <div class="section-content">{{ document.final_parties }}</div>
 
     <!-- Statement of Facts -->
-    <pre>{{ document.final_facts }}</pre>
+    <div class="section-header">STATEMENT OF FACTS</div>
+    <div class="section-content">{{ document.final_facts }}</div>
 
     <!-- Causes of Action -->
+    <div class="section-header">CAUSES OF ACTION</div>
     {% for cause in document.final_causes_of_action %}
     <div class="cause-of-action">
-        <pre>{{ cause.content }}</pre>
+        <div class="section-content">{{ cause.content }}</div>
     </div>
     {% endfor %}
 
     <!-- Prayer for Relief -->
-    <div class="prayer-section">
-        <pre>{{ document.final_prayer }}</pre>
-    </div>
+    <div class="section-header">PRAYER FOR RELIEF</div>
+    <div class="section-content">{{ document.final_prayer }}</div>
 
     <!-- Jury Demand -->
     {% if document.final_jury_demand %}
-    <pre>{{ document.final_jury_demand }}</pre>
+    <div class="section-header">JURY DEMAND</div>
+    <div class="section-content">{{ document.final_jury_demand }}</div>
     {% endif %}
 
     <!-- Signature Block -->
     <div class="signature-block">
-        <pre>{{ document.final_signature }}</pre>
+        <div class="section-content">{{ document.final_signature }}</div>
     </div>
 </body>
 </html>
