@@ -1796,6 +1796,39 @@ async function generateSuggestionFix(index) {
     const contentArea = document.getElementById(`suggestionContent-${index}`);
     const card = document.getElementById(`suggestionCard-${index}`);
 
+    const issue = suggestion.issue;
+    const mappedSection = determineFixSection(issue);
+
+    // Sections that use checkboxes/structured data instead of text - cannot auto-fix
+    const manualOnlySections = ['relief_sought', 'rights_violated', 'plaintiff_info', 'defendants'];
+    if (manualOnlySections.includes(mappedSection)) {
+        card.classList.add('ready');
+        suggestion.generatedFix = {
+            section_type: mappedSection,
+            original_content: '',
+            rewritten_content: issue.suggestion || issue.description,
+            changes_summary: 'This section uses checkboxes and forms - please edit manually.',
+            field_updates: {},
+            manual_only: true,
+        };
+
+        contentArea.innerHTML = `
+            <div class="alert alert-info small mb-2">
+                <i class="bi bi-info-circle me-1"></i>
+                <strong>Manual edit required</strong><br>
+                This section uses checkboxes and forms that cannot be auto-updated.
+            </div>
+            <div class="mb-2">
+                <small class="text-muted"><strong>AI Suggestion:</strong></small>
+                <div class="ai-suggestion-content">${escapeHtml(issue.suggestion || issue.description)}</div>
+            </div>
+            <button class="btn btn-primary btn-sm w-100" onclick="editSection('${mappedSection}'); rejectSuggestion(${index});">
+                <i class="bi bi-pencil me-1"></i>Open Editor to Fix Manually
+            </button>
+        `;
+        return;
+    }
+
     card.classList.add('generating');
     contentArea.innerHTML = `
         <div class="text-center py-2">
@@ -1805,9 +1838,6 @@ async function generateSuggestionFix(index) {
     `;
 
     try {
-        const issue = suggestion.issue;
-        const mappedSection = determineFixSection(issue);
-
         const response = await fetch(`/documents/{{ document.id }}/generate-fix/`, {
             method: 'POST',
             headers: {
@@ -1980,8 +2010,30 @@ async function acceptSuggestion(index) {
     const statusBadge = document.getElementById(`status-${index}`);
     const actionsArea = document.getElementById(`suggestionActions-${index}`);
 
-    // Apply the fix
     const fix = suggestion.generatedFix;
+
+    // Manual-only sections (checkboxes/forms) - just mark as handled, user edits manually
+    if (fix.manual_only) {
+        suggestion.status = 'accepted';
+        card.classList.remove('ready', 'generating');
+        card.classList.add('accepted');
+        statusBadge.textContent = 'Reviewed';
+        statusBadge.className = 'badge bg-success status-badge';
+        actionsArea.innerHTML = '<span class="text-success small"><i class="bi bi-check-circle me-1"></i>Marked as reviewed</span>';
+
+        suggestionStats.accepted++;
+        suggestionStats.pending--;
+        updateProgressBar();
+
+        // Clear highlight
+        const mappedSection = getMappedSection(suggestion.issue.section);
+        document.querySelectorAll(`[data-section="${mappedSection}"]`).forEach(el => {
+            el.classList.remove('ai-issue-critical', 'ai-issue-warning', 'ai-issue-suggestion');
+        });
+        return;
+    }
+
+    // Apply the fix for text-based sections
     const contentToApply = suggestion.editedContent || fix.rewritten_content;
 
     // Update field_updates with edited content if applicable
@@ -1991,7 +2043,6 @@ async function acceptSuggestion(index) {
         const primaryFields = {
             'incident_narrative': 'detailed_narrative',
             'damages': 'physical_injury_description',
-            'plaintiff_info': 'first_name',
             'incident_overview': 'incident_location'
         };
         const primaryField = primaryFields[fix.section_type];
