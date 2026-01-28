@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Final Review: {{ document.title }} - {{ header_app_name }}{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/tell-story.css' %}">
 <style>
     /* Page layout */
     .final-review-container {
@@ -547,12 +549,28 @@
     </div>
 </div>
 
-<!-- Loading Overlay -->
+<!-- Loading Overlay with Terminal Animation -->
 <div class="loading-overlay" id="loadingOverlay">
-    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
-        <span class="visually-hidden">Loading...</span>
+    <div class="terminal-container" style="width: 90%; max-width: 600px;">
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <span class="terminal-btn close"></span>
+                <span class="terminal-btn minimize"></span>
+                <span class="terminal-btn maximize"></span>
+            </div>
+            <div class="terminal-title">1983law — generating complaint</div>
+        </div>
+        <div class="terminal-body" id="terminalBody">
+            <!-- Commands will be added here dynamically -->
+        </div>
+        <div class="terminal-progress-bar">
+            <div class="terminal-progress-fill" id="terminalProgressFill"></div>
+        </div>
+        <div class="terminal-status">
+            <span class="terminal-status-text" id="terminalStatusText">Initializing...</span>
+            <span class="terminal-percentage" id="terminalPercentage">0%</span>
+        </div>
     </div>
-    <div id="loadingMessage">Processing...</div>
 </div>
 {% endblock %}
 
@@ -679,11 +697,160 @@ document.querySelectorAll('.regenerate-btn').forEach(btn => {
     });
 });
 
-function showLoading(msg) {
-    document.getElementById('loadingMessage').textContent = msg;
-    document.getElementById('loadingOverlay').classList.add('active');
+// Document context for terminal commands
+const docContext = {
+    plaintiff: '{{ document_data.plaintiff.first_name|default:"" }} {{ document_data.plaintiff.last_name|default:"Plaintiff" }}'.trim() || 'Plaintiff',
+    defendants: [{% for d in document_data.defendants %}'{{ d.name|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+    state: '{{ document_data.incident.state|default:"" }}',
+    city: '{{ document_data.incident.city|default:"" }}',
+    incidentDate: '{{ document_data.incident.incident_date|default:"" }}',
+    court: '{{ document_data.court|default:"Federal District Court" }}'
+};
+
+// Terminal animation state
+let terminalInterval = null;
+let waitingInterval = null;
+
+// Commands that run while generating
+const GENERATION_COMMANDS = [
+    { cmd: 'load-document --id={{ document.id }}', out: 'Loading document data...' },
+    { cmd: 'parse-plaintiff --name="' + docContext.plaintiff + '"', out: 'Plaintiff: ' + docContext.plaintiff },
+    { cmd: 'count-defendants', out: docContext.defendants.length + ' defendant(s) identified' },
+    { cmd: 'verify-jurisdiction --state=' + (docContext.state || 'federal'), out: 'Verifying federal jurisdiction...' },
+    { cmd: 'lookup-district-court', out: 'Court: ' + docContext.court },
+    { cmd: 'init-complaint-generator --usc=42-1983', out: 'Initializing Section 1983 complaint generator...' },
+    { cmd: 'generate-section --type=introduction', out: 'Writing introduction paragraph...' },
+    { cmd: 'generate-section --type=jurisdiction', out: 'Drafting jurisdiction and venue...' },
+    { cmd: 'generate-section --type=parties', out: 'Identifying all parties...' },
+    { cmd: 'generate-section --type=facts --ai=true', out: 'AI drafting statement of facts...' },
+    { cmd: 'analyze-rights-violated --amendments=1,4,5,14', out: 'Analyzing constitutional violations...' },
+    { cmd: 'generate-causes-of-action --with-caselaw', out: 'Generating causes of action with case citations...' },
+    { cmd: 'draft-prayer-for-relief', out: 'Drafting prayer for relief...' },
+    { cmd: 'add-jury-demand', out: 'Adding jury demand...' },
+    { cmd: 'format-signature-block --pro-se', out: 'Formatting signature block...' },
+];
+
+const WAITING_COMMANDS = [
+    { cmd: 'cross-ref --case-law --recent=5y', out: 'Cross-referencing recent case law...' },
+    { cmd: 'analyze-precedent --circuit=all', out: 'Analyzing circuit precedents...' },
+    { cmd: 'validate-legal-citations', out: 'Validating legal citations...' },
+    { cmd: 'check-qualified-immunity --factors', out: 'Evaluating qualified immunity defenses...' },
+    { cmd: 'optimize-narrative --clarity', out: 'Optimizing narrative clarity...' },
+    { cmd: 'verify-statutory-compliance --1983', out: 'Verifying statutory compliance...' },
+    { cmd: 'compute-damages --compensatory', out: 'Computing damages framework...' },
+    { cmd: 'review-monell-claims --policy', out: 'Reviewing Monell claim viability...' },
+    { cmd: 'structure-legal-arguments', out: 'Structuring legal arguments...' },
+    { cmd: 'validate-complaint --schema=federal', out: 'Validating complaint structure...' },
+    { cmd: 'finalize-json --sections=all', out: 'Finalizing document sections...' },
+];
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
+
+function addTerminalLine(html) {
+    const terminalBody = document.getElementById('terminalBody');
+    if (!terminalBody) return;
+    const line = document.createElement('div');
+    line.className = 'terminal-line';
+    line.innerHTML = html;
+    terminalBody.appendChild(line);
+    terminalBody.scrollTop = terminalBody.scrollHeight;
+}
+
+function updateProgress(percent, status) {
+    const progressFill = document.getElementById('terminalProgressFill');
+    const percentDisplay = document.getElementById('terminalPercentage');
+    const statusText = document.getElementById('terminalStatusText');
+    if (progressFill) progressFill.style.width = percent + '%';
+    if (percentDisplay) percentDisplay.textContent = percent + '%';
+    if (statusText) statusText.textContent = status;
+}
+
+function startTerminalAnimation() {
+    const terminalBody = document.getElementById('terminalBody');
+    if (terminalBody) terminalBody.innerHTML = '';
+
+    addTerminalLine('<span class="terminal-comment"># Generating Section 1983 federal complaint...</span>');
+
+    let cmdIndex = 0;
+    const totalCmds = GENERATION_COMMANDS.length;
+
+    terminalInterval = setInterval(() => {
+        if (cmdIndex < totalCmds) {
+            const cmd = GENERATION_COMMANDS[cmdIndex];
+            const percent = Math.round(((cmdIndex + 1) / totalCmds) * 90);
+
+            addTerminalLine(`
+                <span class="terminal-prompt">❯</span>
+                <span class="terminal-path">~/complaint</span>
+                <span class="terminal-command"> ${escapeHtml(cmd.cmd)}</span>
+            `);
+
+            setTimeout(() => {
+                addTerminalLine(`<span class="terminal-output">→ ${escapeHtml(cmd.out)}</span>`);
+            }, 150);
+
+            updateProgress(percent, cmd.out);
+            cmdIndex++;
+        } else {
+            clearInterval(terminalInterval);
+            terminalInterval = null;
+            startWaitingAnimation();
+        }
+    }, 700);
+}
+
+function startWaitingAnimation() {
+    let waitIdx = 0;
+    const shuffled = [...WAITING_COMMANDS].sort(() => Math.random() - 0.5);
+
+    addTerminalLine('<span class="terminal-comment"># Awaiting AI response...</span>');
+
+    waitingInterval = setInterval(() => {
+        const cmd = shuffled[waitIdx % shuffled.length];
+
+        addTerminalLine(`
+            <span class="terminal-prompt">❯</span>
+            <span class="terminal-path">~/processing</span>
+            <span class="terminal-command"> ${escapeHtml(cmd.cmd)}</span>
+        `);
+
+        setTimeout(() => {
+            addTerminalLine(`<span class="terminal-output">→ ${escapeHtml(cmd.out)}</span>`);
+        }, 100);
+
+        document.getElementById('terminalStatusText').textContent = cmd.out;
+        waitIdx++;
+
+        if (waitIdx % shuffled.length === 0) {
+            shuffled.sort(() => Math.random() - 0.5);
+        }
+    }, 1100);
+}
+
+function stopTerminalAnimation() {
+    if (terminalInterval) {
+        clearInterval(terminalInterval);
+        terminalInterval = null;
+    }
+    if (waitingInterval) {
+        clearInterval(waitingInterval);
+        waitingInterval = null;
+    }
+    updateProgress(100, 'Complete');
+    addTerminalLine('<span class="terminal-success">✓ Document generation complete</span>');
+}
+
+function showLoading(msg) {
+    document.getElementById('loadingOverlay').classList.add('active');
+    startTerminalAnimation();
+}
+
 function hideLoading() {
+    stopTerminalAnimation();
     document.getElementById('loadingOverlay').classList.remove('active');
 }
 </script>
