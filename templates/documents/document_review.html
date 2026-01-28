@@ -1383,7 +1383,9 @@ const sectionNameMap = {
     'facts': 'incident_narrative',
     'factual allegations': 'incident_narrative',
     'allegations': 'incident_narrative',
+    'statement of facts': 'incident_narrative',
     'damages': 'damages',
+    'damage': 'damages',
     'causes_of_action': 'rights_violated',
     'causes of action': 'rights_violated',
     'legal claims': 'rights_violated',
@@ -1398,6 +1400,7 @@ const sectionNameMap = {
     'defendant': 'defendants',
     'plaintiff': 'plaintiff_info',
     'plaintiff_info': 'plaintiff_info',
+    'plaintiff info': 'plaintiff_info',
     'incident': 'incident_overview',
     'incident_overview': 'incident_overview',
     'incident overview': 'incident_overview',
@@ -1410,15 +1413,28 @@ const sectionNameMap = {
     'rights_violated': 'rights_violated',
     'rights violated': 'rights_violated',
     'witnesses': 'witnesses',
+    'witness': 'witnesses',
     'evidence': 'evidence'
 };
+
+// Helper function to normalize section names (trim and lowercase)
+function normalizeSection(sectionName) {
+    if (!sectionName) return '';
+    return sectionName.trim().toLowerCase();
+}
+
+// Get mapped section from AI section name
+function getMappedSection(sectionName) {
+    const normalized = normalizeSection(sectionName);
+    return sectionNameMap[normalized] || normalized;
+}
 
 // Determine the correct section to fix based on issue content
 // AI review may identify cross-section issues where the fix should go to a different section
 function determineFixSection(issue) {
     const suggestion = (issue.suggestion || '').toLowerCase();
     const description = (issue.description || '').toLowerCase();
-    const defaultSection = sectionNameMap[issue.section.toLowerCase()] || issue.section;
+    const defaultSection = getMappedSection(issue.section);
 
     // If suggestion mentions changing "story text" or "narrative", fix should go to incident_narrative
     if (suggestion.includes('story text') || suggestion.includes('story to') ||
@@ -1969,7 +1985,7 @@ function rejectSuggestion(index) {
     updateProgressBar();
 
     // Clear highlight from section
-    const mappedSection = sectionNameMap[suggestion.issue.section.toLowerCase()] || suggestion.issue.section;
+    const mappedSection = getMappedSection(suggestion.issue.section);
     document.querySelectorAll(`[data-section="${mappedSection}"]`).forEach(el => {
         el.classList.remove('ai-issue-critical', 'ai-issue-warning', 'ai-issue-suggestion');
     });
@@ -2014,7 +2030,7 @@ function applyAllAccepted() {
 
 function highlightSection(sectionName, severity, issueIndex) {
     // Map section name to data-section attribute
-    const mappedSection = sectionNameMap[sectionName.toLowerCase()] || sectionName;
+    const mappedSection = getMappedSection(sectionName);
 
     // Exclude caption sections from highlighting - only highlight content sections
     const sections = document.querySelectorAll(`[data-section="${mappedSection}"]:not([data-caption="true"])`);
@@ -2034,7 +2050,7 @@ function highlightSection(sectionName, severity, issueIndex) {
 }
 
 function scrollToIssue(sectionName, issueIndex) {
-    const mappedSection = sectionNameMap[sectionName.toLowerCase()] || sectionName;
+    const mappedSection = getMappedSection(sectionName);
     // Prefer non-caption sections for scrolling
     let section = document.querySelector(`[data-section="${mappedSection}"]:not([data-caption="true"])`);
     if (!section) {
@@ -2189,7 +2205,7 @@ function clearFixingHighlight() {
 
 function highlightCurrentFixSection(sectionName) {
     clearFixingHighlight();
-    const mappedSection = sectionNameMap[sectionName.toLowerCase()] || sectionName;
+    const mappedSection = getMappedSection(sectionName);
     // Exclude caption sections from fix highlighting - only highlight content sections
     const sections = document.querySelectorAll(`[data-section="${mappedSection}"]:not([data-caption="true"])`);
     sections.forEach(el => {
