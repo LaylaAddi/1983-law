@@ -1948,6 +1948,28 @@ def apply_fix(request, document_id):
         section_type = data.get('section_type', '')
         field_updates = data.get('field_updates', {})
 
+        # Map AI section names to database section types
+        section_type_mapping = {
+            'statement_of_facts': 'incident_narrative',
+            'statement of facts': 'incident_narrative',
+            'facts': 'incident_narrative',
+            'factual allegations': 'incident_narrative',
+            'narrative': 'incident_narrative',
+            'caption': 'incident_overview',
+            'parties': 'plaintiff_info',
+            'jurisdiction': 'incident_overview',
+            'causes_of_action': 'rights_violated',
+            'causes of action': 'rights_violated',
+            'relief': 'relief_sought',
+            'prayer for relief': 'relief_sought',
+        }
+        # Normalize and map the section type
+        normalized_section = section_type.strip().lower().replace('_', ' ')
+        if normalized_section in section_type_mapping:
+            section_type = section_type_mapping[normalized_section]
+        elif section_type.strip().lower() in section_type_mapping:
+            section_type = section_type_mapping[section_type.strip().lower()]
+
         if not section_type:
             return JsonResponse({
                 'success': False,

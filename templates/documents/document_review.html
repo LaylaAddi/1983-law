@@ -494,6 +494,19 @@
         color: #6b7280;
     }
 
+    .ai-field-indicator {
+        background: rgba(111, 66, 193, 0.1);
+        border-left: 3px solid #6f42c1;
+        border-radius: 4px;
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .ai-field-indicator .field-value {
+        color: #6f42c1;
+        font-weight: 500;
+    }
+
     /* Dark mode support for AI suggestion cards */
     [data-theme="dark"] .ai-suggestion-card {
         background: #2d2d2d;
@@ -553,6 +566,19 @@
     [data-theme="dark"] .ai-suggestion-actions {
         background: #383838;
         border-color: #444;
+    }
+
+    [data-theme="dark"] .ai-field-indicator {
+        background: rgba(111, 66, 193, 0.2);
+        border-color: #8b5cf6;
+    }
+
+    [data-theme="dark"] .ai-field-indicator .field-value {
+        color: #a78bfa;
+    }
+
+    [data-theme="dark"] .ai-field-indicator .text-muted {
+        color: #9ca3af !important;
     }
 
     [data-theme="dark"] .ai-review-progress {
@@ -1417,10 +1443,10 @@ const sectionNameMap = {
     'evidence': 'evidence'
 };
 
-// Helper function to normalize section names (trim and lowercase)
+// Helper function to normalize section names (trim, lowercase, replace underscores with spaces)
 function normalizeSection(sectionName) {
     if (!sectionName) return '';
-    return sectionName.trim().toLowerCase();
+    return sectionName.trim().toLowerCase().replace(/_/g, ' ');
 }
 
 // Get mapped section from AI section name
@@ -1844,11 +1870,29 @@ function showSuggestionContent(index) {
     const actionsArea = document.getElementById(`suggestionActions-${index}`);
     const fix = suggestion.generatedFix;
 
+    // Get the section title for display
+    const sectionTitle = getSectionTitle(fix.section_type);
+
+    // Determine which field(s) will be updated
+    const fieldUpdates = fix.field_updates || {};
+    const fieldNames = Object.keys(fieldUpdates);
+    const fieldDisplay = fieldNames.length > 0
+        ? fieldNames.map(f => f.replace(/_/g, ' ')).join(', ')
+        : 'text content';
+
     // Show the suggested content
     const displayContent = suggestion.editedContent || fix.rewritten_content;
     contentArea.innerHTML = `
-        <div class="mb-2">
-            <small class="text-muted d-block mb-1"><strong>Summary:</strong> ${escapeHtml(fix.changes_summary)}</small>
+        <div class="ai-field-indicator">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge" style="background: #6f42c1 !important;">
+                    <i class="bi bi-pencil-square me-1"></i>${escapeHtml(sectionTitle)}
+                </span>
+            </div>
+            <small class="text-muted d-block">
+                <strong>Editing:</strong> <span class="field-value">${escapeHtml(fieldDisplay)}</span>
+            </small>
+            <small class="text-muted d-block mt-1"><strong>Summary:</strong> ${escapeHtml(fix.changes_summary)}</small>
         </div>
         <div class="ai-suggestion-content" id="displayContent-${index}">
             ${escapeHtml(displayContent)}
