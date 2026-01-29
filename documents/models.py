@@ -35,7 +35,7 @@ class Document(models.Model):
     finalized_at = models.DateTimeField(null=True, blank=True)
 
     # AI usage tracking
-    ai_generations_used = models.IntegerField(default=0, help_text='Free tier: count of generations used')
+    ai_generations_used = models.IntegerField(default=0, help_text='AI generations used (for free tier and paid documents)')
     ai_cost_used = models.DecimalField(
         max_digits=10, decimal_places=4, default=0,
         help_text='Paid tier: actual API cost in dollars'
