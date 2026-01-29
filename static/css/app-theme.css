@@ -2740,11 +2740,25 @@ a:hover {
 [data-theme="dark"] .table thead,
 [data-theme="dark"] .table thead th {
     background-color: transparent !important;
+    background: transparent !important;
     color: var(--dark-text) !important;
     border-color: var(--dark-border) !important;
 }
 
-[data-theme="dark"] .card .table {
+[data-theme="dark"] .card .table,
+[data-theme="dark"] .card-body .table,
+[data-theme="dark"] .card-body .table-responsive {
     background-color: transparent !important;
+    background: transparent !important;
+}
+
+[data-theme="dark"] .card-body .table tbody,
+[data-theme="dark"] .card-body .table tbody tr,
+[data-theme="dark"] .card-body .table tbody td,
+[data-theme="dark"] .card-body .table thead,
+[data-theme="dark"] .card-body .table thead th {
+    background-color: var(--dark-bg-card) !important;
+    background: var(--dark-bg-card) !important;
+    color: var(--dark-text) !important;
 }
 
