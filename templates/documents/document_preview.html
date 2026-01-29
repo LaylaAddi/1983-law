@@ -243,10 +243,10 @@
         <!-- CAPTION -->
         <div class="caption">
             <div class="caption-court">
-                {% if document_data.court %}
-                {{ document_data.court }}
-                {% else %}
                 UNITED STATES DISTRICT COURT<br>
+                {% if document_data.district %}
+                {{ document_data.district }} DISTRICT OF {{ document_data.state_name|default:document_data.incident.state|upper }}
+                {% else %}
                 [DISTRICT TO BE DETERMINED]
                 {% endif %}
             </div>

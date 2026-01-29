@@ -378,8 +378,8 @@
             <!-- Court Caption -->
             <div class="court-caption">
                 <div class="court-name">
-                    {{ document_data.court|default:"UNITED STATES DISTRICT COURT" }}<br>
-                    FOR THE {{ document_data.district|default:"[DISTRICT]" }} DISTRICT OF {{ document_data.state_name|default:document_data.incident.state|upper }}
+                    UNITED STATES DISTRICT COURT<br>
+                    {{ document_data.district|default:"[DISTRICT]" }} DISTRICT OF {{ document_data.state_name|default:document_data.incident.state|upper }}
                 </div>
 
                 <div class="case-caption">

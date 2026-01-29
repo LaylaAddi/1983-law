@@ -961,6 +961,14 @@ def _collect_document_data(document):
             'recording_device': io.recording_device,
         }
         data['court'] = io.federal_district_court or ''
+
+        # Parse court name to extract district (e.g., "Northern" from "United States District Court for the Northern District of Iowa")
+        if io.federal_district_court:
+            import re
+            match = re.search(r'for the (\w+) District of (\w+)', io.federal_district_court, re.IGNORECASE)
+            if match:
+                data['district'] = match.group(1).upper()
+                data['state_name'] = match.group(2).upper()
     except (DocumentSection.DoesNotExist, IncidentOverview.DoesNotExist):
         pass
 
