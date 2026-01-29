@@ -3088,6 +3088,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const summaryDiv = document.getElementById('videoSuggestionsSummary');
     const closeBtn = document.getElementById('closeSuggestionsPanel');
 
+    // Previously applied suggestions for duplicate detection
+    const appliedSuggestions = {{ document.applied_video_suggestions|safe|default:"[]" }};
+
+    function isAlreadyApplied(quote, section) {
+        if (!quote || !appliedSuggestions.length) return false;
+        return appliedSuggestions.some(prev => prev.quote === quote && prev.section === section);
+    }
+
     if (!analyzeBtn) return;
 
     // Close suggestions panel
@@ -3148,11 +3156,15 @@ document.addEventListener('DOMContentLoaded', function() {
             suggestions.forEach((s, idx) => {
                 const sectionLabel = getSectionLabel(s.section);
                 const sectionBadgeClass = getSectionBadgeClass(s.section);
+                const alreadyApplied = isAlreadyApplied(s.quote, s.section);
 
                 html += `
-                    <div class="card mb-3 video-suggestion-card" data-suggestion-idx="${idx}">
+                    <div class="card mb-3 video-suggestion-card${alreadyApplied ? ' applied-suggestion' : ''}" data-suggestion-idx="${idx}" ${alreadyApplied ? 'style="opacity: 0.7;"' : ''}>
                         <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                            <span class="badge ${sectionBadgeClass}">${sectionLabel}</span>
+                            <div>
+                                <span class="badge ${sectionBadgeClass}">${sectionLabel}</span>
+                                ${alreadyApplied ? '<span class="badge bg-secondary ms-1"><i class="bi bi-check2-all me-1"></i>Already Applied</span>' : ''}
+                            </div>
                             <small class="text-muted">${escapeHtml(s.timestamp_ref || '')}</small>
                         </div>
                         <div class="card-body py-2">
@@ -3173,6 +3185,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             ${s.youtube_link ? `<p class="mb-2"><small><a href="${escapeHtml(s.youtube_link)}" target="_blank" class="text-decoration-none"><i class="bi bi-youtube me-1"></i>Watch clip</a></small></p>` : ''}
                             <p class="text-muted small mb-2"><i class="bi bi-lightbulb me-1"></i>${escapeHtml(s.explanation || '')}</p>
                             <div class="d-flex gap-2 flex-wrap">
+                                ${alreadyApplied ? `
+                                <button type="button" class="btn btn-secondary btn-sm" disabled>
+                                    <i class="bi bi-check2-all me-1"></i>Already Applied
+                                </button>
+                                ` : `
                                 <button type="button" class="btn btn-success btn-sm apply-suggestion-btn"
                                         data-section="${s.section}"
                                         data-text="${escapeHtml(s.suggested_text || '')}"
@@ -3180,6 +3197,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         data-quote="${escapeHtml(s.quote || '')}">
                                     <i class="bi bi-check-lg me-1"></i>Apply to ${sectionLabel}
                                 </button>
+                                `}
                                 <button type="button" class="btn btn-outline-secondary btn-sm copy-suggestion-btn"
                                         data-text="${escapeHtml(s.suggested_text || '')}">
                                     <i class="bi bi-clipboard me-1"></i>Copy
@@ -3386,6 +3404,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 btn.classList.remove('btn-success');
                 btn.classList.add('btn-secondary');
                 btn.disabled = true;
+            } else if (data.duplicate) {
+                btn.innerHTML = '<i class="bi bi-check2-all me-1"></i>Already Applied';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-secondary');
+                btn.disabled = true;
+                card.style.opacity = '0.7';
             } else {
                 btn.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Failed';
                 btn.classList.remove('btn-success');

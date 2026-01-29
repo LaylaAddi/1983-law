@@ -4857,6 +4857,16 @@ def apply_video_suggestion(request, document_id):
     if not section_type or not text:
         return JsonResponse({'success': False, 'error': 'Section and text are required.'})
 
+    # Check for duplicate - see if this quote was already applied to this section
+    if quote and document.applied_video_suggestions:
+        for prev in document.applied_video_suggestions:
+            if prev.get('section') == section_type and prev.get('quote') == quote:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'This quote was already applied to {prev.get("message", section_type)}.',
+                    'duplicate': True,
+                })
+
     def _log_suggestion(message):
         """Log an applied video suggestion to the document."""
         from django.utils import timezone
