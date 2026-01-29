@@ -3107,26 +3107,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show summary
         summaryDiv.innerHTML = `<i class="bi bi-info-circle me-1"></i>${data.summary || 'Analysis complete.'} <strong>(${data.transcript_count} transcript${data.transcript_count !== 1 ? 's' : ''} analyzed)</strong>`;
 
-        // Build speaker options from actual video speakers
-        const speakers = data.speakers || [];
-        let speakerOptions = '<option value="">-- Select --</option>';
-        if (speakers.length > 0) {
-            speakers.forEach(speaker => {
-                const value = speaker.is_plaintiff ? 'plaintiff' : (speaker.defendant_name || speaker.label);
-                const label = speaker.display_name || speaker.label;
-                const badgeClass = speaker.is_plaintiff ? 'text-primary' : (speaker.defendant_name ? 'text-danger' : '');
-                speakerOptions += `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
-            });
-        } else {
-            // Fallback to generic options if no speakers defined
-            speakerOptions += `
-                <option value="plaintiff">Me (Plaintiff)</option>
-                <option value="officer">Officer/Defendant</option>
-                <option value="witness">Witness</option>
-                <option value="unknown">Unknown/Unclear</option>
-            `;
-        }
-
         // Build suggestions HTML
         const suggestions = data.suggestions || [];
         if (suggestions.length === 0) {
@@ -3147,14 +3127,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             <blockquote class="blockquote mb-2" style="font-size: 0.9rem; border-left: 3px solid #6c757d; padding-left: 1rem;">
                                 "${escapeHtml(s.quote || '')}"
                             </blockquote>
-                            <div class="row mb-2">
-                                <div class="col-auto">
-                                    <label class="form-label small mb-1"><strong>Speaker:</strong></label>
-                                    <select class="form-select form-select-sm speaker-select" style="width: auto;">
-                                        ${speakerOptions}
-                                    </select>
-                                </div>
-                            </div>
                             <p class="mb-2"><strong>Suggested text:</strong> <button type="button" class="btn btn-link btn-sm p-0 ms-2 edit-suggestion-btn"><i class="bi bi-pencil"></i> Edit</button></p>
                             <div class="suggested-text-preview p-2 bg-light rounded mb-2" style="font-size: 0.9rem;">
                                 ${escapeHtml(s.suggested_text || '')}
@@ -3282,45 +3254,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
 
-            // Add change handlers for speaker dropdown
-            suggestionsList.querySelectorAll('.speaker-select').forEach(select => {
-                select.addEventListener('change', function() {
-                    const card = this.closest('.video-suggestion-card');
-                    const applyBtn = card.querySelector('.apply-suggestion-btn');
-                    const currentText = applyBtn.getAttribute('data-text');
-                    const speaker = this.value;
-                    const speakerText = this.options[this.selectedIndex].text;
-
-                    // Build speaker label from selected option
-                    let speakerLabel = '';
-                    if (speaker === 'plaintiff') {
-                        speakerLabel = '[Plaintiff statement] ';
-                    } else if (speaker && speaker !== '') {
-                        // Use the actual speaker name/defendant name
-                        speakerLabel = `[${speakerText}] `;
-                    }
-
-                    // Update preview to show speaker attribution
-                    if (speakerLabel) {
-                        const previewDiv = card.querySelector('.suggested-text-preview');
-                        const textarea = card.querySelector('.suggestion-textarea');
-                        const copyBtn = card.querySelector('.copy-suggestion-btn');
-
-                        // Remove any existing speaker prefix (matches [Any Text] at start)
-                        let cleanText = currentText.replace(/^\[[^\]]+\] /, '');
-                        const newText = speakerLabel + cleanText;
-
-                        previewDiv.textContent = newText;
-                        textarea.value = newText;
-                        applyBtn.setAttribute('data-text', newText);
-                        copyBtn.setAttribute('data-text', newText);
-
-                        // Visual feedback
-                        this.classList.add('border-success');
-                        setTimeout(() => this.classList.remove('border-success'), 1000);
-                    }
-                });
-            });
         }
 
         suggestionsPanel.classList.remove('d-none');
