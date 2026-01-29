@@ -4849,11 +4849,29 @@ def apply_video_suggestion(request, document_id):
         data = json.loads(request.body)
         section_type = data.get('section', '').strip()
         text = data.get('text', '').strip()
+        quote = data.get('quote', '').strip()
+        timestamp_ref = data.get('timestamp_ref', '').strip()
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Invalid request format.'})
 
     if not section_type or not text:
         return JsonResponse({'success': False, 'error': 'Section and text are required.'})
+
+    def _log_suggestion(message):
+        """Log an applied video suggestion to the document."""
+        from django.utils import timezone
+        log_entry = {
+            'section': section_type,
+            'text': text,
+            'quote': quote,
+            'timestamp_ref': timestamp_ref,
+            'message': message,
+            'applied_at': timezone.now().isoformat(),
+        }
+        if not document.applied_video_suggestions:
+            document.applied_video_suggestions = []
+        document.applied_video_suggestions.append(log_entry)
+        document.save(update_fields=['applied_video_suggestions'])
 
     try:
         if section_type == 'narrative':
@@ -4868,6 +4886,7 @@ def apply_video_suggestion(request, document_id):
             else:
                 narrative.detailed_narrative = text
             narrative.save()
+            _log_suggestion('Added to Incident Narrative')
             return JsonResponse({
                 'success': True,
                 'message': 'Added to Incident Narrative',
@@ -4887,6 +4906,7 @@ def apply_video_suggestion(request, document_id):
             else:
                 damages.emotional_distress = text
             damages.save()
+            _log_suggestion('Added to Damages (Emotional Distress)')
             return JsonResponse({
                 'success': True,
                 'message': 'Added to Damages (Emotional Distress)',
@@ -4930,6 +4950,7 @@ def apply_video_suggestion(request, document_id):
                 field_name = '1st Amendment Details'
 
             rights.save()
+            _log_suggestion(f'Added to Rights Violated ({field_name})')
             return JsonResponse({
                 'success': True,
                 'message': f'Added to Rights Violated ({field_name})',

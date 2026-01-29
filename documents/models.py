@@ -41,6 +41,9 @@ class Document(models.Model):
         help_text='Paid tier: actual API cost in dollars'
     )
 
+    # Video suggestion tracking
+    applied_video_suggestions = models.JSONField(default=list, blank=True, help_text='Log of applied video evidence suggestions')
+
     # Story parsing status (for background processing)
     PARSING_STATUS_CHOICES = [
         ('idle', 'Idle'),
