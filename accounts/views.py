@@ -154,6 +154,7 @@ def profile(request):
         'document_packs': document_packs,
         'access_summary': access_summary,
         'paid_documents': paid_documents,
+        'paid_ai_uses': django_settings.PAID_AI_USES,
     }
     return render(request, 'accounts/profile.html', context)
 

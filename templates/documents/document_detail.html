@@ -189,8 +189,8 @@
     {% endfor %}
 </div>
 
-<!-- Video Evidence Analysis (Subscribers Only) -->
-{% if request.user.can_use_video_analysis %}
+<!-- Video Evidence Analysis (Pro Subscribers and Paid Documents) -->
+{% if document.can_use_video_analysis %}
 <div class="card mt-4 mb-4 border-danger">
     <div class="card-body">
         <div class="row align-items-center">

@@ -317,6 +317,23 @@ class Document(models.Model):
             self.ai_generations_used += 1
             self.save(update_fields=['ai_generations_used'])
 
+    def can_use_video_analysis(self):
+        """
+        Check if video analysis feature is available for this document.
+        Available for:
+        - Admin/staff users (unlimited access)
+        - Users with active subscriptions
+        - Paid documents (counts against document's AI usage)
+        """
+        if self.user.has_unlimited_access():
+            return True
+        if self.user.has_active_subscription():
+            return True
+        # Paid documents can use video analysis (counts as AI usage)
+        if self.payment_status == 'paid':
+            return self.can_use_ai()  # Has remaining AI uses
+        return False
+
     def get_price(self, promo_code=None):
         """Calculate price with optional promo code discount."""
         base_price = Decimal(str(settings.DOCUMENT_PRICE))

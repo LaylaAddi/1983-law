@@ -470,7 +470,7 @@ def section_edit(request, document_id, section_type):
         'help_content': help_content,
         'profile_prefilled': profile_prefilled,
         'is_profile_based': is_profile_based,
-        'can_use_video_analysis': request.user.can_use_video_analysis(),
+        'can_use_video_analysis': document.can_use_video_analysis(),
         'ordered_sections': ordered_sections,
     }
 
@@ -479,7 +479,7 @@ def section_edit(request, document_id, section_type):
         context['user_profile'] = request.user
 
     # For evidence section, add video evidences for sidebar display
-    if section_type == 'evidence' and request.user.can_use_video_analysis():
+    if section_type == 'evidence' and document.can_use_video_analysis():
         video_evidences = VideoEvidence.objects.filter(
             evidence__section=section
         ).prefetch_related('captures').select_related('evidence')
@@ -731,7 +731,7 @@ def edit_evidence(request, document_id, evidence_id):
         'incident_time': incident_time,
         'incident_time_display': incident_time_display,
         'video_evidence': video_evidence,
-        'can_use_video_analysis': request.user.can_use_video_analysis(),
+        'can_use_video_analysis': document.can_use_video_analysis(),
     })
 
 
@@ -4000,16 +4000,16 @@ def pdf_generation_status(request, document_id):
 def video_analysis(request, document_id):
     """
     Main video analysis page for extracting YouTube transcripts.
-    Only available to subscribers (Monthly/Annual Pro).
+    Available to Pro subscribers and paid document owners.
     """
     document = get_object_or_404(Document, id=document_id, user=request.user)
 
-    # Check subscriber access
-    if not request.user.can_use_video_analysis():
+    # Check video analysis access (subscription OR paid document)
+    if not document.can_use_video_analysis():
         messages.warning(
             request,
-            'Video Analysis is available for Pro subscribers. '
-            'Upgrade to extract transcripts from YouTube videos.'
+            'Video Analysis is available for Pro subscribers and paid documents. '
+            'Upgrade or purchase this document to access this feature.'
         )
         return redirect('accounts:pricing')
 
@@ -4051,11 +4051,11 @@ def video_add(request, document_id):
     """
     document = get_object_or_404(Document, id=document_id, user=request.user)
 
-    # Check subscriber access
-    if not request.user.can_use_video_analysis():
+    # Check video analysis access (subscription OR paid document)
+    if not document.can_use_video_analysis():
         return JsonResponse({
             'success': False,
-            'error': 'Video Analysis requires a Pro subscription.'
+            'error': 'Video Analysis requires a Pro subscription or paid document.'
         }, status=403)
 
     youtube_url = request.POST.get('youtube_url', '').strip()
@@ -4144,11 +4144,11 @@ def link_youtube_to_evidence(request, document_id, evidence_id):
     document = get_object_or_404(Document, id=document_id, user=request.user)
     evidence = get_object_or_404(Evidence, id=evidence_id, section__document=document)
 
-    # Check subscriber access
-    if not request.user.can_use_video_analysis():
+    # Check video analysis access (subscription OR paid document)
+    if not document.can_use_video_analysis():
         return JsonResponse({
             'success': False,
-            'error': 'Video Analysis requires a Pro subscription.'
+            'error': 'Video Analysis requires a Pro subscription or paid document.'
         }, status=403)
 
     # Check if evidence already has a video linked
@@ -4267,11 +4267,11 @@ def quick_add_youtube_evidence(request, document_id):
     """
     document = get_object_or_404(Document, id=document_id, user=request.user)
 
-    # Check subscriber access
-    if not request.user.can_use_video_analysis():
+    # Check video analysis access (subscription OR paid document)
+    if not document.can_use_video_analysis():
         return JsonResponse({
             'success': False,
-            'error': 'Video Analysis requires a Pro subscription.'
+            'error': 'Video Analysis requires a Pro subscription or paid document.'
         }, status=403)
 
     # Get the evidence section
