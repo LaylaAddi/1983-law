@@ -4671,11 +4671,32 @@ def analyze_video_evidence(request, document_id):
             'error': 'No evidence section found.'
         })
 
-    # Collect all transcripts with timestamps
-    transcripts = []
+    # Check that all video evidence items have required date/time/location
     video_evidences = VideoEvidence.objects.filter(
         evidence__section=evidence_section
-    ).prefetch_related('captures', 'speakers', 'speakers__defendant')
+    ).select_related('evidence').prefetch_related('captures', 'speakers', 'speakers__defendant')
+
+    incomplete_items = []
+    for video in video_evidences:
+        ev = video.evidence
+        missing = []
+        if not ev.date_created:
+            missing.append('Date created')
+        if not ev.time_created:
+            missing.append('Time created')
+        if not ev.location_obtained:
+            missing.append('Location obtained')
+        if missing:
+            incomplete_items.append(f'"{ev.title}" is missing: {", ".join(missing)}')
+
+    if incomplete_items:
+        return JsonResponse({
+            'success': False,
+            'error': 'Please complete the following before running AI analysis:\n' + '\n'.join(incomplete_items),
+        })
+
+    # Collect all transcripts with timestamps
+    transcripts = []
 
     # Collect all speakers from all videos for the dropdown
     all_speakers = []
