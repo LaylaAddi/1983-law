@@ -151,12 +151,14 @@
                     </div>
                     <div class="col-md-4">
                         <div class="border rounded p-3 text-center">
-                            <small class="text-muted d-block">AI Uses This Period</small>
+                            <small class="text-muted d-block">AI Uses Remaining</small>
                             <strong>
                                 {% if subscription.plan == 'annual' %}
-                                Unlimited
+                                <span class="text-success">Unlimited</span>
                                 {% else %}
-                                {{ subscription.ai_uses_this_period }} / {{ subscription.get_ai_limit }}
+                                <span class="{% if subscription.get_ai_remaining <= 0 %}text-danger{% elif subscription.get_ai_remaining <= 10 %}text-warning{% else %}text-success{% endif %}">
+                                    {{ subscription.get_ai_remaining }} / {{ subscription.get_ai_limit }}
+                                </span>
                                 {% endif %}
                             </strong>
                         </div>
