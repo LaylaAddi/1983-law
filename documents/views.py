@@ -4675,9 +4675,24 @@ def analyze_video_evidence(request, document_id):
     transcripts = []
     video_evidences = VideoEvidence.objects.filter(
         evidence__section=evidence_section
-    ).prefetch_related('captures')
+    ).prefetch_related('captures', 'speakers', 'speakers__defendant')
+
+    # Collect all speakers from all videos for the dropdown
+    all_speakers = []
+    seen_speakers = set()
 
     for video in video_evidences:
+        for speaker in video.speakers.all():
+            speaker_key = (speaker.label, speaker.is_plaintiff, speaker.defendant_id)
+            if speaker_key not in seen_speakers:
+                seen_speakers.add(speaker_key)
+                all_speakers.append({
+                    'label': speaker.label,
+                    'display_name': speaker.get_display_name(),
+                    'is_plaintiff': speaker.is_plaintiff,
+                    'defendant_name': speaker.defendant.name if speaker.defendant else None,
+                })
+
         for capture in video.captures.filter(extraction_status='completed'):
             transcript_text = capture.attributed_transcript or capture.raw_transcript
             if transcript_text:
@@ -4780,6 +4795,7 @@ Include the YouTube link with timestamp for each suggestion so it can be referen
             'suggestions': result.get('suggestions', []),
             'summary': result.get('summary', ''),
             'transcript_count': len(transcripts),
+            'speakers': all_speakers,
         })
 
     except Exception as e:

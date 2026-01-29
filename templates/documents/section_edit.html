@@ -3107,6 +3107,26 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show summary
         summaryDiv.innerHTML = `<i class="bi bi-info-circle me-1"></i>${data.summary || 'Analysis complete.'} <strong>(${data.transcript_count} transcript${data.transcript_count !== 1 ? 's' : ''} analyzed)</strong>`;
 
+        // Build speaker options from actual video speakers
+        const speakers = data.speakers || [];
+        let speakerOptions = '<option value="">-- Select --</option>';
+        if (speakers.length > 0) {
+            speakers.forEach(speaker => {
+                const value = speaker.is_plaintiff ? 'plaintiff' : (speaker.defendant_name || speaker.label);
+                const label = speaker.display_name || speaker.label;
+                const badgeClass = speaker.is_plaintiff ? 'text-primary' : (speaker.defendant_name ? 'text-danger' : '');
+                speakerOptions += `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
+            });
+        } else {
+            // Fallback to generic options if no speakers defined
+            speakerOptions += `
+                <option value="plaintiff">Me (Plaintiff)</option>
+                <option value="officer">Officer/Defendant</option>
+                <option value="witness">Witness</option>
+                <option value="unknown">Unknown/Unclear</option>
+            `;
+        }
+
         // Build suggestions HTML
         const suggestions = data.suggestions || [];
         if (suggestions.length === 0) {
@@ -3131,12 +3151,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="col-auto">
                                     <label class="form-label small mb-1"><strong>Speaker:</strong></label>
                                     <select class="form-select form-select-sm speaker-select" style="width: auto;">
-                                        <option value="">-- Select --</option>
-                                        <option value="me">Me (Plaintiff)</option>
-                                        <option value="officer">Officer/Defendant</option>
-                                        <option value="witness">Witness</option>
-                                        <option value="unknown">Unknown/Unclear</option>
-                                        <option value="other">Other</option>
+                                        ${speakerOptions}
                                     </select>
                                 </div>
                             </div>
@@ -3274,15 +3289,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     const applyBtn = card.querySelector('.apply-suggestion-btn');
                     const currentText = applyBtn.getAttribute('data-text');
                     const speaker = this.value;
+                    const speakerText = this.options[this.selectedIndex].text;
 
-                    // Add speaker prefix to the text if selected
+                    // Build speaker label from selected option
                     let speakerLabel = '';
-                    switch(speaker) {
-                        case 'me': speakerLabel = '[Plaintiff statement] '; break;
-                        case 'officer': speakerLabel = '[Officer/Defendant action] '; break;
-                        case 'witness': speakerLabel = '[Witness observation] '; break;
-                        case 'unknown': speakerLabel = '[Speaker unclear] '; break;
-                        case 'other': speakerLabel = '[Third party] '; break;
+                    if (speaker === 'plaintiff') {
+                        speakerLabel = '[Plaintiff statement] ';
+                    } else if (speaker && speaker !== '') {
+                        // Use the actual speaker name/defendant name
+                        speakerLabel = `[${speakerText}] `;
                     }
 
                     // Update preview to show speaker attribution
@@ -3291,8 +3306,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         const textarea = card.querySelector('.suggestion-textarea');
                         const copyBtn = card.querySelector('.copy-suggestion-btn');
 
-                        // Remove any existing speaker prefix
-                        let cleanText = currentText.replace(/^\[(Plaintiff statement|Officer\/Defendant action|Witness observation|Speaker unclear|Third party)\] /, '');
+                        // Remove any existing speaker prefix (matches [Any Text] at start)
+                        let cleanText = currentText.replace(/^\[[^\]]+\] /, '');
                         const newText = speakerLabel + cleanText;
 
                         previewDiv.textContent = newText;
