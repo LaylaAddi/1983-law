@@ -307,7 +307,8 @@ REQUIREMENTS:
 8. Include specific details that support the constitutional claims
 9. If witnesses captured video/photo evidence, include a paragraph stating that the incident was recorded and describing what the recording captured
 10. If witnesses have prior interactions with defendants, this may be relevant to establishing pattern or motive - include if appropriate
-11. If VIDEO EVIDENCE TRANSCRIPTS are provided above, incorporate key quotes from the video with proper attribution (e.g., "As captured on video at [timestamp], Defendant [Name] stated: '[quote]'"). Video evidence is powerful - use direct quotes where they support the claims
+11. ONLY if VIDEO EVIDENCE TRANSCRIPTS are provided above, incorporate key quotes from the video with proper attribution (e.g., "As captured on video at [timestamp], Defendant [Name] stated: '[quote]'"). Do NOT invent or reference timestamps unless actual transcript text is provided above
+12. If WAS RECORDING is True but no VIDEO EVIDENCE TRANSCRIPTS are provided, you may mention that the incident was recorded, but do NOT reference specific timestamps or quote content that was not provided
 
 Write ONLY the Statement of Facts section, starting with the header "STATEMENT OF FACTS"."""
 
