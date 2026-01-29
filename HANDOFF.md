@@ -6,7 +6,7 @@ A web application to help people create Section 1983 civil rights complaints. Us
 
 ---
 
-## Current State (January 28, 2026)
+## Current State (January 29, 2026)
 
 The app is fully functional with all core features complete.
 
@@ -111,9 +111,27 @@ Register → Complete Profile → Create Document → Tell Your Story → Fill S
 
 ---
 
-## Recent Changes (January 28, 2026)
+## Recent Changes
 
-### Session 2 Updates
+### Session 3 Updates (January 29, 2026)
+
+1. **Fixed Final Review Edit Buttons** - After inline editing and saving/canceling, edit buttons were inaccessible because toolbar's `display: none` wasn't being reset. Fixed in `final_review.html`
+
+2. **Removed Redundant AI Assistant from Rights Violated** - The "Analyze Story & Suggest" box was redundant since rights_violated has dedicated "Analyze My Case" functionality via `rights-analyze.js`. Now only shows for damages section
+
+3. **Improved PDF Page Utilization** - Added CSS to keep jury demand and signature block together on same page when possible using `page-break-inside: avoid` and a wrapper div
+
+4. **Fixed AI Generating Fake Timestamps** - AI was inventing timestamps when `was_recording=True` even without video transcripts. Updated prompt to only reference timestamps when actual `VIDEO EVIDENCE TRANSCRIPTS` are provided
+
+5. **Added generate_facts Prompt to Seed File** - Moved the Statement of Facts generation prompt from hardcoded to database via `seed_ai_prompts.py`. Document generator now loads prompt from database with fallback
+
+6. **YouTube for Paid Documents** - YouTube video analysis is now available for paid documents (not just subscribers). Each API call counts against the document's 100 AI uses. Added `Document.can_use_video_analysis()` method
+
+7. **Fixed Profile Display for Paid Documents** - Users who paid for documents were showing "Free Trial". Added "Pay Per Document" section that shows before free trial check, displaying paid document count and AI uses
+
+8. **Dark Mode Fixes for Profile Page** - Fixed table backgrounds showing white in dark mode. Added CSS for tables, bg-opacity backgrounds, and card-body tables
+
+### Session 2 Updates (January 28, 2026)
 
 1. **Smart Regenerate Detection** - Final review page now shows a banner only when interview data has changed since the document was generated (compares `document.updated_at` vs `document.final_generated_at`), instead of always showing a Regenerate All button
 
