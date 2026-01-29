@@ -2712,3 +2712,24 @@ a:hover {
     color: #a78bfa !important;
 }
 
+/* Profile page dark mode fixes */
+[data-theme="dark"] .table a {
+    color: #60a5fa !important;
+}
+
+[data-theme="dark"] .table a:hover {
+    color: #93c5fd !important;
+}
+
+[data-theme="dark"] .table-hover tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="dark"] .bg-success.bg-opacity-10,
+[data-theme="dark"] .bg-primary.bg-opacity-10,
+[data-theme="dark"] .bg-info.bg-opacity-10,
+[data-theme="dark"] .bg-warning.bg-opacity-10,
+[data-theme="dark"] .bg-secondary.bg-opacity-10 {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
