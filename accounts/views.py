@@ -14,6 +14,7 @@ from django.contrib.auth.views import (
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
+from django.conf import settings as django_settings
 
 from .forms import (
     EmailAuthenticationForm,
