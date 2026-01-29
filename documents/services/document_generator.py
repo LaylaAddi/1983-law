@@ -19,6 +19,33 @@ class DocumentGenerator:
             raise ValueError("OPENAI_API_KEY not configured in settings")
         self.client = OpenAI(api_key=api_key)
 
+    def _get_prompt(self, prompt_type: str) -> dict:
+        """
+        Fetch a prompt from the database AIPrompt model.
+
+        Args:
+            prompt_type: The type of prompt (e.g., 'generate_facts')
+
+        Returns:
+            dict with prompt config, or None if not found
+        """
+        from documents.models import AIPrompt
+        prompt = AIPrompt.objects.filter(
+            prompt_type=prompt_type,
+            is_active=True
+        ).first()
+
+        if not prompt:
+            return None
+
+        return {
+            'system_message': prompt.system_message,
+            'user_prompt_template': prompt.user_prompt_template,
+            'model_name': prompt.model_name,
+            'temperature': prompt.temperature,
+            'max_tokens': prompt.max_tokens,
+        }
+
     def generate_complaint(self, document_data: dict) -> dict:
         """
         Generate a complete Section 1983 federal complaint.
@@ -279,7 +306,35 @@ ________________________________________"""
                     video_prompt_section += f"\nSpeakers: {speakers_str}"
                 video_prompt_section += f"\nTranscript:\n\"{vt.get('transcript', '')}\"\n"
 
-        prompt = f"""Write the STATEMENT OF FACTS section for a Section 1983 federal complaint based on these details:
+        # Load prompt from database
+        prompt_config = self._get_prompt('generate_facts')
+
+        if prompt_config:
+            # Use database prompt
+            prompt = prompt_config['user_prompt_template'].format(
+                plaintiff_name=context['plaintiff_name'],
+                incident_date=context['incident_date'],
+                incident_time=context['incident_time'],
+                incident_location=context['incident_location'],
+                city=context['city'],
+                state=context['state'],
+                was_recording=context['was_recording'],
+                what_were_you_doing=context['what_were_you_doing'],
+                detailed_narrative=context['detailed_narrative'],
+                what_was_said=context['what_was_said'],
+                physical_actions=context['physical_actions'],
+                how_it_ended=context['how_it_ended'],
+                defendants=', '.join(context['defendants']),
+                witness_section=witness_prompt_section,
+                video_section=video_prompt_section,
+            )
+            system_message = prompt_config['system_message']
+            model_name = prompt_config['model_name']
+            temperature = prompt_config['temperature']
+            max_tokens = prompt_config['max_tokens']
+        else:
+            # Fallback to hardcoded prompt if database prompt not found
+            prompt = f"""Write the STATEMENT OF FACTS section for a Section 1983 federal complaint based on these details:
 
 PLAINTIFF: {context['plaintiff_name']}
 DATE: {context['incident_date']}
@@ -307,26 +362,30 @@ REQUIREMENTS:
 8. Include specific details that support the constitutional claims
 9. If witnesses captured video/photo evidence, include a paragraph stating that the incident was recorded and describing what the recording captured
 10. If witnesses have prior interactions with defendants, this may be relevant to establishing pattern or motive - include if appropriate
-11. ONLY if VIDEO EVIDENCE TRANSCRIPTS are provided above, incorporate key quotes from the video with proper attribution (e.g., "As captured on video at [timestamp], Defendant [Name] stated: '[quote]'"). Do NOT invent or reference timestamps unless actual transcript text is provided above
+11. ONLY if VIDEO EVIDENCE TRANSCRIPTS are provided above, incorporate key quotes from the video with proper attribution. Do NOT invent or reference timestamps unless actual transcript text is provided above
 12. If WAS RECORDING is True but no VIDEO EVIDENCE TRANSCRIPTS are provided, you may mention that the incident was recorded, but do NOT reference specific timestamps or quote content that was not provided
 
 Write ONLY the Statement of Facts section, starting with the header "STATEMENT OF FACTS"."""
+            system_message = "You are an expert legal writer drafting Section 1983 civil rights complaints for federal court. Write clear, factual, professional legal prose. Use numbered paragraphs and formal legal style."
+            model_name = "gpt-4o-mini"
+            temperature = 0.3
+            max_tokens = 2000
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=model_name,
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an expert legal writer drafting Section 1983 civil rights complaints for federal court. Write clear, factual, professional legal prose. Use numbered paragraphs and formal legal style."
+                        "content": system_message
                     },
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ],
-                temperature=0.3,
-                max_tokens=2000,
+                temperature=temperature,
+                max_tokens=max_tokens,
             )
             return response.choices[0].message.content.strip()
         except Exception as e:

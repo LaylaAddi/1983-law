@@ -706,6 +706,57 @@ IMPORTANT: Include ALL fields that need updating. For location consistency issue
                 'max_tokens': 2000,
             },
             {
+                'prompt_type': 'generate_facts',
+                'title': 'Generate Statement of Facts',
+                'description': '''Generates the STATEMENT OF FACTS section for the Section 1983 complaint.
+
+Uses AI to write a formal legal narrative based on:
+- Incident details (date, time, location)
+- Plaintiff's narrative and what happened
+- Defendant information
+- Witness information and evidence they captured
+- Video transcript evidence (if provided)
+
+Called when: Document is generated on the Final Review page.''',
+                'system_message': 'You are an expert legal writer drafting Section 1983 civil rights complaints for federal court. Write clear, factual, professional legal prose. Use numbered paragraphs and formal legal style.',
+                'user_prompt_template': '''Write the STATEMENT OF FACTS section for a Section 1983 federal complaint based on these details:
+
+PLAINTIFF: {plaintiff_name}
+DATE: {incident_date}
+TIME: {incident_time}
+LOCATION: {incident_location}, {city}, {state}
+WAS RECORDING: {was_recording}
+
+NARRATIVE DETAILS:
+- What plaintiff was doing: {what_were_you_doing}
+- What happened: {detailed_narrative}
+- What was said: {what_was_said}
+- Physical actions: {physical_actions}
+- How it ended: {how_it_ended}
+
+DEFENDANTS: {defendants}{witness_section}{video_section}
+
+REQUIREMENTS:
+1. Write in formal legal style with numbered paragraphs
+2. Use third person ("Plaintiff" not "I")
+3. Be chronological and specific about times, locations, actions
+4. State facts objectively without legal conclusions
+5. Each paragraph should focus on one key fact or event
+6. Start paragraph numbers at 10 (previous sections used 1-9)
+7. Reference defendants by name where known
+8. Include specific details that support the constitutional claims
+9. If witnesses captured video/photo evidence, include a paragraph stating that the incident was recorded and describing what the recording captured
+10. If witnesses have prior interactions with defendants, this may be relevant to establishing pattern or motive - include if appropriate
+11. ONLY if VIDEO EVIDENCE TRANSCRIPTS are provided above, incorporate key quotes from the video with proper attribution (e.g., "As captured on video at [timestamp], Defendant [Name] stated: '[quote]'"). Do NOT invent or reference timestamps unless actual transcript text is provided above
+12. If WAS RECORDING is True but no VIDEO EVIDENCE TRANSCRIPTS are provided, you may mention that the incident was recorded, but do NOT reference specific timestamps or quote content that was not provided
+
+Write ONLY the Statement of Facts section, starting with the header "STATEMENT OF FACTS".''',
+                'available_variables': 'plaintiff_name, incident_date, incident_time, incident_location, city, state, was_recording, what_were_you_doing, detailed_narrative, what_was_said, physical_actions, how_it_ended, defendants, witness_section, video_section',
+                'model_name': 'gpt-4o-mini',
+                'temperature': 0.3,
+                'max_tokens': 2000,
+            },
+            {
                 'prompt_type': 'review_final_document',
                 'title': 'Review Final Document Text',
                 'description': '''Reviews the ACTUAL GENERATED DOCUMENT TEXT (not raw input data).
