@@ -4900,11 +4900,12 @@ def apply_video_suggestion(request, document_id):
                 damages = section.damages
             except Damages.DoesNotExist:
                 damages = Damages.objects.create(section=section)
-            # Append to emotional distress field (most common for video evidence)
-            if damages.emotional_distress:
-                damages.emotional_distress += '\n\n' + text
+            # Append to emotional distress description and check the boolean
+            damages.emotional_distress = True
+            if damages.emotional_distress_description:
+                damages.emotional_distress_description += '\n\n' + text
             else:
-                damages.emotional_distress = text
+                damages.emotional_distress_description = text
             damages.save()
             _log_suggestion('Added to Damages (Emotional Distress)')
             return JsonResponse({
