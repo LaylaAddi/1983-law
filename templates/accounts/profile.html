@@ -236,7 +236,16 @@
                     Each paid document includes {{ paid_ai_uses }} AI uses and access to all features including YouTube video analysis.
                 </p>
 
-                <a href="{% url 'documents:document_list' %}" class="btn btn-outline-primary btn-sm">
+                {% for doc in paid_documents %}
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                    <span class="text-truncate me-2" style="max-width: 200px;">{{ doc.title }}</span>
+                    <span class="badge {% if doc.ai_remaining <= 0 %}bg-danger{% elif doc.ai_remaining <= 20 %}bg-warning{% else %}bg-success{% endif %}">
+                        {{ doc.ai_remaining }} / {{ paid_ai_uses }} AI
+                    </span>
+                </div>
+                {% endfor %}
+
+                <a href="{% url 'documents:document_list' %}" class="btn btn-outline-primary btn-sm mt-2">
                     <i class="bi bi-folder me-1"></i>View Documents
                 </a>
 
@@ -293,6 +302,7 @@
                             <tr>
                                 <th>Document</th>
                                 <th>Status</th>
+                                <th>AI Uses</th>
                                 <th>Amount</th>
                                 <th>Date</th>
                             </tr>
@@ -311,6 +321,11 @@
                                     {% else %}
                                     <span class="badge bg-primary">Paid</span>
                                     {% endif %}
+                                </td>
+                                <td>
+                                    <span class="{% if doc.ai_remaining <= 0 %}text-danger{% elif doc.ai_remaining <= 20 %}text-warning{% else %}text-success{% endif %}">
+                                        {{ doc.ai_remaining }}/{{ paid_ai_uses }}
+                                    </span>
                                 </td>
                                 <td>${{ doc.amount_paid|floatformat:2 }}</td>
                                 <td>{{ doc.paid_at|date:"M j, Y" }}</td>

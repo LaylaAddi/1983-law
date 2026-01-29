@@ -150,12 +150,17 @@ def profile(request):
         payment_status__in=['paid', 'finalized']
     ).order_by('-paid_at')[:10]
 
+    # Add computed ai_remaining to each paid document
+    paid_ai_uses = django_settings.PAID_AI_USES
+    for doc in paid_documents:
+        doc.ai_remaining = paid_ai_uses - doc.ai_generations_used
+
     context = {
         'subscription': subscription,
         'document_packs': document_packs,
         'access_summary': access_summary,
         'paid_documents': paid_documents,
-        'paid_ai_uses': django_settings.PAID_AI_USES,
+        'paid_ai_uses': paid_ai_uses,
     }
     return render(request, 'accounts/profile.html', context)
 
