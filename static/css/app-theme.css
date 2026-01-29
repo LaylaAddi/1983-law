@@ -2733,3 +2733,18 @@ a:hover {
     background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
+[data-theme="dark"] .table,
+[data-theme="dark"] .table tbody,
+[data-theme="dark"] .table tbody tr,
+[data-theme="dark"] .table tbody td,
+[data-theme="dark"] .table thead,
+[data-theme="dark"] .table thead th {
+    background-color: transparent !important;
+    color: var(--dark-text) !important;
+    border-color: var(--dark-border) !important;
+}
+
+[data-theme="dark"] .card .table {
+    background-color: transparent !important;
+}
+
