@@ -112,19 +112,31 @@
             margin-top: 18pt;
         }
 
-        /* Signature block */
+        /* Signature block - try to keep with preceding content */
         .signature-block {
             margin-top: 48pt;
             margin-left: 50%;
+            page-break-inside: avoid;
         }
 
         .signature-block .section-content {
             line-height: 1.5;
         }
 
+        /* Keep signature with jury demand or prayer if possible */
+        .signature-wrapper {
+            page-break-inside: avoid;
+        }
+
         /* Page break hints */
         .section-break {
             page-break-before: auto;
+        }
+
+        /* Reduce orphans/widows for better page utilization */
+        p, .section-content {
+            orphans: 3;
+            widows: 3;
         }
 
         /* Footer for draft */
@@ -201,15 +213,17 @@
     <div class="section-header">PRAYER FOR RELIEF</div>
     <div class="section-content">{{ document.final_prayer }}</div>
 
-    <!-- Jury Demand -->
-    {% if document.final_jury_demand %}
-    <div class="section-header">JURY DEMAND</div>
-    <div class="section-content">{{ document.final_jury_demand }}</div>
-    {% endif %}
+    <!-- Jury Demand + Signature - try to keep together -->
+    <div class="signature-wrapper">
+        {% if document.final_jury_demand %}
+        <div class="section-header">JURY DEMAND</div>
+        <div class="section-content">{{ document.final_jury_demand }}</div>
+        {% endif %}
 
-    <!-- Signature Block -->
-    <div class="signature-block">
-        <div class="section-content">{{ document.final_signature }}</div>
+        <!-- Signature Block -->
+        <div class="signature-block">
+            <div class="section-content">{{ document.final_signature }}</div>
+        </div>
     </div>
 </body>
 </html>
