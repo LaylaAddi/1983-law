@@ -221,7 +221,7 @@ class DefendantForm(forms.ModelForm):
 
     class Meta:
         model = Defendant
-        exclude = ['section', 'agency_inferred']  # agency_inferred is cleared on manual save
+        exclude = ['section', 'slug', 'agency_inferred']  # agency_inferred is cleared on manual save
         widgets = {
             'defendant_type': forms.Select(attrs={'class': 'form-select'}),
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Agency or officer name'}),
@@ -341,7 +341,7 @@ class WitnessForm(forms.ModelForm):
 
     class Meta:
         model = Witness
-        exclude = ['section']
+        exclude = ['section', 'slug']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Witness name'}),
             'contact_info': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Phone, email, or address'}),
@@ -360,7 +360,7 @@ class EvidenceForm(forms.ModelForm):
 
     class Meta:
         model = Evidence
-        exclude = ['section']
+        exclude = ['section', 'slug']
         widgets = {
             'evidence_type': forms.Select(attrs={'class': 'form-select'}),
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., My recording of the incident'}),
