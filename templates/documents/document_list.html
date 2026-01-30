@@ -46,10 +46,10 @@
                     </div>
                     <div class="card-footer bg-transparent">
                         <div class="d-flex gap-2">
-                            <a href="{% url 'documents:document_detail' doc.id %}" class="btn btn-outline-primary btn-sm flex-grow-1">
+                            <a href="{% url 'documents:document_detail' doc.slug %}" class="btn btn-outline-primary btn-sm flex-grow-1">
                                 <i class="bi bi-pencil me-1"></i>Continue Editing
                             </a>
-                            <form method="post" action="{% url 'documents:document_delete' doc.id %}" class="d-inline"
+                            <form method="post" action="{% url 'documents:document_delete' doc.slug %}" class="d-inline"
                                   onsubmit="return confirm('Delete &quot;{{ doc.title }}&quot;? This cannot be undone.');">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete Document">

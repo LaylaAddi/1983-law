@@ -259,7 +259,7 @@ def document_create(request):
             plaintiff_section.save()
 
             messages.success(request, 'Document created! Your information has been pre-filled from your profile.')
-            return redirect('documents:tell_your_story', document_id=document.id)
+            return redirect('documents:tell_your_story', document_slug=document.slug)
     else:
         form = DocumentForm()
 
@@ -267,14 +267,14 @@ def document_create(request):
 
 
 @login_required
-def document_detail(request, document_id):
+def document_detail(request, document_slug):
     """Overview of document with all sections and their status."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Redirect to Tell Your Story if not completed
     if not document.has_story():
         messages.info(request, 'Please tell your story first. This helps us understand your case and pre-fill relevant sections.')
-        return redirect('documents:tell_your_story', document_id=document.id)
+        return redirect('documents:tell_your_story', document_slug=document.slug)
 
     # Get sections and order them according to SECTION_TYPES
     sections_queryset = document.sections.all()
@@ -329,9 +329,9 @@ def document_detail(request, document_id):
 
 
 @login_required
-def section_edit(request, document_id, section_type):
+def section_edit(request, document_slug, section_type):
     """Edit a specific section of the document (interview style)."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Block editing for finalized or expired documents
     if not document.can_edit():
@@ -339,19 +339,19 @@ def section_edit(request, document_id, section_type):
             messages.info(request, 'This document has been finalized and cannot be edited.')
         elif document.payment_status == 'expired':
             messages.warning(request, 'This document has expired. Please upgrade to continue editing.')
-        return redirect('documents:document_detail', document_id=document.id)
+        return redirect('documents:document_detail', document_slug=document.slug)
 
     # Block section access until user tells their story
     if not document.has_story():
         messages.info(request, 'Please tell your story first. This helps us understand your case and pre-fill relevant sections.')
-        return redirect('documents:tell_your_story', document_id=document.id)
+        return redirect('documents:tell_your_story', document_slug=document.slug)
 
     section = get_object_or_404(DocumentSection, document=document, section_type=section_type)
 
     config = SECTION_CONFIG.get(section_type)
     if not config:
         messages.error(request, 'Invalid section type.')
-        return redirect('documents:document_detail', document_id=document.id)
+        return redirect('documents:document_detail', document_slug=document.slug)
 
     Model = config['model']
     Form = config['form']
@@ -429,7 +429,7 @@ def section_edit(request, document_id, section_type):
                     next_section = document.sections.filter(order__gt=section.order).first()
                     if next_section:
                         return redirect('documents:section_edit',
-                                       document_id=document.id,
+                                       document_slug=document.slug,
                                        section_type=next_section.section_type)
                     else:
                         # Check if all sections are actually completed
@@ -439,10 +439,10 @@ def section_edit(request, document_id, section_type):
                             messages.success(request, 'All sections completed! Your document is ready for review.')
                         else:
                             messages.info(request, 'You\'ve reached the last section. Review your document to see what still needs attention.')
-                        return redirect('documents:document_detail', document_id=document.id)
+                        return redirect('documents:document_detail', document_slug=document.slug)
 
                 return redirect('documents:section_edit',
-                               document_id=document.id,
+                               document_slug=document.slug,
                                section_type=section_type)
 
     # Get previous and next sections for navigation
@@ -489,15 +489,15 @@ def section_edit(request, document_id, section_type):
 
 
 @login_required
-def add_multiple_item(request, document_id, section_type):
+def add_multiple_item(request, document_slug, section_type):
     """Add an item to a multiple-item section (defendants, witnesses, evidence)."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
     section = get_object_or_404(DocumentSection, document=document, section_type=section_type)
 
     config = SECTION_CONFIG.get(section_type)
     if not config or not config.get('multiple'):
         messages.error(request, 'Invalid section type.')
-        return redirect('documents:document_detail', document_id=document.id)
+        return redirect('documents:document_detail', document_slug=document.slug)
 
     Form = config['form']
 
@@ -549,33 +549,33 @@ def add_multiple_item(request, document_id, section_type):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': True,
-                    'item_id': obj.id,
+                    'item_slug': obj.slug,
                     'item_str': str(obj),
                     'message': f'{config["title"][:-1]} added.'
                 })
 
             return redirect('documents:section_edit',
-                           document_id=document.id,
+                           document_slug=document.slug,
                            section_type=section_type)
 
     return redirect('documents:section_edit',
-                   document_id=document.id,
+                   document_slug=document.slug,
                    section_type=section_type)
 
 
 @login_required
-def delete_multiple_item(request, document_id, section_type, item_id):
+def delete_multiple_item(request, document_slug, section_type, item_slug):
     """Delete an item from a multiple-item section."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
     section = get_object_or_404(DocumentSection, document=document, section_type=section_type)
 
     config = SECTION_CONFIG.get(section_type)
     if not config or not config.get('multiple'):
         messages.error(request, 'Invalid section type.')
-        return redirect('documents:document_detail', document_id=document.id)
+        return redirect('documents:document_detail', document_slug=document.slug)
 
     Model = config['model']
-    item = get_object_or_404(Model, id=item_id, section=section)
+    item = get_object_or_404(Model, slug=item_slug, section=section)
     item.delete()
 
     # Invalidate cached complaint since data changed
@@ -583,17 +583,17 @@ def delete_multiple_item(request, document_id, section_type, item_id):
 
     messages.success(request, 'Item deleted.')
     return redirect('documents:section_edit',
-                   document_id=document.id,
+                   document_slug=document.slug,
                    section_type=section_type)
 
 
 @login_required
-def edit_defendant(request, document_id, defendant_id):
+def edit_defendant(request, document_slug, defendant_slug):
     """Edit a specific defendant with agency suggestion support."""
     from .forms import DefendantForm
 
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-    defendant = get_object_or_404(Defendant, id=defendant_id, section__document=document)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+    defendant = get_object_or_404(Defendant, slug=defendant_slug, section__document=document)
     section = defendant.section
 
     # Get incident overview for city/state context
@@ -611,7 +611,7 @@ def edit_defendant(request, document_id, defendant_id):
             # Invalidate cached complaint since data changed
             document.invalidate_generated_complaint()
             messages.success(request, 'Defendant updated successfully.')
-            return redirect('documents:section_edit', document_id=document.id, section_type='defendants')
+            return redirect('documents:section_edit', document_slug=document.slug, section_type='defendants')
     else:
         form = DefendantForm(instance=defendant)
 
@@ -626,10 +626,10 @@ def edit_defendant(request, document_id, defendant_id):
 
 @login_required
 @require_POST
-def accept_defendant_agency(request, document_id, defendant_id):
+def accept_defendant_agency(request, document_slug, defendant_slug):
     """Accept/confirm an AI-suggested agency as correct."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-    defendant = get_object_or_404(Defendant, id=defendant_id, section__document=document)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+    defendant = get_object_or_404(Defendant, slug=defendant_slug, section__document=document)
 
     # Mark the agency as verified (no longer AI-inferred) and address as verified
     defendant.agency_inferred = False
@@ -640,16 +640,16 @@ def accept_defendant_agency(request, document_id, defendant_id):
     document.invalidate_generated_complaint()
 
     messages.success(request, f'Agency for {defendant.name} confirmed.')
-    return redirect('documents:section_edit', document_id=document.id, section_type='defendants')
+    return redirect('documents:section_edit', document_slug=document.slug, section_type='defendants')
 
 
 @login_required
-def edit_witness(request, document_id, witness_id):
+def edit_witness(request, document_slug, witness_slug):
     """Edit a specific witness with enhanced fields."""
     from .forms import WitnessForm
 
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-    witness = get_object_or_404(Witness, id=witness_id, section__document=document)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+    witness = get_object_or_404(Witness, slug=witness_slug, section__document=document)
     section = witness.section
 
     if request.method == 'POST':
@@ -659,7 +659,7 @@ def edit_witness(request, document_id, witness_id):
             # Invalidate cached complaint since data changed
             document.invalidate_generated_complaint()
             messages.success(request, 'Witness updated successfully.')
-            return redirect('documents:section_edit', document_id=document.id, section_type='witnesses')
+            return redirect('documents:section_edit', document_slug=document.slug, section_type='witnesses')
     else:
         form = WitnessForm(instance=witness)
 
@@ -672,12 +672,12 @@ def edit_witness(request, document_id, witness_id):
 
 
 @login_required
-def edit_evidence(request, document_id, evidence_id):
+def edit_evidence(request, document_slug, evidence_slug):
     """Edit a specific piece of evidence."""
     from .forms import EvidenceForm
 
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-    evidence = get_object_or_404(Evidence, id=evidence_id, section__document=document)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+    evidence = get_object_or_404(Evidence, slug=evidence_slug, section__document=document)
     section = evidence.section
 
     # Get incident location, date, and time for "Use Incident" buttons
@@ -717,7 +717,7 @@ def edit_evidence(request, document_id, evidence_id):
             # Invalidate cached complaint since data changed
             document.invalidate_generated_complaint()
             messages.success(request, 'Evidence updated successfully.')
-            return redirect('documents:section_edit', document_id=document.id, section_type='evidence')
+            return redirect('documents:section_edit', document_slug=document.slug, section_type='evidence')
     else:
         form = EvidenceForm(instance=evidence)
 
@@ -737,9 +737,9 @@ def edit_evidence(request, document_id, evidence_id):
 
 @login_required
 @require_POST
-def update_section_status(request, document_id, section_type):
+def update_section_status(request, document_slug, section_type):
     """Update the status of a section (AJAX endpoint)."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
     section = get_object_or_404(DocumentSection, document=document, section_type=section_type)
 
     status = request.POST.get('status')
@@ -764,14 +764,14 @@ def update_section_status(request, document_id, section_type):
         messages.error(request, 'Invalid status.')
 
     return redirect('documents:section_edit',
-                   document_id=document.id,
+                   document_slug=document.slug,
                    section_type=section_type)
 
 
 @login_required
-def document_delete(request, document_id):
+def document_delete(request, document_slug):
     """Delete a document."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     if request.method == 'POST':
         document.delete()
@@ -783,14 +783,14 @@ def document_delete(request, document_id):
 
 @login_required
 @require_POST
-def fill_test_data(request, document_id):
+def fill_test_data(request, document_slug):
     """Fill document with realistic test data (test users only)."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Check if user is a test user
     if not request.user.is_test_user:
         messages.error(request, 'Test data feature is only available for test users.')
-        return redirect('documents:document_detail', document_id=document.id)
+        return redirect('documents:document_detail', document_slug=document.slug)
 
     try:
         from .test_data import populate_test_data
@@ -799,13 +799,13 @@ def fill_test_data(request, document_id):
     except Exception as e:
         messages.error(request, f'Error filling test data: {str(e)}')
 
-    return redirect('documents:document_detail', document_id=document.id)
+    return redirect('documents:document_detail', document_slug=document.slug)
 
 
 @login_required
-def document_preview(request, document_id):
+def document_preview(request, document_slug):
     """Show preview for finalized documents, redirect others to final_review."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Finalized documents show the preview/PDF view (read-only)
     if document.payment_status == 'finalized':
@@ -821,22 +821,22 @@ def document_preview(request, document_id):
         })
 
     # Non-finalized documents go to final review for editing
-    return redirect('documents:final_review', document_id=document_id)
+    return redirect('documents:final_review', document_slug=document_slug)
 
 
 @login_required
-def document_review(request, document_id):
+def document_review(request, document_slug):
     """Review and edit the complete document with inline editing.
 
     Shows the full legal complaint with edit buttons for each section.
     No AI involvement - just displays and edits saved data.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Finalized documents go to preview/PDF view (no editing allowed)
     if document.payment_status == 'finalized':
         messages.info(request, 'This document has been finalized. You can view or download the PDF.')
-        return redirect('documents:document_preview', document_id=document.id)
+        return redirect('documents:document_preview', document_slug=document.slug)
 
     # Collect all document data from the database
     document_data = _collect_document_data(document)
@@ -1409,9 +1409,9 @@ def _update_section_relevance(document, extracted_data):
 
 @login_required
 @require_POST
-def section_save_ajax(request, document_id, section_type):
+def section_save_ajax(request, document_slug, section_type):
     """Save section data via AJAX."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
     section = get_object_or_404(DocumentSection, document=document, section_type=section_type)
 
     config = SECTION_CONFIG.get(section_type)
@@ -1440,7 +1440,7 @@ def section_save_ajax(request, document_id, section_type):
             return JsonResponse({
                 'success': True,
                 'message': 'Item added successfully',
-                'item_id': obj.id,
+                'item_slug': obj.slug,
                 'item_str': str(obj),
             })
         else:
@@ -1481,9 +1481,9 @@ def section_save_ajax(request, document_id, section_type):
 
 @login_required
 @require_POST
-def delete_item_ajax(request, document_id, section_type, item_id):
+def delete_item_ajax(request, document_slug, section_type, item_slug):
     """Delete a multiple-item via AJAX."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
     section = get_object_or_404(DocumentSection, document=document, section_type=section_type)
 
     config = SECTION_CONFIG.get(section_type)
@@ -1491,7 +1491,7 @@ def delete_item_ajax(request, document_id, section_type, item_id):
         return JsonResponse({'success': False, 'error': 'Invalid section type'})
 
     Model = config['model']
-    item = get_object_or_404(Model, id=item_id, section=section)
+    item = get_object_or_404(Model, slug=item_slug, section=section)
     item.delete()
 
     return JsonResponse({
@@ -1502,13 +1502,13 @@ def delete_item_ajax(request, document_id, section_type, item_id):
 
 @login_required
 @require_POST
-def analyze_rights(request, document_id):
+def analyze_rights(request, document_slug):
     """AJAX endpoint to analyze document and suggest rights violations."""
     import json
 
     try:
         # Get the document and verify ownership
-        document = get_object_or_404(Document, id=document_id, user=request.user)
+        document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
         # Check AI usage limits for free users
         if not document.can_use_ai():
@@ -1574,12 +1574,12 @@ def analyze_rights(request, document_id):
 
 @login_required
 @require_POST
-def suggest_agency(request, document_id):
+def suggest_agency(request, document_slug):
     """AJAX endpoint to suggest defendants (agencies and individuals) based on story and location."""
 
     try:
         # Verify document ownership
-        document = get_object_or_404(Document, id=document_id, user=request.user)
+        document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
         # Check AI usage limits for free users
         if not document.can_use_ai():
@@ -1661,7 +1661,7 @@ def suggest_agency(request, document_id):
 
 @login_required
 @require_POST
-def suggest_section_content(request, document_id, section_type):
+def suggest_section_content(request, document_slug, section_type):
     """AJAX endpoint to suggest content for a specific section based on story analysis."""
 
     # Allowed section types for AI suggestions
@@ -1674,7 +1674,7 @@ def suggest_section_content(request, document_id, section_type):
         })
 
     try:
-        document = get_object_or_404(Document, id=document_id, user=request.user)
+        document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
         # Check AI usage limits for free users
         if not document.can_use_ai():
@@ -1767,14 +1767,14 @@ def suggest_section_content(request, document_id, section_type):
 
 @login_required
 @require_http_methods(["POST"])
-def ai_review_document(request, document_id):
+def ai_review_document(request, document_slug):
     """AJAX endpoint to perform AI review of the complete document.
 
     Analyzes legal strength, clarity, and completeness.
     Returns structured feedback with issues keyed by section.
     """
     try:
-        document = get_object_or_404(Document, id=document_id, user=request.user)
+        document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
         # Check AI usage limits for free users
         if not document.can_use_ai():
@@ -1848,13 +1848,13 @@ PRAYER FOR RELIEF
 
 @login_required
 @require_http_methods(["POST"])
-def generate_fix(request, document_id):
+def generate_fix(request, document_slug):
     """AJAX endpoint to generate AI-suggested fix for an issue.
 
     Takes issue details and returns rewritten section content.
     """
     try:
-        document = get_object_or_404(Document, id=document_id, user=request.user)
+        document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
         # Check AI usage limits for free users
         if not document.can_use_ai():
@@ -1960,13 +1960,13 @@ def generate_fix(request, document_id):
 
 @login_required
 @require_http_methods(["POST"])
-def apply_fix(request, document_id):
+def apply_fix(request, document_slug):
     """AJAX endpoint to apply an AI-suggested fix to a section.
 
     Saves the field_updates to the database.
     """
     try:
-        document = get_object_or_404(Document, id=document_id, user=request.user)
+        document = get_object_or_404(Document, slug=document_slug, user=request.user)
         data = json.loads(request.body)
 
         section_type = data.get('section_type', '')
@@ -2244,7 +2244,7 @@ def _get_section_content(document, section_type):
 
 @login_required
 @require_http_methods(["POST"])
-def lookup_address(request, document_id):
+def lookup_address(request, document_slug):
     """AJAX endpoint to lookup agency address using web search.
 
     If agency_name is not provided but officer info is available,
@@ -2253,7 +2253,7 @@ def lookup_address(request, document_id):
 
     try:
         # Verify document ownership
-        document = get_object_or_404(Document, id=document_id, user=request.user)
+        document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
         # Check AI usage limits for free users
         if not document.can_use_ai():
@@ -2361,9 +2361,9 @@ def lookup_district_court(request):
 
 
 @login_required
-def tell_your_story(request, document_id):
+def tell_your_story(request, document_slug):
     """Page for users to tell their story and have AI extract form fields."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Block editing for finalized or expired documents
     if not document.can_edit():
@@ -2371,7 +2371,7 @@ def tell_your_story(request, document_id):
             messages.info(request, 'This document has been finalized and cannot be edited.')
         elif document.payment_status == 'expired':
             messages.warning(request, 'This document has expired. Please upgrade to continue editing.')
-        return redirect('documents:document_detail', document_id=document.id)
+        return redirect('documents:document_detail', document_slug=document.slug)
 
     context = {
         'document': document,
@@ -2566,12 +2566,12 @@ def _process_story_background(document_id, story_text):
 
 @login_required
 @require_POST
-def parse_story(request, document_id):
+def parse_story(request, document_slug):
     """AJAX endpoint to start story parsing (returns immediately, processes in background)."""
 
     try:
         # Verify document ownership
-        document = get_object_or_404(Document, id=document_id, user=request.user)
+        document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
         # Check AI usage limits for free users
         if not document.can_use_ai():
@@ -2614,7 +2614,7 @@ def parse_story(request, document_id):
         # Start background processing
         thread = threading.Thread(
             target=_process_story_background,
-            args=(document_id, story_text),
+            args=(document.id, story_text),
             daemon=True
         )
         thread.start()
@@ -2639,10 +2639,10 @@ def parse_story(request, document_id):
 
 @login_required
 @require_GET
-def parse_story_status(request, document_id):
+def parse_story_status(request, document_slug):
     """AJAX endpoint to check story parsing status (for polling)."""
     try:
-        document = get_object_or_404(Document, id=document_id, user=request.user)
+        document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
         if document.parsing_status == 'processing':
             return JsonResponse({
@@ -2690,13 +2690,13 @@ def parse_story_status(request, document_id):
 
 @login_required
 @require_POST
-def apply_story_fields(request, document_id):
+def apply_story_fields(request, document_slug):
     """Save selected fields from story parsing to the database."""
     import json
     from datetime import datetime
 
     try:
-        document = get_object_or_404(Document, id=document_id, user=request.user)
+        document = get_object_or_404(Document, slug=document_slug, user=request.user)
         data = json.loads(request.body)
         fields = data.get('fields', [])
 
@@ -3040,9 +3040,9 @@ def apply_story_fields(request, document_id):
 # ============================================================================
 
 @login_required
-def checkout(request, document_id):
+def checkout(request, document_slug):
     """Display checkout page with promo code option."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Check/update expiry status
     document.check_and_update_expiry()
@@ -3050,7 +3050,7 @@ def checkout(request, document_id):
     # Allow checkout for draft or expired documents
     if document.payment_status not in ['draft', 'expired']:
         messages.info(request, 'This document has already been paid for.')
-        return redirect('documents:document_detail', document_id=document.id)
+        return redirect('documents:document_detail', document_slug=document.slug)
 
     # Check if user has exhausted free AI uses - if so, allow checkout regardless of completion
     # This prevents a catch-22 where users can't complete sections without AI
@@ -3100,7 +3100,7 @@ def checkout(request, document_id):
                 request,
                 f"Cannot proceed to checkout. Please complete all sections first. Issues: {'; '.join(error_parts)}"
             )
-            return redirect('documents:document_detail', document_id=document.id)
+            return redirect('documents:document_detail', document_slug=document.slug)
 
     # Calculate prices
     base_price = Decimal(str(settings.DOCUMENT_PRICE))
@@ -3159,10 +3159,10 @@ def checkout(request, document_id):
                 }],
                 mode='payment',
                 success_url=request.build_absolute_uri(
-                    reverse('documents:checkout_success', args=[document.id])
+                    reverse('documents:checkout_success', args=[document.slug])
                 ) + '?session_id={CHECKOUT_SESSION_ID}',
                 cancel_url=request.build_absolute_uri(
-                    reverse('documents:checkout_cancel', args=[document.id])
+                    reverse('documents:checkout_cancel', args=[document.slug])
                 ),
                 metadata={
                     'document_id': str(document.id),
@@ -3185,14 +3185,14 @@ def checkout(request, document_id):
 
 
 @login_required
-def checkout_success(request, document_id):
+def checkout_success(request, document_slug):
     """Handle successful payment."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     session_id = request.GET.get('session_id')
     if not session_id:
         messages.error(request, 'Invalid checkout session.')
-        return redirect('documents:document_detail', document_id=document.id)
+        return redirect('documents:document_detail', document_slug=document.slug)
 
     try:
         session = stripe.checkout.Session.retrieve(session_id)
@@ -3234,19 +3234,19 @@ def checkout_success(request, document_id):
                 del request.session['pending_promo_code']
 
             messages.success(request, 'Payment successful! You now have full access to edit and finalize your document.')
-            return redirect('documents:document_detail', document_id=document.id)
+            return redirect('documents:document_detail', document_slug=document.slug)
 
     except stripe.error.StripeError as e:
         messages.error(request, f'Error verifying payment: {str(e)}')
 
-    return redirect('documents:document_detail', document_id=document.id)
+    return redirect('documents:document_detail', document_slug=document.slug)
 
 
 @login_required
-def checkout_cancel(request, document_id):
+def checkout_cancel(request, document_slug):
     """Handle cancelled payment."""
     messages.info(request, 'Payment was cancelled. You can try again when ready.')
-    return redirect('documents:checkout', document_id=document_id)
+    return redirect('documents:checkout', document_slug=document_slug)
 
 
 @csrf_exempt
@@ -3287,13 +3287,13 @@ def stripe_webhook(request):
 
 
 @login_required
-def finalize_document(request, document_id):
+def finalize_document(request, document_slug):
     """Display finalization confirmation and handle PDF generation."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     if document.payment_status != 'paid':
         messages.error(request, 'You must complete payment before finalizing your document.')
-        return redirect('documents:checkout', document_id=document.id)
+        return redirect('documents:checkout', document_slug=document.slug)
 
     # Check for incomplete sections (ordered by SECTION_TYPES)
     section_type_order = [choice[0] for choice in DocumentSection.SECTION_TYPES]
@@ -3361,7 +3361,7 @@ def finalize_document(request, document_id):
         document.save()
 
         messages.success(request, 'Your document has been finalized! You can now download or print your PDF.')
-        return redirect('documents:document_preview', document_id=document.id)
+        return redirect('documents:document_preview', document_slug=document.slug)
 
     return render(request, 'documents/finalize.html', {
         'document': document,
@@ -3699,17 +3699,17 @@ def validate_promo_code(request):
 
 
 @login_required
-def download_pdf(request, document_id):
+def download_pdf(request, document_slug):
     """Download the finalized document as a PDF."""
     import os
     import re
 
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Only allow PDF download for finalized documents
     if document.payment_status != 'finalized':
         messages.error(request, 'Only finalized documents can be downloaded as PDF.')
-        return redirect('documents:document_preview', document_id=document.id)
+        return redirect('documents:document_preview', document_slug=document.slug)
 
     # Sanitize filename for response
     safe_title = re.sub(r'[^\w\s-]', '', document.title)
@@ -3743,14 +3743,14 @@ def download_pdf(request, document_id):
 
     if not document_data.get('has_minimum_data'):
         messages.error(request, 'Document is missing required data for PDF generation.')
-        return redirect('documents:document_preview', document_id=document.id)
+        return redirect('documents:document_preview', document_slug=document.slug)
 
     generator = DocumentGenerator()
     result = generator.generate_complaint(document_data)
 
     if not result.get('success'):
         messages.error(request, f'Error generating document: {result.get("error", "Unknown error")}')
-        return redirect('documents:document_preview', document_id=document.id)
+        return redirect('documents:document_preview', document_slug=document.slug)
 
     generated_document = result.get('document')
 
@@ -3869,10 +3869,10 @@ def _generate_pdf_background(document_id):
 
 @login_required
 @require_POST
-def start_pdf_generation(request, document_id):
+def start_pdf_generation(request, document_slug):
     """AJAX endpoint to start PDF generation in background."""
     try:
-        document = get_object_or_404(Document, id=document_id, user=request.user)
+        document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
         # Only allow PDF generation for finalized documents
         if document.payment_status != 'finalized':
@@ -3917,7 +3917,7 @@ def start_pdf_generation(request, document_id):
         # Start background processing
         thread = threading.Thread(
             target=_generate_pdf_background,
-            args=(document_id,),
+            args=(document.id,),
             daemon=True
         )
         thread.start()
@@ -3938,10 +3938,10 @@ def start_pdf_generation(request, document_id):
 
 @login_required
 @require_GET
-def pdf_generation_status(request, document_id):
+def pdf_generation_status(request, document_slug):
     """AJAX endpoint to check PDF generation status (for polling)."""
     try:
-        document = get_object_or_404(Document, id=document_id, user=request.user)
+        document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
         # Map internal stages to user-friendly messages
         stage_messages = {
@@ -3970,7 +3970,7 @@ def pdf_generation_status(request, document_id):
                 'success': True,
                 'status': 'completed',
                 'message': 'PDF ready for download!',
-                'download_url': reverse('documents:download_pdf', args=[document.id])
+                'download_url': reverse('documents:download_pdf', args=[document.slug])
             })
         elif document.pdf_status == 'failed':
             error = document.pdf_error or 'Unknown error occurred'
@@ -4005,12 +4005,12 @@ def pdf_generation_status(request, document_id):
 # =============================================================================
 
 @login_required
-def video_analysis(request, document_id):
+def video_analysis(request, document_slug):
     """
     Main video analysis page for extracting YouTube transcripts.
     Available to Pro subscribers and paid document owners.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Check video analysis access (subscription OR paid document)
     if not document.can_use_video_analysis():
@@ -4052,12 +4052,12 @@ def video_analysis(request, document_id):
 
 @login_required
 @require_POST
-def video_add(request, document_id):
+def video_add(request, document_slug):
     """
     Add a new YouTube video for transcript extraction.
     Creates Evidence + VideoEvidence records.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Check video analysis access (subscription OR paid document)
     if not document.can_use_video_analysis():
@@ -4074,8 +4074,8 @@ def video_add(request, document_id):
         })
 
     # Extract video ID
-    video_id = VideoEvidence.extract_video_id(youtube_url)
-    if not video_id:
+    video_slug = VideoEvidence.extract_video_id(youtube_url)
+    if not video_slug:
         return JsonResponse({
             'success': False,
             'error': 'Invalid YouTube URL. Please enter a valid YouTube video link.'
@@ -4091,7 +4091,7 @@ def video_add(request, document_id):
     # Check if this video already exists for this document
     existing = VideoEvidence.objects.filter(
         evidence__section=evidence_section,
-        video_id=video_id
+        video_slug=video_slug
     ).first()
 
     if existing:
@@ -4113,7 +4113,7 @@ def video_add(request, document_id):
         evidence = Evidence.objects.create(
             section=evidence_section,
             evidence_type='video',
-            title=f'YouTube Video: {video_id}',
+            title=f'YouTube Video: {video_slug}',
             description='YouTube video for transcript extraction',
             is_in_possession=True
         )
@@ -4122,15 +4122,15 @@ def video_add(request, document_id):
         video_evidence = VideoEvidence.objects.create(
             evidence=evidence,
             youtube_url=youtube_url,
-            video_id=video_id,
-            video_title=f'Video {video_id}',  # Will be updated when we have metadata API
+            video_slug=video_slug,
+            video_title=f'Video {video_slug}',  # Will be updated when we have metadata API
             has_youtube_captions=has_captions
         )
 
         return JsonResponse({
             'success': True,
-            'video_id': video_evidence.id,
-            'youtube_video_id': video_id,
+            'video_slug': video_evidence.slug,
+            'youtube_video_id': video_slug,
             'has_captions': has_captions,
             'message': 'Video added successfully!'
         })
@@ -4144,13 +4144,13 @@ def video_add(request, document_id):
 
 @login_required
 @require_POST
-def link_youtube_to_evidence(request, document_id, evidence_id):
+def link_youtube_to_evidence(request, document_slug, evidence_slug):
     """
     Link a YouTube video to an existing Evidence record.
     Creates a VideoEvidence record linked to the specified evidence.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-    evidence = get_object_or_404(Evidence, id=evidence_id, section__document=document)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+    evidence = get_object_or_404(Evidence, slug=evidence_slug, section__document=document)
 
     # Check video analysis access (subscription OR paid document)
     if not document.can_use_video_analysis():
@@ -4181,8 +4181,8 @@ def link_youtube_to_evidence(request, document_id, evidence_id):
         })
 
     # Extract video ID
-    video_id = VideoEvidence.extract_video_id(youtube_url)
-    if not video_id:
+    video_slug = VideoEvidence.extract_video_id(youtube_url)
+    if not video_slug:
         return JsonResponse({
             'success': False,
             'error': 'Invalid YouTube URL. Please enter a valid YouTube video link.'
@@ -4192,7 +4192,7 @@ def link_youtube_to_evidence(request, document_id, evidence_id):
     evidence_section = evidence.section
     existing = VideoEvidence.objects.filter(
         evidence__section=evidence_section,
-        video_id=video_id
+        video_slug=video_slug
     ).first()
 
     if existing:
@@ -4207,8 +4207,8 @@ def link_youtube_to_evidence(request, document_id, evidence_id):
         video_evidence = VideoEvidence.objects.create(
             evidence=evidence,
             youtube_url=youtube_url,
-            video_id=video_id,
-            video_title=evidence.title or f'Video {video_id}',
+            video_slug=video_slug,
+            video_title=evidence.title or f'Video {video_slug}',
             has_youtube_captions=False  # Will be updated when user extracts transcript
         )
 
@@ -4220,8 +4220,8 @@ def link_youtube_to_evidence(request, document_id, evidence_id):
         return JsonResponse({
             'success': True,
             'video_evidence_id': video_evidence.id,
-            'youtube_video_id': video_id,
-            'redirect_url': f'/documents/{document_id}/video-analysis/',
+            'youtube_video_id': video_slug,
+            'redirect_url': f'/documents/{document.slug}/video-analysis/',
             'message': 'Video linked successfully!'
         })
 
@@ -4234,13 +4234,13 @@ def link_youtube_to_evidence(request, document_id, evidence_id):
 
 @login_required
 @require_POST
-def unlink_youtube_from_evidence(request, document_id, evidence_id):
+def unlink_youtube_from_evidence(request, document_slug, evidence_slug):
     """
     Unlink a YouTube video from an Evidence record.
     Deletes the VideoEvidence record but keeps the Evidence record.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-    evidence = get_object_or_404(Evidence, id=evidence_id, section__document=document)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+    evidence = get_object_or_404(Evidence, slug=evidence_slug, section__document=document)
 
     # Check if evidence has a video linked
     if not hasattr(evidence, 'video_evidence'):
@@ -4268,12 +4268,12 @@ def unlink_youtube_from_evidence(request, document_id, evidence_id):
 
 @login_required
 @require_POST
-def quick_add_youtube_evidence(request, document_id):
+def quick_add_youtube_evidence(request, document_slug):
     """
     Create a new Video Evidence record with YouTube link in one step.
     Creates an Evidence record and VideoEvidence record together.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Check video analysis access (subscription OR paid document)
     if not document.can_use_video_analysis():
@@ -4306,8 +4306,8 @@ def quick_add_youtube_evidence(request, document_id):
         })
 
     # Extract video ID
-    video_id = VideoEvidence.extract_video_id(youtube_url)
-    if not video_id:
+    video_slug = VideoEvidence.extract_video_id(youtube_url)
+    if not video_slug:
         return JsonResponse({
             'success': False,
             'error': 'Invalid YouTube URL. Please enter a valid YouTube video link.'
@@ -4316,7 +4316,7 @@ def quick_add_youtube_evidence(request, document_id):
     # Check if this video already exists for this document
     existing = VideoEvidence.objects.filter(
         evidence__section=evidence_section,
-        video_id=video_id
+        video_slug=video_slug
     ).first()
 
     if existing:
@@ -4330,7 +4330,7 @@ def quick_add_youtube_evidence(request, document_id):
         evidence = Evidence.objects.create(
             section=evidence_section,
             evidence_type='video',
-            title=f'YouTube Video ({video_id})',
+            title=f'YouTube Video ({video_slug})',
             description='Video evidence from YouTube',
             is_in_possession=True
         )
@@ -4339,17 +4339,17 @@ def quick_add_youtube_evidence(request, document_id):
         video_evidence = VideoEvidence.objects.create(
             evidence=evidence,
             youtube_url=youtube_url,
-            video_id=video_id,
-            video_title=f'YouTube Video {video_id}',
+            video_slug=video_slug,
+            video_title=f'YouTube Video {video_slug}',
             has_youtube_captions=False
         )
 
         return JsonResponse({
             'success': True,
-            'evidence_id': evidence.id,
-            'video_evidence_id': video_evidence.id,
-            'youtube_video_id': video_id,
-            'redirect_url': f'/documents/{document_id}/video-analysis/',
+            'evidence_slug': evidence.slug,
+            'video_evidence_id': video_evidence.slug,
+            'youtube_video_id': video_slug,
+            'redirect_url': f'/documents/{document.slug}/video-analysis/',
             'message': 'Video evidence added successfully!'
         })
 
@@ -4362,10 +4362,10 @@ def quick_add_youtube_evidence(request, document_id):
 
 @login_required
 @require_POST
-def video_delete(request, document_id, video_id):
+def video_delete(request, document_slug, video_slug):
     """Delete a video and all its captures."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-    video_evidence = get_object_or_404(VideoEvidence, id=video_id)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+    video_evidence = get_object_or_404(VideoEvidence, slug=video_slug)
 
     # Verify ownership
     if video_evidence.evidence.section.document != document:
@@ -4382,10 +4382,10 @@ def video_delete(request, document_id, video_id):
 
 @login_required
 @require_POST
-def video_add_capture(request, document_id, video_id):
+def video_add_capture(request, document_slug, video_slug):
     """Add a new capture (time range) to a video."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-    video_evidence = get_object_or_404(VideoEvidence, id=video_id)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+    video_evidence = get_object_or_404(VideoEvidence, slug=video_slug)
 
     # Verify ownership
     if video_evidence.evidence.section.document != document:
@@ -4434,7 +4434,7 @@ def video_add_capture(request, document_id, video_id):
 
     return JsonResponse({
         'success': True,
-        'capture_id': capture.id,
+        'capture_slug': capture.slug,
         'start_display': capture.start_time_display,
         'end_display': capture.end_time_display,
         'duration_display': capture.duration_display,
@@ -4444,10 +4444,10 @@ def video_add_capture(request, document_id, video_id):
 
 @login_required
 @require_POST
-def video_delete_capture(request, document_id, capture_id):
+def video_delete_capture(request, document_slug, capture_slug):
     """Delete a capture."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-    capture = get_object_or_404(VideoCapture, id=capture_id)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+    capture = get_object_or_404(VideoCapture, slug=capture_slug)
 
     # Verify ownership
     if capture.video_evidence.evidence.section.document != document:
@@ -4463,13 +4463,13 @@ def video_delete_capture(request, document_id, capture_id):
 
 @login_required
 @require_POST
-def video_extract_transcript(request, document_id, capture_id):
+def video_extract_transcript(request, document_slug, capture_slug):
     """
     Extract transcript for a capture using Supadata API.
     Counts as 1 AI use toward subscriber limit.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-    capture = get_object_or_404(VideoCapture, id=capture_id)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+    capture = get_object_or_404(VideoCapture, slug=capture_slug)
 
     # Verify ownership
     if capture.video_evidence.evidence.section.document != document:
@@ -4543,10 +4543,10 @@ def video_extract_transcript(request, document_id, capture_id):
 
 @login_required
 @require_POST
-def video_update_capture(request, document_id, capture_id):
+def video_update_capture(request, document_slug, capture_slug):
     """Update capture transcript (user edits with speaker attribution)."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-    capture = get_object_or_404(VideoCapture, id=capture_id)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+    capture = get_object_or_404(VideoCapture, slug=capture_slug)
 
     # Verify ownership
     if capture.video_evidence.evidence.section.document != document:
@@ -4564,10 +4564,10 @@ def video_update_capture(request, document_id, capture_id):
 
 @login_required
 @require_POST
-def video_add_speaker(request, document_id, video_id):
+def video_add_speaker(request, document_slug, video_slug):
     """Add a speaker to a video."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-    video_evidence = get_object_or_404(VideoEvidence, id=video_id)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+    video_evidence = get_object_or_404(VideoEvidence, slug=video_slug)
 
     # Verify ownership
     if video_evidence.evidence.section.document != document:
@@ -4594,7 +4594,7 @@ def video_add_speaker(request, document_id, video_id):
 
     return JsonResponse({
         'success': True,
-        'speaker_id': speaker.id,
+        'speaker_slug': speaker.slug,
         'label': speaker.label,
         'message': 'Speaker added.'
     })
@@ -4602,11 +4602,11 @@ def video_add_speaker(request, document_id, video_id):
 
 @login_required
 @require_POST
-def video_update_speaker(request, document_id, video_id, speaker_id):
+def video_update_speaker(request, document_slug, video_slug, speaker_slug):
     """Update speaker attribution (link to defendant or mark as plaintiff)."""
-    document = get_object_or_404(Document, id=document_id, user=request.user)
-    video_evidence = get_object_or_404(VideoEvidence, id=video_id)
-    speaker = get_object_or_404(VideoSpeaker, id=speaker_id, video_evidence=video_evidence)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+    video_evidence = get_object_or_404(VideoEvidence, slug=video_slug)
+    speaker = get_object_or_404(VideoSpeaker, slug=speaker_slug, video_evidence=video_evidence)
 
     # Verify ownership
     if video_evidence.evidence.section.document != document:
@@ -4614,7 +4614,7 @@ def video_update_speaker(request, document_id, video_id, speaker_id):
 
     # Get attribution type
     attribution_type = request.POST.get('attribution_type', '')
-    defendant_id = request.POST.get('defendant_id', '')
+    defendant_slug = request.POST.get('defendant_slug', '')
     notes = request.POST.get('notes', '').strip()
 
     speaker.notes = notes
@@ -4622,12 +4622,12 @@ def video_update_speaker(request, document_id, video_id, speaker_id):
     if attribution_type == 'plaintiff':
         speaker.is_plaintiff = True
         speaker.defendant = None
-    elif attribution_type == 'defendant' and defendant_id:
+    elif attribution_type == 'defendant' and defendant_slug:
         # Get defendant and verify it belongs to this document
         defendants_section = document.sections.filter(section_type='defendants').first()
         if defendants_section:
             try:
-                defendant = defendants_section.defendants.get(id=defendant_id)
+                defendant = defendants_section.defendants.get(slug=defendant_slug)
                 speaker.defendant = defendant
                 speaker.is_plaintiff = False
             except Defendant.DoesNotExist:
@@ -4648,12 +4648,12 @@ def video_update_speaker(request, document_id, video_id, speaker_id):
 
 @login_required
 @require_POST
-def analyze_video_evidence(request, document_id):
+def analyze_video_evidence(request, document_slug):
     """
     Analyze video transcripts and suggest document updates.
     Returns suggestions for narrative, evidence descriptions, rights violations, and damages.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Check AI usage limits
     if not document.can_use_ai():
@@ -4704,7 +4704,7 @@ def analyze_video_evidence(request, document_id):
 
     for video in video_evidences:
         for speaker in video.speakers.all():
-            speaker_key = (speaker.label, speaker.is_plaintiff, speaker.defendant_id)
+            speaker_key = (speaker.label, speaker.is_plaintiff, speaker.defendant_slug)
             if speaker_key not in seen_speakers:
                 seen_speakers.add(speaker_key)
                 all_speakers.append({
@@ -4719,7 +4719,7 @@ def analyze_video_evidence(request, document_id):
             if transcript_text:
                 transcripts.append({
                     'video_title': video.video_title,
-                    'video_id': video.video_id,
+                    'video_slug': video.video_slug,
                     'youtube_url': video.youtube_url,
                     'start_time': capture.start_time_display,
                     'end_time': capture.end_time_display,
@@ -4838,12 +4838,12 @@ def _time_to_seconds(time_str):
 
 @login_required
 @require_POST
-def apply_video_suggestion(request, document_id):
+def apply_video_suggestion(request, document_slug):
     """
     Apply a video evidence suggestion directly to a document section.
     Appends the suggested text to the appropriate field.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     try:
         data = json.loads(request.body)
@@ -4900,7 +4900,7 @@ def apply_video_suggestion(request, document_id):
             return JsonResponse({
                 'success': True,
                 'message': 'Added to Incident Narrative',
-                'section_url': f'/documents/{document_id}/section/incident_narrative/'
+                'section_url': f'/documents/{document.slug}/section/incident_narrative/'
             })
 
         elif section_type == 'damages':
@@ -4921,7 +4921,7 @@ def apply_video_suggestion(request, document_id):
             return JsonResponse({
                 'success': True,
                 'message': 'Added to Damages (Emotional Distress)',
-                'section_url': f'/documents/{document_id}/section/damages/'
+                'section_url': f'/documents/{document.slug}/section/damages/'
             })
 
         elif section_type == 'rights_violated':
@@ -4965,7 +4965,7 @@ def apply_video_suggestion(request, document_id):
             return JsonResponse({
                 'success': True,
                 'message': f'Added to Rights Violated ({field_name})',
-                'section_url': f'/documents/{document_id}/section/rights_violated/'
+                'section_url': f'/documents/{document.slug}/section/rights_violated/'
             })
 
         elif section_type == 'evidence':
@@ -4988,7 +4988,7 @@ def apply_video_suggestion(request, document_id):
 # ============================================================================
 
 @login_required
-def final_review(request, document_id):
+def final_review(request, document_slug):
     """
     Final document review page where users can:
     1. View the complete generated legal document
@@ -4998,7 +4998,7 @@ def final_review(request, document_id):
 
     Auto-generates document on first visit if not already generated.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Check and update expiry status
     document.check_and_update_expiry()
@@ -5075,12 +5075,12 @@ def final_review(request, document_id):
 
 @login_required
 @require_POST
-def generate_final_document(request, document_id):
+def generate_final_document(request, document_slug):
     """
     Generate all final document sections using AI.
     Populates the final_* fields on the Document model.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     # Check permissions
     if not document.can_edit():
@@ -5151,12 +5151,12 @@ def generate_final_document(request, document_id):
 
 @login_required
 @require_POST
-def save_final_section(request, document_id):
+def save_final_section(request, document_slug):
     """
     Save a single section of the final document.
     AJAX endpoint for inline editing.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     if not document.can_edit():
         return JsonResponse({
@@ -5216,13 +5216,13 @@ def save_final_section(request, document_id):
 
 @login_required
 @require_POST
-def ai_review_final(request, document_id):
+def ai_review_final(request, document_slug):
     """
     AI reviews the actual final document text and suggests improvements.
     Reviews the generated/edited text, not the raw input data.
     Uses OpenAIService with prompts from database.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     if not document.can_use_ai():
         return JsonResponse({
@@ -5267,11 +5267,11 @@ def ai_review_final(request, document_id):
 
 @login_required
 @require_POST
-def regenerate_final_section(request, document_id):
+def regenerate_final_section(request, document_slug):
     """
     Regenerate a single section of the final document using AI.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     if not document.can_edit():
         return JsonResponse({
@@ -5351,15 +5351,15 @@ def regenerate_final_section(request, document_id):
 
 
 @login_required
-def download_final_pdf(request, document_id):
+def download_final_pdf(request, document_slug):
     """
     Generate and download PDF from the final document fields.
     """
-    document = get_object_or_404(Document, id=document_id, user=request.user)
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
     if not document.has_final_document():
         messages.error(request, 'Please generate the document first.')
-        return redirect('documents:final_review', document_id=document_id)
+        return redirect('documents:final_review', document_slug=document_slug)
 
     # Check payment status for watermark
     is_draft = document.payment_status in ('draft', 'expired')
@@ -5391,4 +5391,4 @@ def download_final_pdf(request, document_id):
 
     except Exception as e:
         messages.error(request, f'Error generating PDF: {str(e)}')
-        return redirect('documents:final_review', document_id=document_id)
+        return redirect('documents:final_review', document_slug=document_slug)

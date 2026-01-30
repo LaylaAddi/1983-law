@@ -15,11 +15,11 @@
     <nav aria-label="breadcrumb" class="mb-0">
         <ol class="breadcrumb mb-0">
             <li class="breadcrumb-item"><a href="{% url 'documents:document_list' %}">Documents</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'documents:document_detail' document.id %}">{{ document.title|truncatechars:30 }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'documents:document_detail' document.slug %}">{{ document.title|truncatechars:30 }}</a></li>
             <li class="breadcrumb-item active">Tell Your Story</li>
         </ol>
     </nav>
-    <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-secondary btn-sm">
+    <a href="{% url 'documents:document_detail' document.slug %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Back to Document
     </a>
 </div>
@@ -117,7 +117,7 @@
                 </div>
 
                 <div class="d-flex justify-content-end align-items-center">
-                    <button type="button" id="analyzeStoryBtn" class="btn btn-primary btn-lg" data-document-id="{{ document.id }}">
+                    <button type="button" id="analyzeStoryBtn" class="btn btn-primary btn-lg" data-document-id="{{ document.slug }}">
                         <i class="bi bi-stars me-1"></i>Analyze My Story
                     </button>
                 </div>

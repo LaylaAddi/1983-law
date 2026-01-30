@@ -148,7 +148,7 @@
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span><i class="bi bi-youtube me-1"></i>Linked Video</span>
                                     <div class="d-flex gap-2">
-                                        <a href="{% url 'documents:video_analysis' document.id %}#video-{{ video_evidence.id }}" class="btn btn-sm btn-light">
+                                        <a href="{% url 'documents:video_analysis' document.slug %}#video-{{ video_evidence.slug }}" class="btn btn-sm btn-light">
                                             <i class="bi bi-pencil me-1"></i>Manage Transcript
                                         </a>
                                         <button type="button" class="btn btn-sm btn-outline-light" id="unlinkVideoBtn" title="Remove YouTube video link (keeps evidence)">
@@ -238,7 +238,7 @@
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-check-lg me-1"></i>Save Changes
                             </button>
-                            <a href="{% url 'documents:section_edit' document.id 'evidence' %}" class="btn btn-outline-secondary">
+                            <a href="{% url 'documents:section_edit' document.slug 'evidence' %}" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-1"></i>Cancel
                             </a>
                         </div>
@@ -386,7 +386,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
             // Make API request
-            fetch('{% url "documents:link_youtube_to_evidence" document.id evidence.id %}', {
+            fetch('{% url "documents:link_youtube_to_evidence" document.slug evidence.slug %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -400,7 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     successDiv.classList.remove('d-none');
                     setTimeout(function() {
-                        window.location.href = data.redirect_url || '{% url "documents:video_analysis" document.id %}';
+                        window.location.href = data.redirect_url || '{% url "documents:video_analysis" document.slug %}';
                     }, 1500);
                 } else {
                     errorDiv.textContent = data.error || 'Failed to link video.';
@@ -435,7 +435,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
             // Make API request
-            fetch('{% url "documents:unlink_youtube_from_evidence" document.id evidence.id %}', {
+            fetch('{% url "documents:unlink_youtube_from_evidence" document.slug evidence.slug %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

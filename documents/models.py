@@ -3,6 +3,14 @@ from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
+import secrets
+import string
+
+
+def generate_slug(length=8):
+    """Generate a short random slug for URLs (e.g., 'xK9mR2pL')."""
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 
 class Document(models.Model):
@@ -16,6 +24,7 @@ class Document(models.Model):
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='documents')
+    slug = models.CharField(max_length=12, unique=True, default=generate_slug, db_index=True)
     title = models.CharField(max_length=255)  # Required field
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='draft')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -483,6 +492,7 @@ class Defendant(models.Model):
     ]
 
     section = models.ForeignKey(DocumentSection, on_delete=models.CASCADE, related_name='defendants')
+    slug = models.CharField(max_length=12, unique=True, default=generate_slug, db_index=True)
     defendant_type = models.CharField(max_length=20, choices=DEFENDANT_TYPES)
     name = models.CharField(max_length=255, help_text='Agency name or officer name')
     badge_number = models.CharField(max_length=50, blank=True)
@@ -556,6 +566,7 @@ class Witness(models.Model):
     """Witnesses to the incident."""
 
     section = models.ForeignKey(DocumentSection, on_delete=models.CASCADE, related_name='witnesses')
+    slug = models.CharField(max_length=12, unique=True, default=generate_slug, db_index=True)
     name = models.CharField(max_length=255)
     contact_info = models.TextField(blank=True, help_text='Phone, email, or address')
     relationship = models.CharField(max_length=100, blank=True, help_text='How do you know this person?')
@@ -592,6 +603,7 @@ class Evidence(models.Model):
     ]
 
     section = models.ForeignKey(DocumentSection, on_delete=models.CASCADE, related_name='evidence_items')
+    slug = models.CharField(max_length=12, unique=True, default=generate_slug, db_index=True)
     evidence_type = models.CharField(max_length=20, choices=EVIDENCE_TYPES)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
@@ -1014,6 +1026,7 @@ class VideoEvidence(models.Model):
         on_delete=models.CASCADE,
         related_name='video_evidence'
     )
+    slug = models.CharField(max_length=12, unique=True, default=generate_slug, db_index=True)
     youtube_url = models.CharField(
         max_length=500,
         help_text='Full YouTube URL'
@@ -1092,6 +1105,7 @@ class VideoCapture(models.Model):
         on_delete=models.CASCADE,
         related_name='captures'
     )
+    slug = models.CharField(max_length=12, unique=True, default=generate_slug, db_index=True)
     start_time_seconds = models.IntegerField(
         help_text='Clip start time in seconds (e.g., 302 for 5:02)'
     )
@@ -1218,6 +1232,7 @@ class VideoSpeaker(models.Model):
         on_delete=models.CASCADE,
         related_name='speakers'
     )
+    slug = models.CharField(max_length=12, unique=True, default=generate_slug, db_index=True)
     label = models.CharField(
         max_length=100,
         help_text='Speaker label (e.g., "Speaker 1", "Male Officer")'

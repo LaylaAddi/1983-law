@@ -169,11 +169,11 @@
     <nav aria-label="breadcrumb" class="mb-0">
         <ol class="breadcrumb mb-0">
             <li class="breadcrumb-item"><a href="{% url 'documents:document_list' %}">Documents</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'documents:document_detail' document.id %}">{{ document.title|truncatechars:30 }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'documents:document_detail' document.slug %}">{{ document.title|truncatechars:30 }}</a></li>
             <li class="breadcrumb-item active">Video Analysis</li>
         </ol>
     </nav>
-    <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-secondary btn-sm">
+    <a href="{% url 'documents:document_detail' document.slug %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Back to Document
     </a>
 </div>
@@ -203,7 +203,7 @@
                                 and suggest additions to your complaint with timestamps.
                             </p>
                         </div>
-                        <a href="{% url 'documents:section_edit' document.id 'evidence' %}" class="btn btn-success ms-auto">
+                        <a href="{% url 'documents:section_edit' document.slug 'evidence' %}" class="btn btn-success ms-auto">
                             <i class="bi bi-arrow-right me-1"></i>Go to Evidence
                         </a>
                     </div>
@@ -232,7 +232,7 @@
                 <!-- Videos Container -->
                 <div id="videosContainer">
                     {% for video in video_evidences %}
-                    <div class="video-card" data-video-id="{{ video.id }}">
+                    <div class="video-card" data-video-id="{{ video.slug }}">
                         <div class="video-card-header d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
                                 <img src="https://img.youtube.com/vi/{{ video.video_id }}/default.jpg"
@@ -254,7 +254,7 @@
                                 </div>
                             </div>
                             <button type="button" class="btn btn-outline-light btn-sm delete-video-btn"
-                                    data-video-id="{{ video.id }}">
+                                    data-video-id="{{ video.slug }}">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -264,10 +264,10 @@
                                 <h6><i class="bi bi-scissors me-2"></i>Clips to Extract</h6>
                                 <p class="text-muted small">Add time ranges (max 2 minutes each) and extract transcripts.</p>
 
-                                <div class="captures-list" data-video-id="{{ video.id }}">
+                                <div class="captures-list" data-video-id="{{ video.slug }}">
                                     {% for capture in video.captures.all %}
                                     <div class="capture-item {% if capture.extraction_status == 'completed' %}extracted{% elif capture.extraction_status == 'failed' %}failed{% elif capture.extraction_status == 'processing' %}processing{% endif %}"
-                                         data-capture-id="{{ capture.id }}">
+                                         data-capture-id="{{ capture.slug }}">
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <div>
                                                 <strong>{{ capture.start_time_display }} - {{ capture.end_time_display }}</strong>
@@ -285,19 +285,19 @@
                                             <div>
                                                 {% if capture.extraction_status != 'completed' %}
                                                 <button type="button" class="btn btn-primary btn-sm extract-btn"
-                                                        data-capture-id="{{ capture.id }}">
+                                                        data-capture-id="{{ capture.slug }}">
                                                     <i class="bi bi-download me-1"></i>Extract
                                                 </button>
                                                 {% endif %}
                                                 <button type="button" class="btn btn-outline-danger btn-sm delete-capture-btn"
-                                                        data-capture-id="{{ capture.id }}">
+                                                        data-capture-id="{{ capture.slug }}">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>
                                         </div>
                                         {% if capture.extraction_status == 'completed' %}
                                         <!-- Speaker insertion toolbar -->
-                                        <div class="speaker-toolbar mb-2" data-capture-id="{{ capture.id }}">
+                                        <div class="speaker-toolbar mb-2" data-capture-id="{{ capture.slug }}">
                                             <span class="text-muted small me-2">Insert speaker at cursor:</span>
                                             <button type="button" class="btn btn-sm btn-primary insert-speaker-btn" data-speaker="Plaintiff">
                                                 Plaintiff
@@ -312,10 +312,10 @@
                                             </button>
                                         </div>
                                         <div class="transcript-box" contenteditable="true"
-                                             data-capture-id="{{ capture.id }}">{{ capture.attributed_transcript }}</div>
+                                             data-capture-id="{{ capture.slug }}">{{ capture.attributed_transcript }}</div>
                                         <div class="d-flex justify-content-between align-items-center mt-1">
                                             <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>Click in the text where a speaker changes, then click a speaker button above to insert their name.</p>
-                                            <span class="save-status small text-muted" data-capture-id="{{ capture.id }}">
+                                            <span class="save-status small text-muted" data-capture-id="{{ capture.slug }}">
                                                 <i class="bi bi-cloud-check me-1"></i>Auto-saved
                                             </span>
                                         </div>
@@ -343,7 +343,7 @@
                                             <div class="col-auto">
                                                 <label class="form-label small mb-1">Start Time</label>
                                                 <input type="text" class="form-control time-input start-time-input"
-                                                       placeholder="0:00" data-video-id="{{ video.id }}">
+                                                       placeholder="0:00" data-video-id="{{ video.slug }}">
                                             </div>
                                             <div class="col-auto d-flex align-items-center pt-4">
                                                 <i class="bi bi-arrow-right text-muted"></i>
@@ -353,18 +353,18 @@
                                                 <div class="time-input-group">
                                                     <button type="button" class="btn btn-outline-secondary spinner-btn minus-btn">−</button>
                                                     <input type="text" class="form-control time-input end-time-input"
-                                                           placeholder="0:00" data-video-id="{{ video.id }}" readonly>
+                                                           placeholder="0:00" data-video-id="{{ video.slug }}" readonly>
                                                     <button type="button" class="btn btn-outline-secondary spinner-btn plus-btn">+</button>
                                                 </div>
                                             </div>
                                             <div class="col-auto pt-4">
-                                                <span class="duration-display" data-video-id="{{ video.id }}">
+                                                <span class="duration-display" data-video-id="{{ video.slug }}">
                                                     Duration: 0:00 / 2:00
                                                 </span>
                                             </div>
                                             <div class="col-auto pt-4">
                                                 <button type="button" class="btn btn-success add-capture-btn"
-                                                        data-video-id="{{ video.id }}">
+                                                        data-video-id="{{ video.slug }}">
                                                     <i class="bi bi-plus-lg me-1"></i>Add Clip
                                                 </button>
                                             </div>
@@ -382,28 +382,28 @@
                                 <div class="mb-3">
                                     <span class="text-muted small me-2">Quick add:</span>
                                     <button type="button" class="btn btn-primary btn-sm me-1 quick-add-speaker"
-                                            data-video-id="{{ video.id }}" data-label="Plaintiff" data-type="plaintiff">
+                                            data-video-id="{{ video.slug }}" data-label="Plaintiff" data-type="plaintiff">
                                         <i class="bi bi-person me-1"></i>Plaintiff (Me)
                                     </button>
                                     {% for defendant in defendants %}
                                     <button type="button" class="btn btn-warning btn-sm me-1 quick-add-speaker"
-                                            data-video-id="{{ video.id }}" data-label="{{ defendant.name }}" data-type="defendant" data-defendant-id="{{ defendant.id }}">
+                                            data-video-id="{{ video.slug }}" data-label="{{ defendant.name }}" data-type="defendant" data-defendant-id="{{ defendant.slug }}">
                                         <i class="bi bi-person-badge me-1"></i>{{ defendant.name }}
                                     </button>
                                     {% endfor %}
                                 </div>
 
-                                <div class="speakers-list mb-2" data-video-id="{{ video.id }}">
+                                <div class="speakers-list mb-2" data-video-id="{{ video.slug }}">
                                     {% for speaker in video.speakers.all %}
-                                    <div class="speaker-item" data-speaker-id="{{ speaker.id }}">
+                                    <div class="speaker-item" data-speaker-id="{{ speaker.slug }}">
                                         <span class="badge bg-secondary">{{ speaker.label }}</span>
                                         <span class="text-muted mx-2">→</span>
                                         <select class="form-select form-select-sm speaker-attribution" style="width: auto;">
                                             <option value="">-- Assign to --</option>
                                             <option value="plaintiff" {% if speaker.is_plaintiff %}selected{% endif %}>Me (Plaintiff)</option>
                                             {% for defendant in defendants %}
-                                            <option value="defendant:{{ defendant.id }}"
-                                                    {% if speaker.defendant and speaker.defendant.id == defendant.id %}selected{% endif %}>
+                                            <option value="defendant:{{ defendant.slug }}"
+                                                    {% if speaker.defendant and speaker.defendant.slug == defendant.slug %}selected{% endif %}>
                                                 {{ defendant.name }}
                                             </option>
                                             {% endfor %}
@@ -419,7 +419,7 @@
                                     <input type="text" class="form-control form-control-sm add-speaker-input"
                                            placeholder="Other speaker (e.g., Witness, Bystander)">
                                     <button type="button" class="btn btn-outline-secondary btn-sm add-speaker-btn"
-                                            data-video-id="{{ video.id }}">
+                                            data-video-id="{{ video.slug }}">
                                         <i class="bi bi-plus"></i> Add
                                     </button>
                                 </div>
@@ -458,7 +458,7 @@
 
 {% block extra_js %}
 <script>
-const documentId = {{ document.id }};
+const documentId = '{{ document.slug }}';
 const maxClipSeconds = {{ max_clip_seconds }};
 const csrfToken = '{{ csrf_token }}';
 
@@ -898,7 +898,7 @@ document.querySelectorAll('.quick-add-speaker').forEach(btn => {
 
             if (data.success) {
                 // Now assign the speaker to plaintiff or defendant
-                const speakerId = data.speaker_id;
+                const speakerId = data.speaker_slug;
                 const updateFormData = new FormData();
                 updateFormData.append('csrfmiddlewaretoken', csrfToken);
 

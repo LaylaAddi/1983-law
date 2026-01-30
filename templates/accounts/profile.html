@@ -313,7 +313,7 @@
                             {% for doc in paid_documents %}
                             <tr>
                                 <td>
-                                    <a href="{% url 'documents:document_detail' doc.id %}">
+                                    <a href="{% url 'documents:document_detail' doc.slug %}">
                                         {{ doc.title|truncatechars:40 }}
                                     </a>
                                 </td>

@@ -188,11 +188,11 @@
     <div class="container">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2">
-                <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-outline-secondary">
+                <a href="{% url 'documents:document_detail' document.slug %}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i>Back
                 </a>
                 {% if document.payment_status != 'finalized' %}
-                <a href="{% url 'documents:final_review' document.id %}" class="btn btn-outline-primary">
+                <a href="{% url 'documents:final_review' document.slug %}" class="btn btn-outline-primary">
                     <i class="bi bi-file-text me-1"></i>Final Review
                 </a>
                 {% endif %}
@@ -202,7 +202,7 @@
                     <i class="bi bi-printer me-1"></i>Print
                 </button>
                 {% if document.payment_status == 'finalized' %}
-                <button type="button" class="btn btn-success pdf-download-btn" data-document-id="{{ document.id }}">
+                <button type="button" class="btn btn-success pdf-download-btn" data-document-id="{{ document.slug }}">
                     <i class="bi bi-file-earmark-pdf me-1"></i><span class="btn-text">Download PDF</span>
                 </button>
                 {% endif %}
@@ -221,16 +221,16 @@
             <p class="mb-2">To complete your legal document, please provide:</p>
             <ul class="mb-3">
                 {% if not document_data.plaintiff.first_name or not document_data.plaintiff.last_name %}
-                <li>Complete your <a href="{% url 'documents:section_edit' document.id 'plaintiff_info' %}">Plaintiff Information</a> (need first and last name)</li>
+                <li>Complete your <a href="{% url 'documents:section_edit' document.slug 'plaintiff_info' %}">Plaintiff Information</a> (need first and last name)</li>
                 {% endif %}
                 {% if not document_data.narrative.detailed_narrative %}
-                <li>Add your <a href="{% url 'documents:section_edit' document.id 'incident_narrative' %}">Incident Narrative</a> (need detailed narrative)</li>
+                <li>Add your <a href="{% url 'documents:section_edit' document.slug 'incident_narrative' %}">Incident Narrative</a> (need detailed narrative)</li>
                 {% endif %}
                 {% if not document_data.rights_violated.first_amendment and not document_data.rights_violated.fourth_amendment and not document_data.rights_violated.fifth_amendment and not document_data.rights_violated.fourteenth_amendment %}
-                <li>Select which <a href="{% url 'documents:section_edit' document.id 'rights_violated' %}">Rights Were Violated</a> (need at least one amendment)</li>
+                <li>Select which <a href="{% url 'documents:section_edit' document.slug 'rights_violated' %}">Rights Were Violated</a> (need at least one amendment)</li>
                 {% endif %}
             </ul>
-            <a href="{% url 'documents:document_detail' document.id %}" class="btn btn-primary mt-3">
+            <a href="{% url 'documents:document_detail' document.slug %}" class="btn btn-primary mt-3">
                 <i class="bi bi-pencil me-1"></i>Continue Editing
             </a>
         </div>

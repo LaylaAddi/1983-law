@@ -78,7 +78,7 @@
                             <button type="button" class="btn btn-outline-info" id="lookupAddressBtn" onclick="lookupInfo()">
                                 <i class="bi bi-search me-1"></i>Find Agency & Address
                             </button>
-                            <a href="{% url 'documents:section_edit' document.id 'defendants' %}" class="btn btn-outline-secondary">
+                            <a href="{% url 'documents:section_edit' document.slug 'defendants' %}" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-1"></i>Cancel
                             </a>
                         </div>
@@ -183,7 +183,7 @@ function lookupInfo() {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     console.log('CSRF token found:', !!csrfToken);
 
-    const url = '{% url "documents:lookup_address" document.id %}';
+    const url = '{% url "documents:lookup_address" document.slug %}';
     console.log('Fetching URL:', url);
 
     fetch(url, {
@@ -239,7 +239,7 @@ function lookupInfo() {
                         <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 2rem;"></i>
                         <h6 class="mt-2">AI Limit Reached</h6>
                         <p class="small mb-2">${data.error}</p>
-                        <a href="/documents/{{ document.id }}/checkout/" class="btn btn-primary btn-sm">
+                        <a href="/documents/{{ document.slug }}/checkout/" class="btn btn-primary btn-sm">
                             <i class="bi bi-unlock me-1"></i>Upgrade Now
                         </a>
                     </div>
