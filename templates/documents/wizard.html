@@ -194,7 +194,11 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">State <span x-show="aiSuggested(1, 'state')" class="ai-badge">AI suggested</span></label>
-                                <input type="text" class="form-control" x-model="stepData[1].state" placeholder="e.g., IA" maxlength="2">
+                                <select class="form-select" x-model="stepData[1].state">
+                                    {% for value, label in us_states %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Location Type</label>

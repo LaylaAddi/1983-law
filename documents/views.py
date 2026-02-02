@@ -2401,6 +2401,8 @@ def wizard(request, document_slug):
     # Get or create wizard session
     session = getattr(document, 'wizard_session', None)
 
+    from common.constants import US_STATES
+
     context = {
         'document': document,
         'wizard_session': session,
@@ -2412,6 +2414,7 @@ def wizard(request, document_slug):
         'current_step': session.current_step if session else 1,
         'wizard_status': session.status if session else 'not_started',
         'analysis_status': session.analysis_status if session else 'pending',
+        'us_states': US_STATES,
     }
 
     # Include test stories for test users
