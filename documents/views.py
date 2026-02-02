@@ -260,7 +260,7 @@ def document_create(request):
             plaintiff_section.save()
 
             messages.success(request, 'Document created! Your information has been pre-filled from your profile.')
-            return redirect('documents:tell_your_story', document_slug=document.slug)
+            return redirect('documents:wizard', document_slug=document.slug)
     else:
         form = DocumentForm()
 
@@ -272,10 +272,10 @@ def document_detail(request, document_slug):
     """Overview of document with all sections and their status."""
     document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
-    # Redirect to Tell Your Story if not completed
+    # Redirect to Wizard if story not completed yet
     if not document.has_story():
-        messages.info(request, 'Please tell your story first. This helps us understand your case and pre-fill relevant sections.')
-        return redirect('documents:tell_your_story', document_slug=document.slug)
+        messages.info(request, 'Please start with the guided interview. This helps us understand your case and build your complaint.')
+        return redirect('documents:wizard', document_slug=document.slug)
 
     # Get sections and order them according to SECTION_TYPES
     sections_queryset = document.sections.all()
