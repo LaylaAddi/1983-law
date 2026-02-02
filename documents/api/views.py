@@ -275,16 +275,20 @@ def _extract_story_background(session_id, story_text):
         ai_service = OpenAIService()
         result = ai_service.parse_story(story_text)
 
-        if not result:
-            session.ai_extracted = {}
+        if not result or not result.get('success'):
+            session.ai_extracted = {'error': result.get('error', 'AI parsing failed') if result else 'No response from AI'}
             session.save(update_fields=['ai_extracted'])
             return
+
+        # parse_story returns {'success': True, 'sections': {...}}
+        # The actual data (incident_overview, defendants, etc.) is inside 'sections'
+        sections = result.get('sections', {})
 
         # Map AI extraction to wizard step structure
         ai_steps = {}
 
         # Step 1: When & Where
-        overview = result.get('incident_overview', {})
+        overview = sections.get('incident_overview', {})
         if overview:
             ai_steps['step_1'] = {
                 'incident_date': overview.get('incident_date', ''),
@@ -296,8 +300,8 @@ def _extract_story_background(session_id, story_text):
             }
 
         # Step 2: Who
-        defendants = result.get('defendants', [])
-        witnesses = result.get('witnesses', [])
+        defendants = sections.get('defendants', [])
+        witnesses = sections.get('witnesses', [])
         if defendants or witnesses:
             ai_steps['step_2'] = {
                 'defendants': defendants,
@@ -305,7 +309,7 @@ def _extract_story_background(session_id, story_text):
             }
 
         # Step 3: What happened
-        narrative = result.get('incident_narrative', {})
+        narrative = sections.get('incident_narrative', {})
         if narrative:
             ai_steps['step_3'] = {
                 'summary': narrative.get('summary', ''),
@@ -318,7 +322,7 @@ def _extract_story_background(session_id, story_text):
             }
 
         # Step 4: Why (from rights_violated)
-        rights = result.get('rights_violated', {})
+        rights = sections.get('rights_violated', {})
         violations = rights.get('suggested_violations', [])
         if violations:
             # Map AI violation suggestions to our plain-language keys
@@ -345,7 +349,7 @@ def _extract_story_background(session_id, story_text):
             }
 
         # Step 5: Impact
-        damages = result.get('damages', {})
+        damages = sections.get('damages', {})
         if damages:
             ai_steps['step_5'] = {
                 'physical_injuries': damages.get('physical_injuries', ''),
@@ -355,7 +359,7 @@ def _extract_story_background(session_id, story_text):
             }
 
         # Step 6: Evidence
-        evidence = result.get('evidence', [])
+        evidence = sections.get('evidence', [])
         if evidence:
             ai_steps['step_6'] = {
                 'items': evidence,
