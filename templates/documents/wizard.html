@@ -1,0 +1,1015 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Case Interview - {{ document.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .wizard-progress { background: var(--bs-dark, #1a1a2e); border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 2rem; }
+    .wizard-step-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease; cursor: pointer; border: 2px solid transparent; }
+    .wizard-step-dot.active { background: #0d6efd; color: #fff; border-color: #0d6efd; box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.25); }
+    .wizard-step-dot.completed { background: #198754; color: #fff; border-color: #198754; }
+    .wizard-step-dot.pending { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); border-color: rgba(255,255,255,0.2); }
+    .wizard-step-line { flex: 1; height: 2px; background: rgba(255,255,255,0.15); margin: 0 0.25rem; }
+    .wizard-step-line.completed { background: #198754; }
+    .wizard-step-label { font-size: 0.7rem; color: rgba(255,255,255,0.6); margin-top: 0.25rem; white-space: nowrap; }
+    .wizard-step-label.active { color: #fff; }
+
+    .step-card { display: none; }
+    .step-card.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .ai-badge { font-size: 0.7rem; background: rgba(13,110,253,0.1); color: #0d6efd; padding: 2px 8px; border-radius: 12px; display: inline-block; margin-left: 0.5rem; }
+
+    .voice-btn { border: none; background: none; color: #6c757d; padding: 0.375rem; cursor: pointer; transition: color 0.2s; }
+    .voice-btn:hover { color: #0d6efd; }
+    .voice-btn.recording { color: #dc3545; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    .violation-card { border: 2px solid transparent; border-radius: 8px; padding: 1rem; cursor: pointer; transition: all 0.2s; background: var(--bs-body-bg); }
+    .violation-card:hover { border-color: rgba(13,110,253,0.3); }
+    .violation-card.selected { border-color: #0d6efd; background: rgba(13,110,253,0.05); }
+
+    .analysis-card { border-left: 4px solid; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    .analysis-card.strong { border-left-color: #198754; }
+    .analysis-card.moderate { border-left-color: #ffc107; }
+    .analysis-card.worth_including { border-left-color: #6c757d; }
+
+    .strength-badge { font-size: 0.75rem; padding: 2px 10px; border-radius: 12px; }
+    .strength-badge.strong { background: rgba(25,135,84,0.15); color: #198754; }
+    .strength-badge.moderate { background: rgba(255,193,7,0.15); color: #b58a00; }
+    .strength-badge.worth_including { background: rgba(108,117,125,0.15); color: #6c757d; }
+
+    .terminal-box { background: #0a0a1a; border-radius: 8px; padding: 1rem; font-family: monospace; font-size: 0.85rem; color: #00ff88; max-height: 200px; overflow-y: auto; }
+    .terminal-cursor { display: inline-block; width: 8px; height: 14px; background: #00ff88; animation: blink 1s step-end infinite; vertical-align: middle; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .preview-section { background: #fff; color: #000; padding: 2rem; border: 1px solid #ddd; border-radius: 4px; font-family: 'Times New Roman', serif; line-height: 2; }
+    .preview-section h4 { font-family: 'Times New Roman', serif; font-weight: bold; text-transform: uppercase; text-align: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="wizardApp()" x-init="init()">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'documents:document_list' %}">Documents</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'documents:document_detail' document.slug %}">{{ document.title|truncatechars:30 }}</a></li>
+            <li class="breadcrumb-item active">Case Interview</li>
+        </ol>
+    </nav>
+
+    <!-- Progress Bar -->
+    <div class="wizard-progress" x-show="currentView !== 'story'">
+        <div class="d-flex align-items-center justify-content-between">
+            <template x-for="(step, index) in steps" :key="index">
+                <div class="d-flex align-items-center" :class="index < steps.length - 1 ? 'flex-fill' : ''">
+                    <div class="text-center">
+                        <div class="wizard-step-dot"
+                             :class="{
+                                 'active': currentStep === index + 1,
+                                 'completed': stepCompleted(index + 1),
+                                 'pending': currentStep !== index + 1 && !stepCompleted(index + 1)
+                             }"
+                             @click="goToStep(index + 1)">
+                            <span x-show="!stepCompleted(index + 1)" x-text="index + 1"></span>
+                            <i x-show="stepCompleted(index + 1)" class="bi bi-check"></i>
+                        </div>
+                        <div class="wizard-step-label d-none d-md-block"
+                             :class="{ 'active': currentStep === index + 1 }"
+                             x-text="step.title"></div>
+                    </div>
+                    <div x-show="index < steps.length - 1"
+                         class="wizard-step-line"
+                         :class="{ 'completed': stepCompleted(index + 1) }"></div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- ==================== STORY INPUT VIEW ==================== -->
+    <div x-show="currentView === 'story'" class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body p-4">
+                    <h3 class="mb-3"><i class="bi bi-journal-text me-2"></i>Tell Your Story</h3>
+                    <p class="text-muted">Describe what happened in your own words. Include as much detail as you can about dates, locations, who was involved, and what they did. AI will extract the key details to help build your complaint.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Your Story</label>
+                        <div class="position-relative">
+                            <textarea x-model="story" class="form-control" rows="12"
+                                      placeholder="On March 15, 2024, I was walking down Main Street in Des Moines, Iowa when two officers approached me..."></textarea>
+                            <button type="button" class="voice-btn position-absolute"
+                                    style="bottom: 8px; right: 8px;"
+                                    x-show="speechSupported"
+                                    :class="{ 'recording': isRecording }"
+                                    @click="toggleVoiceInput('story')"
+                                    :title="isRecording ? 'Stop recording' : 'Speak your story'">
+                                <i class="bi" :class="isRecording ? 'bi-mic-fill' : 'bi-mic'" style="font-size: 1.3rem;"></i>
+                            </button>
+                        </div>
+                        <div class="form-text" x-show="speechSupported">
+                            <i class="bi bi-mic me-1"></i>Click the microphone to dictate your story
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'documents:document_detail' document.slug %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Back to Document
+                        </a>
+                        <button class="btn btn-primary btn-lg" @click="submitStory()" :disabled="story.length < 50 || isProcessing">
+                            <span x-show="!isProcessing">Analyze My Story <i class="bi bi-arrow-right ms-1"></i></span>
+                            <span x-show="isProcessing"><span class="spinner-border spinner-border-sm me-1"></span>Analyzing...</span>
+                        </button>
+                    </div>
+
+                    <!-- Terminal during processing -->
+                    <div x-show="isProcessing" class="mt-4">
+                        <div class="terminal-box" x-ref="terminal">
+                            <template x-for="line in terminalLines" :key="line.id">
+                                <div>
+                                    <span class="text-muted">$</span> <span x-text="line.text"></span>
+                                </div>
+                            </template>
+                            <div><span class="text-muted">$</span> <span class="terminal-cursor"></span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== STEP VIEWS ==================== -->
+    <div x-show="currentView === 'steps'" class="row justify-content-center">
+        <div class="col-lg-8">
+
+            <!-- STEP 1: When & Where -->
+            <div class="step-card" :class="{ 'active': currentStep === 1 }">
+                <div class="card">
+                    <div class="card-body p-4">
+                        <h4 class="mb-1"><i class="bi bi-geo-alt me-2"></i>When & Where</h4>
+                        <p class="text-muted mb-4">When and where did the incident happen?</p>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Date of Incident <span x-show="aiSuggested(1, 'incident_date')" class="ai-badge">AI suggested</span></label>
+                                <input type="date" class="form-control" x-model="stepData[1].incident_date">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Time of Incident <span x-show="aiSuggested(1, 'incident_time')" class="ai-badge">AI suggested</span></label>
+                                <input type="time" class="form-control" x-model="stepData[1].incident_time">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Location <span x-show="aiSuggested(1, 'incident_location')" class="ai-badge">AI suggested</span></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" x-model="stepData[1].incident_location" placeholder="e.g., Corner of 5th and Main St">
+                                    <button class="voice-btn btn btn-outline-secondary" type="button" x-show="speechSupported" @click="toggleVoiceInput('stepData[1].incident_location')"><i class="bi bi-mic"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">City <span x-show="aiSuggested(1, 'city')" class="ai-badge">AI suggested</span></label>
+                                <input type="text" class="form-control" x-model="stepData[1].city" placeholder="City">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">State <span x-show="aiSuggested(1, 'state')" class="ai-badge">AI suggested</span></label>
+                                <input type="text" class="form-control" x-model="stepData[1].state" placeholder="e.g., IA" maxlength="2">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Location Type</label>
+                                <select class="form-select" x-model="stepData[1].location_type">
+                                    <option value="">Select...</option>
+                                    <option value="sidewalk">Sidewalk / Public Street</option>
+                                    <option value="home">Home / Residence</option>
+                                    <option value="vehicle">Vehicle</option>
+                                    <option value="business">Business / Store</option>
+                                    <option value="park">Park / Public Space</option>
+                                    <option value="government">Government Building</option>
+                                    <option value="school">School / Campus</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: Who Was Involved -->
+            <div class="step-card" :class="{ 'active': currentStep === 2 }">
+                <div class="card">
+                    <div class="card-body p-4">
+                        <h4 class="mb-1"><i class="bi bi-people me-2"></i>Who Was Involved</h4>
+                        <p class="text-muted mb-4">Who were the officers or officials involved?</p>
+
+                        <h6 class="mb-3">Government Defendants</h6>
+                        <template x-for="(defendant, i) in stepData[2].defendants" :key="'d'+i">
+                            <div class="card mb-3 bg-light">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="fw-bold" x-text="'Defendant ' + (i + 1)"></span>
+                                        <button class="btn btn-sm btn-outline-danger" @click="stepData[2].defendants.splice(i, 1)" x-show="stepData[2].defendants.length > 1"><i class="bi bi-trash"></i></button>
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <input type="text" class="form-control form-control-sm" x-model="defendant.name" placeholder="Name">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <input type="text" class="form-control form-control-sm" x-model="defendant.agency_name" placeholder="Agency">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control form-control-sm" x-model="defendant.badge_number" placeholder="Badge #">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control form-control-sm" x-model="defendant.title_rank" placeholder="Title/Rank">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <select class="form-select form-select-sm" x-model="defendant.defendant_type">
+                                                <option value="individual">Individual Officer</option>
+                                                <option value="agency">Government Agency</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <button class="btn btn-outline-primary btn-sm mb-4" @click="stepData[2].defendants.push({name:'', badge_number:'', title_rank:'', agency_name:'', defendant_type:'individual', description:''})">
+                            <i class="bi bi-plus-circle me-1"></i>Add Defendant
+                        </button>
+
+                        <h6 class="mb-3">Witnesses</h6>
+                        <template x-for="(witness, i) in stepData[2].witnesses" :key="'w'+i">
+                            <div class="card mb-3 bg-light">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="fw-bold" x-text="'Witness ' + (i + 1)"></span>
+                                        <button class="btn btn-sm btn-outline-danger" @click="stepData[2].witnesses.splice(i, 1)"><i class="bi bi-trash"></i></button>
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-md-6"><input type="text" class="form-control form-control-sm" x-model="witness.name" placeholder="Name"></div>
+                                        <div class="col-md-6"><input type="text" class="form-control form-control-sm" x-model="witness.relationship" placeholder="Relationship (bystander, etc.)"></div>
+                                        <div class="col-12"><textarea class="form-control form-control-sm" x-model="witness.what_they_witnessed" placeholder="What did they see?" rows="2"></textarea></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <button class="btn btn-outline-primary btn-sm" @click="stepData[2].witnesses.push({name:'', relationship:'', what_they_witnessed:'', contact_info:''})">
+                            <i class="bi bi-plus-circle me-1"></i>Add Witness
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: What Happened -->
+            <div class="step-card" :class="{ 'active': currentStep === 3 }">
+                <div class="card">
+                    <div class="card-body p-4">
+                        <h4 class="mb-1"><i class="bi bi-journal-text me-2"></i>What Happened</h4>
+                        <p class="text-muted mb-4">Walk us through the incident step by step.</p>
+
+                        <div class="mb-3">
+                            <label class="form-label">What were you doing before the incident? <span x-show="aiSuggested(3, 'what_were_you_doing')" class="ai-badge">AI suggested</span></label>
+                            <textarea class="form-control" x-model="stepData[3].what_were_you_doing" rows="2" placeholder="I was walking home from the store..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">How did the initial contact happen? <span x-show="aiSuggested(3, 'initial_contact')" class="ai-badge">AI suggested</span></label>
+                            <textarea class="form-control" x-model="stepData[3].initial_contact" rows="2" placeholder="Two officers approached me and..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">What was said? <span x-show="aiSuggested(3, 'what_was_said')" class="ai-badge">AI suggested</span></label>
+                            <textarea class="form-control" x-model="stepData[3].what_was_said" rows="3" placeholder="The officer said... I responded..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">What physical actions were taken? <span x-show="aiSuggested(3, 'physical_actions')" class="ai-badge">AI suggested</span></label>
+                            <textarea class="form-control" x-model="stepData[3].physical_actions" rows="3" placeholder="The officer grabbed my arm..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">How did it end? <span x-show="aiSuggested(3, 'how_it_ended')" class="ai-badge">AI suggested</span></label>
+                            <textarea class="form-control" x-model="stepData[3].how_it_ended" rows="2" placeholder="Eventually they let me go..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Full detailed narrative <span x-show="aiSuggested(3, 'detailed_narrative')" class="ai-badge">AI suggested</span></label>
+                            <textarea class="form-control" x-model="stepData[3].detailed_narrative" rows="5" placeholder="Complete narrative of the incident (can be edited from AI suggestion)..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: Why It Was Wrong -->
+            <div class="step-card" :class="{ 'active': currentStep === 4 }">
+                <div class="card">
+                    <div class="card-body p-4">
+                        <h4 class="mb-1"><i class="bi bi-shield-exclamation me-2"></i>Why Was It Wrong</h4>
+                        <p class="text-muted mb-4">Select the situations that apply to what happened to you. You can select multiple.</p>
+
+                        <div class="row g-3">
+                            <template x-for="violation in violationOptions" :key="violation.key">
+                                <div class="col-md-6">
+                                    <div class="violation-card"
+                                         :class="{ 'selected': stepData[4].selections.includes(violation.key) }"
+                                         @click="toggleViolation(violation.key)">
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi me-2 mt-1" :class="stepData[4].selections.includes(violation.key) ? 'bi-check-square-fill text-primary' : 'bi-square'" style="font-size:1.2rem;"></i>
+                                            <div>
+                                                <div class="fw-bold" x-text="violation.label"></div>
+                                                <small class="text-muted" x-text="violation.description"></small>
+                                                <div><span class="badge bg-secondary mt-1" x-text="violation.amendment"></span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="form-label">Anything else you believe was wrong?</label>
+                            <textarea class="form-control" x-model="stepData[4].additional_text" rows="3" placeholder="Describe any other rights you believe were violated..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 5: How It Affected You -->
+            <div class="step-card" :class="{ 'active': currentStep === 5 }">
+                <div class="card">
+                    <div class="card-body p-4">
+                        <h4 class="mb-1"><i class="bi bi-heart-pulse me-2"></i>How It Affected You</h4>
+                        <p class="text-muted mb-4">Describe the harm or damages you experienced.</p>
+
+                        <div class="mb-3">
+                            <label class="form-label">Physical Injuries <span x-show="aiSuggested(5, 'physical_injuries')" class="ai-badge">AI suggested</span></label>
+                            <textarea class="form-control" x-model="stepData[5].physical_injuries" rows="2" placeholder="Bruises, cuts, broken bones, etc."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Medical Treatment</label>
+                            <textarea class="form-control" x-model="stepData[5].medical_treatment" rows="2" placeholder="ER visit, surgery, ongoing treatment..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Emotional / Psychological Impact <span x-show="aiSuggested(5, 'emotional_distress')" class="ai-badge">AI suggested</span></label>
+                            <textarea class="form-control" x-model="stepData[5].emotional_distress" rows="2" placeholder="Anxiety, PTSD, fear, depression..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Financial Losses <span x-show="aiSuggested(5, 'financial_losses')" class="ai-badge">AI suggested</span></label>
+                            <textarea class="form-control" x-model="stepData[5].financial_losses" rows="2" placeholder="Medical bills, legal fees, property damage..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Lost Wages</label>
+                            <textarea class="form-control" x-model="stepData[5].lost_wages" rows="2" placeholder="Time off work, lost job..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ongoing Effects</label>
+                            <textarea class="form-control" x-model="stepData[5].ongoing_effects" rows="2" placeholder="Continuing pain, recurring nightmares, inability to trust police..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 6: Evidence -->
+            <div class="step-card" :class="{ 'active': currentStep === 6 }">
+                <div class="card">
+                    <div class="card-body p-4">
+                        <h4 class="mb-1"><i class="bi bi-camera me-2"></i>Evidence & Proof</h4>
+                        <p class="text-muted mb-4">What evidence do you have to support your case?</p>
+
+                        <h6 class="mb-3">Types of Evidence Available</h6>
+                        <div class="row g-2 mb-4">
+                            <template x-for="type in evidenceTypes" :key="type.key">
+                                <div class="col-6 col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" :id="'ev_'+type.key"
+                                               :checked="stepData[6].evidence_types.includes(type.key)"
+                                               @change="toggleEvidenceType(type.key)">
+                                        <label class="form-check-label" :for="'ev_'+type.key">
+                                            <i class="bi me-1" :class="type.icon"></i><span x-text="type.label"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <h6 class="mb-3">Evidence Items</h6>
+                        <template x-for="(item, i) in stepData[6].items" :key="'e'+i">
+                            <div class="card mb-2 bg-light">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="fw-bold" x-text="'Item ' + (i+1)"></span>
+                                        <button class="btn btn-sm btn-outline-danger" @click="stepData[6].items.splice(i,1)"><i class="bi bi-trash"></i></button>
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-md-4">
+                                            <select class="form-select form-select-sm" x-model="item.evidence_type">
+                                                <option value="">Type...</option>
+                                                <option value="video">Video</option>
+                                                <option value="photo">Photo</option>
+                                                <option value="audio">Audio</option>
+                                                <option value="document">Document</option>
+                                                <option value="body_cam">Body Cam</option>
+                                                <option value="dash_cam">Dash Cam</option>
+                                                <option value="medical_records">Medical Records</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-8"><input type="text" class="form-control form-control-sm" x-model="item.title" placeholder="Title / Description"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <button class="btn btn-outline-primary btn-sm" @click="stepData[6].items.push({evidence_type:'', title:'', description:'', is_in_possession:true})">
+                            <i class="bi bi-plus-circle me-1"></i>Add Evidence Item
+                        </button>
+
+                        <div class="mt-4">
+                            <label class="form-label">YouTube Video URL (optional)</label>
+                            <input type="url" class="form-control" x-model="stepData[6].youtube_url" placeholder="https://youtube.com/watch?v=...">
+                            <div class="form-text">If you have video evidence on YouTube, you can analyze it after completing the wizard.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 7: Preferences -->
+            <div class="step-card" :class="{ 'active': currentStep === 7 }">
+                <div class="card">
+                    <div class="card-body p-4">
+                        <h4 class="mb-1"><i class="bi bi-gear me-2"></i>Preferences</h4>
+                        <p class="text-muted mb-4">Choose how you want your complaint prepared.</p>
+
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="caseLawToggle" x-model="stepData[7].use_case_law" style="transform: scale(1.3);">
+                                    <label class="form-check-label fw-bold ms-2" for="caseLawToggle">
+                                        Include relevant case law
+                                    </label>
+                                </div>
+                                <p class="text-muted mt-2 mb-0">
+                                    Case law references show the court that similar situations have been ruled in favor of plaintiffs.
+                                    This can strengthen your complaint but is not required.
+                                </p>
+                                <div class="alert alert-info mt-3 mb-0" x-show="stepData[7].use_case_law">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    AI will suggest relevant precedent cases. A legal professional should verify all citations before filing.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6><i class="bi bi-check-circle me-2 text-success"></i>Ready to Analyze</h6>
+                                <p class="mb-0 text-muted">Click "Analyze My Case" below to get AI's assessment of your potential violations, recommended case law, and a preview of your complaint.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="d-flex justify-content-between mt-4" x-show="currentView === 'steps'">
+                <button class="btn btn-outline-secondary" @click="prevStep()">
+                    <i class="bi bi-arrow-left me-1"></i><span x-text="currentStep === 1 ? 'Back to Story' : 'Previous'"></span>
+                </button>
+                <div>
+                    <button class="btn btn-outline-secondary me-2" @click="saveCurrentStep()" :disabled="isSaving">
+                        <span x-show="!isSaving"><i class="bi bi-save me-1"></i>Save</span>
+                        <span x-show="isSaving"><span class="spinner-border spinner-border-sm"></span></span>
+                    </button>
+                    <template x-if="currentStep < 7">
+                        <button class="btn btn-primary" @click="nextStep()">
+                            Next <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                    </template>
+                    <template x-if="currentStep === 7">
+                        <button class="btn btn-success btn-lg" @click="analyzeCase()" :disabled="isAnalyzing">
+                            <span x-show="!isAnalyzing"><i class="bi bi-lightning me-1"></i>Analyze My Case</span>
+                            <span x-show="isAnalyzing"><span class="spinner-border spinner-border-sm me-1"></span>Analyzing...</span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== ANALYSIS VIEW ==================== -->
+    <div x-show="currentView === 'analysis'" class="row justify-content-center">
+        <div class="col-lg-10">
+
+            <!-- Processing animation -->
+            <div x-show="isAnalyzing" class="text-center py-5">
+                <div class="terminal-box mx-auto" style="max-width:500px; text-align:left;">
+                    <template x-for="line in terminalLines" :key="line.id">
+                        <div><span class="text-muted">$</span> <span x-text="line.text"></span></div>
+                    </template>
+                    <div><span class="text-muted">$</span> <span class="terminal-cursor"></span></div>
+                </div>
+                <p class="text-muted mt-3">Analyzing your case details...</p>
+            </div>
+
+            <!-- Analysis Results -->
+            <div x-show="!isAnalyzing && analysisData.violations">
+
+                <h3 class="mb-4"><i class="bi bi-lightning me-2"></i>Case Analysis</h3>
+
+                <!-- Potential Violations -->
+                <h5 class="mb-3">Potential Violations</h5>
+                <template x-for="(violation, i) in analysisData.violations || []" :key="'v'+i">
+                    <div class="analysis-card" :class="violation.strength">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="fw-bold" x-text="violation.amendment"></span>
+                                <span class="ms-2 text-muted" x-text="violation.violation_type"></span>
+                            </div>
+                            <span class="strength-badge" :class="violation.strength" x-text="(violation.strength || '').replace('_', ' ')"></span>
+                        </div>
+                        <p class="mb-0" x-text="violation.description"></p>
+                    </div>
+                </template>
+
+                <!-- Case Law -->
+                <template x-if="analysisData.case_law && analysisData.case_law.length > 0">
+                    <div class="mt-4">
+                        <h5 class="mb-3"><i class="bi bi-book me-2"></i>Supporting Case Law</h5>
+                        <template x-for="(caseRef, i) in analysisData.case_law" :key="'c'+i">
+                            <div class="card mb-2">
+                                <div class="card-body p-3">
+                                    <div class="fw-bold" x-text="caseRef.case_name"></div>
+                                    <p class="mb-1 text-muted" x-text="caseRef.relevance"></p>
+                                    <small class="text-muted fst-italic" x-text="caseRef.key_holding"></small>
+                                </div>
+                            </div>
+                        </template>
+                        <div class="alert alert-warning mt-2">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            AI-suggested citations. A legal professional should verify these before filing.
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Document Preview -->
+                <template x-if="analysisData.preview">
+                    <div class="mt-4">
+                        <h5 class="mb-3"><i class="bi bi-file-earmark-text me-2"></i>Complaint Preview</h5>
+                        <div class="preview-section">
+                            <h4 x-text="analysisData.preview.caption || 'COMPLAINT'"></h4>
+                            <p x-text="analysisData.preview.parties_description"></p>
+                            <hr>
+                            <div style="white-space: pre-line;" x-text="analysisData.preview.factual_summary"></div>
+                            <hr>
+                            <template x-if="analysisData.preview.causes_of_action">
+                                <div>
+                                    <h4>CAUSES OF ACTION</h4>
+                                    <template x-for="(cause, i) in analysisData.preview.causes_of_action" :key="'cause'+i">
+                                        <p><strong x-text="'Count ' + (i+1) + ': '"></strong><span x-text="cause"></span></p>
+                                    </template>
+                                </div>
+                            </template>
+                            <hr>
+                            <p><strong>RELIEF:</strong> <span x-text="analysisData.preview.relief_summary"></span></p>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between mt-4 mb-5">
+                    <button class="btn btn-outline-secondary" @click="currentView = 'steps'; currentStep = 1;">
+                        <i class="bi bi-pencil me-1"></i>Edit My Answers
+                    </button>
+                    <button class="btn btn-success btn-lg" @click="completeWizard()" :disabled="isCompleting">
+                        <span x-show="!isCompleting"><i class="bi bi-check-circle me-1"></i>Build My Complaint</span>
+                        <span x-show="isCompleting"><span class="spinner-border spinner-border-sm me-1"></span>Building...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Alpine.js -->
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js" defer></script>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function wizardApp() {
+    return {
+        // State
+        documentSlug: '{{ document.slug }}',
+        sessionSlug: '{{ session_slug }}',
+        hasSession: {{ has_session|yesno:"true,false" }},
+        currentView: '{{ wizard_status }}' === 'not_started' || !'{{ session_slug }}' ? 'story' : ('{{ wizard_status }}' === 'analyzed' ? 'analysis' : 'steps'),
+        currentStep: {{ current_step }},
+        story: '{{ document.story_text|escapejs }}',
+        isProcessing: false,
+        isSaving: false,
+        isAnalyzing: false,
+        isCompleting: false,
+        isRecording: false,
+        speechSupported: false,
+        terminalLines: [],
+        terminalInterval: null,
+
+        // AI data
+        aiExtracted: JSON.parse('{{ ai_extracted|escapejs }}'),
+        analysisData: JSON.parse('{{ ai_analysis|escapejs }}'),
+
+        // Step data (user-confirmed)
+        stepData: {
+            1: { incident_date: '', incident_time: '', incident_location: '', city: '', state: '', location_type: '' },
+            2: { defendants: [{ name: '', badge_number: '', title_rank: '', agency_name: '', defendant_type: 'individual', description: '' }], witnesses: [] },
+            3: { summary: '', detailed_narrative: '', what_were_you_doing: '', initial_contact: '', what_was_said: '', physical_actions: '', how_it_ended: '' },
+            4: { selections: [], additional_text: '' },
+            5: { physical_injuries: '', medical_treatment: '', emotional_distress: '', financial_losses: '', lost_wages: '', ongoing_effects: '' },
+            6: { evidence_types: [], items: [], youtube_url: '' },
+            7: { use_case_law: true },
+        },
+
+        steps: [
+            { title: 'When & Where' },
+            { title: 'Who' },
+            { title: 'What' },
+            { title: 'Why' },
+            { title: 'Impact' },
+            { title: 'Evidence' },
+            { title: 'Options' },
+        ],
+
+        violationOptions: [
+            { key: 'searched_without_warrant', label: 'Searched without a warrant', description: 'Officers searched you, your vehicle, or your property without a warrant or consent.', amendment: 'Fourth Amendment' },
+            { key: 'arrested_no_cause', label: 'Arrested without probable cause', description: 'You were arrested or detained without a valid legal reason.', amendment: 'Fourth Amendment' },
+            { key: 'excessive_force', label: 'Excessive force', description: 'Officers used more physical force than was necessary.', amendment: 'Fourth Amendment' },
+            { key: 'punished_for_speech', label: 'Punished for speaking out', description: 'You were retaliated against for what you said or expressed.', amendment: 'First Amendment' },
+            { key: 'punished_for_recording', label: 'Punished for recording', description: 'You were stopped or punished for recording police activity.', amendment: 'First Amendment' },
+            { key: 'racial_discrimination', label: 'Racial discrimination', description: 'You were treated differently because of your race or ethnicity.', amendment: 'Fourteenth Amendment' },
+            { key: 'gender_discrimination', label: 'Gender discrimination', description: 'You were treated differently because of your gender.', amendment: 'Fourteenth Amendment' },
+            { key: 'forced_statements', label: 'Forced to make statements', description: 'You were coerced into making self-incriminating statements.', amendment: 'Fifth Amendment' },
+            { key: 'denied_medical_care', label: 'Denied medical care', description: 'Officers refused to get you medical attention when you needed it.', amendment: 'Fourteenth Amendment' },
+            { key: 'denied_due_process', label: 'Denied due process', description: 'Your case was handled without proper legal procedures.', amendment: 'Fourteenth Amendment' },
+            { key: 'retaliation', label: 'Retaliation for complaint', description: 'Officers retaliated against you for filing a complaint or exercising rights.', amendment: 'First Amendment' },
+        ],
+
+        evidenceTypes: [
+            { key: 'video', label: 'Video', icon: 'bi-camera-video' },
+            { key: 'photo', label: 'Photos', icon: 'bi-image' },
+            { key: 'audio', label: 'Audio', icon: 'bi-mic' },
+            { key: 'body_cam', label: 'Body Camera', icon: 'bi-person-badge' },
+            { key: 'dash_cam', label: 'Dash Camera', icon: 'bi-car-front' },
+            { key: 'medical_records', label: 'Medical Records', icon: 'bi-hospital' },
+            { key: 'police_report', label: 'Police Report', icon: 'bi-file-earmark' },
+            { key: 'witness_statements', label: 'Witness Statements', icon: 'bi-chat-quote' },
+            { key: 'social_media', label: 'Social Media', icon: 'bi-phone' },
+        ],
+
+        init() {
+            this.speechSupported = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+
+            // If we have a session, load interview data into stepData
+            if (this.hasSession) {
+                const saved = JSON.parse('{{ interview_data|escapejs }}');
+                for (let i = 1; i <= 7; i++) {
+                    const key = 'step_' + i;
+                    if (saved[key]) {
+                        this.stepData[i] = { ...this.stepData[i], ...saved[key] };
+                    }
+                }
+                // Pre-fill from AI extraction if step data is empty
+                this.prefillFromAI();
+            }
+
+            // If analysis is done, show analysis view
+            if ('{{ analysis_status }}' === 'completed' && this.analysisData.violations) {
+                this.currentView = 'analysis';
+            }
+        },
+
+        prefillFromAI() {
+            const ai = this.aiExtracted;
+            for (let i = 1; i <= 7; i++) {
+                const key = 'step_' + i;
+                if (ai[key]) {
+                    for (const [field, value] of Object.entries(ai[key])) {
+                        if (value && !this.stepData[i][field]) {
+                            if (Array.isArray(value) && Array.isArray(this.stepData[i][field])) {
+                                if (this.stepData[i][field].length === 0 ||
+                                    (this.stepData[i][field].length === 1 && !this.stepData[i][field][0].name)) {
+                                    this.stepData[i][field] = value;
+                                }
+                            } else if (typeof value === 'string' || typeof value === 'boolean') {
+                                this.stepData[i][field] = value;
+                            }
+                        }
+                    }
+                }
+            }
+            // Ensure at least one defendant exists
+            if (!this.stepData[2].defendants || this.stepData[2].defendants.length === 0) {
+                this.stepData[2].defendants = [{ name: '', badge_number: '', title_rank: '', agency_name: '', defendant_type: 'individual', description: '' }];
+            }
+        },
+
+        aiSuggested(step, field) {
+            const ai = this.aiExtracted['step_' + step];
+            return ai && ai[field] && this.stepData[step][field] === ai[field];
+        },
+
+        stepCompleted(n) {
+            const data = this.stepData[n];
+            if (!data) return false;
+            switch(n) {
+                case 1: return !!(data.incident_date || data.city);
+                case 2: return data.defendants && data.defendants.some(d => d.name);
+                case 3: return !!(data.detailed_narrative || data.what_were_you_doing);
+                case 4: return data.selections && data.selections.length > 0;
+                case 5: return !!(data.physical_injuries || data.emotional_distress || data.financial_losses);
+                case 6: return data.evidence_types && data.evidence_types.length > 0;
+                case 7: return true; // Always "complete" since it's just a preference
+                default: return false;
+            }
+        },
+
+        goToStep(n) {
+            if (this.currentView === 'story') return;
+            this.saveCurrentStep(true);
+            this.currentStep = n;
+        },
+
+        nextStep() {
+            this.saveCurrentStep(true);
+            if (this.currentStep < 7) this.currentStep++;
+        },
+
+        prevStep() {
+            if (this.currentStep === 1) {
+                this.currentView = 'story';
+            } else {
+                this.saveCurrentStep(true);
+                this.currentStep--;
+            }
+        },
+
+        toggleViolation(key) {
+            const idx = this.stepData[4].selections.indexOf(key);
+            if (idx >= 0) this.stepData[4].selections.splice(idx, 1);
+            else this.stepData[4].selections.push(key);
+        },
+
+        toggleEvidenceType(key) {
+            const idx = this.stepData[6].evidence_types.indexOf(key);
+            if (idx >= 0) this.stepData[6].evidence_types.splice(idx, 1);
+            else this.stepData[6].evidence_types.push(key);
+        },
+
+        // Terminal animation
+        startTerminal(commands) {
+            this.terminalLines = [];
+            let idx = 0;
+            this.terminalInterval = setInterval(() => {
+                if (idx < commands.length) {
+                    this.terminalLines.push({ id: idx, text: commands[idx] });
+                    idx++;
+                    // Auto-scroll
+                    this.$nextTick(() => {
+                        const el = this.$refs.terminal;
+                        if (el) el.scrollTop = el.scrollHeight;
+                    });
+                }
+            }, 800);
+        },
+
+        stopTerminal() {
+            if (this.terminalInterval) {
+                clearInterval(this.terminalInterval);
+                this.terminalInterval = null;
+            }
+        },
+
+        // API calls
+        async submitStory() {
+            if (this.story.length < 50) return;
+            this.isProcessing = true;
+
+            this.startTerminal([
+                'parse-narrative --input=story.txt',
+                'extract-entities --type=persons,locations,dates',
+                'identify-defendants --source=narrative',
+                'classify-violations --usc=42-1983',
+                'analyze-damages --categories=physical,emotional,financial',
+                'lookup-witnesses --from=narrative',
+                'map-evidence --types=video,document,photo',
+                'compute-timeline --sort=chronological',
+                'validate-jurisdiction --federal-court',
+                'generate-suggestions --confidence=high',
+            ]);
+
+            try {
+                const response = await fetch(`/api/v1/wizard/${this.documentSlug}/start/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ story: this.story }),
+                });
+
+                const data = await response.json();
+                if (data.session_slug) {
+                    this.sessionSlug = data.session_slug;
+                    this.hasSession = true;
+                    this.pollForExtraction();
+                }
+            } catch (err) {
+                this.stopTerminal();
+                this.isProcessing = false;
+                alert('Error submitting story. Please try again.');
+            }
+        },
+
+        async pollForExtraction() {
+            const poll = async () => {
+                try {
+                    const response = await fetch(`/api/v1/wizard/${this.sessionSlug}/status/`, {
+                        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    });
+                    const data = await response.json();
+
+                    if (data.ai_extracted && Object.keys(data.ai_extracted).length > 0) {
+                        this.stopTerminal();
+                        this.isProcessing = false;
+                        this.aiExtracted = data.ai_extracted;
+                        this.prefillFromAI();
+                        this.currentView = 'steps';
+                        this.currentStep = 1;
+                        return;
+                    }
+
+                    // Keep polling
+                    setTimeout(poll, 3000);
+                } catch (err) {
+                    setTimeout(poll, 3000);
+                }
+            };
+            poll();
+        },
+
+        async saveCurrentStep(silent = false) {
+            if (!this.sessionSlug) return;
+            if (!silent) this.isSaving = true;
+
+            try {
+                await fetch(`/api/v1/wizard/${this.sessionSlug}/step/${this.currentStep}/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify(this.stepData[this.currentStep]),
+                });
+            } catch (err) {
+                console.error('Error saving step:', err);
+            }
+
+            if (!silent) {
+                this.isSaving = false;
+            }
+        },
+
+        async analyzeCase() {
+            // Save current step first
+            await this.saveCurrentStep(true);
+
+            this.isAnalyzing = true;
+            this.currentView = 'analysis';
+
+            this.startTerminal([
+                'compile-case-data --all-steps',
+                'analyze-constitutional-violations --depth=full',
+                'assess-violation-strength --scale=3',
+                this.stepData[7].use_case_law ? 'search-case-law --database=scotus,circuit' : 'skip-case-law --user-preference',
+                'evaluate-damages --comprehensive',
+                'draft-complaint-preview --format=section1983',
+                'recommend-relief --based-on=violations,damages',
+                'finalize-analysis --output=json',
+            ]);
+
+            try {
+                const response = await fetch(`/api/v1/wizard/${this.sessionSlug}/analyze/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                });
+
+                if (response.ok) {
+                    this.pollForAnalysis();
+                } else {
+                    const data = await response.json();
+                    this.stopTerminal();
+                    this.isAnalyzing = false;
+                    alert(data.error || 'Error starting analysis.');
+                }
+            } catch (err) {
+                this.stopTerminal();
+                this.isAnalyzing = false;
+                alert('Error starting analysis. Please try again.');
+            }
+        },
+
+        async pollForAnalysis() {
+            const poll = async () => {
+                try {
+                    const response = await fetch(`/api/v1/wizard/${this.sessionSlug}/analysis/`, {
+                        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    });
+                    const data = await response.json();
+
+                    if (data.status === 'completed') {
+                        this.stopTerminal();
+                        this.isAnalyzing = false;
+                        this.analysisData = data.analysis;
+                        return;
+                    } else if (data.status === 'failed') {
+                        this.stopTerminal();
+                        this.isAnalyzing = false;
+                        alert('Analysis failed: ' + (data.error || 'Unknown error'));
+                        return;
+                    }
+
+                    setTimeout(poll, 3000);
+                } catch (err) {
+                    setTimeout(poll, 3000);
+                }
+            };
+            poll();
+        },
+
+        async completeWizard() {
+            this.isCompleting = true;
+            try {
+                const response = await fetch(`/api/v1/wizard/${this.sessionSlug}/complete/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                });
+                const data = await response.json();
+                if (data.success || data.already_completed) {
+                    window.location.href = `/documents/${data.document_slug}/`;
+                } else {
+                    alert('Error building complaint: ' + (data.error || 'Unknown error'));
+                    this.isCompleting = false;
+                }
+            } catch (err) {
+                alert('Error building complaint. Please try again.');
+                this.isCompleting = false;
+            }
+        },
+
+        // Voice input
+        toggleVoiceInput(target) {
+            if (this.isRecording) {
+                this.recognition.stop();
+                this.isRecording = false;
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
+
+            this.recognition = new SpeechRecognition();
+            this.recognition.continuous = true;
+            this.recognition.interimResults = true;
+            this.recognition.lang = 'en-US';
+
+            this.recognition.onresult = (event) => {
+                let transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+                if (target === 'story') {
+                    this.story = this.story + ' ' + transcript;
+                }
+            };
+
+            this.recognition.onend = () => { this.isRecording = false; };
+            this.recognition.start();
+            this.isRecording = true;
+        },
+    };
+}
+</script>
+{% endblock %}

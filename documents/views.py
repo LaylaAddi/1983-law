@@ -20,7 +20,8 @@ from .models import (
     Defendant, IncidentNarrative, RightsViolated, Witness,
     Evidence, Damages, PriorComplaints, ReliefSought,
     PromoCode, PromoCodeUsage, PayoutRequest,
-    VideoEvidence, VideoCapture, VideoSpeaker
+    VideoEvidence, VideoCapture, VideoSpeaker,
+    WizardSession,
 )
 
 # Initialize Stripe
@@ -2383,6 +2384,42 @@ def tell_your_story(request, document_slug):
         context['test_stories'] = get_test_stories()
 
     return render(request, 'documents/tell_your_story.html', context)
+
+
+@login_required
+def wizard(request, document_slug):
+    """Guided interview wizard - serves the single-page wizard template."""
+    document = get_object_or_404(Document, slug=document_slug, user=request.user)
+
+    if not document.can_edit():
+        if document.payment_status == 'finalized':
+            messages.info(request, 'This document has been finalized and cannot be edited.')
+        elif document.payment_status == 'expired':
+            messages.warning(request, 'This document has expired. Please upgrade to continue editing.')
+        return redirect('documents:document_detail', document_slug=document.slug)
+
+    # Get or create wizard session
+    session = getattr(document, 'wizard_session', None)
+
+    context = {
+        'document': document,
+        'wizard_session': session,
+        'has_session': session is not None,
+        'session_slug': session.slug if session else '',
+        'ai_extracted': json.dumps(session.ai_extracted) if session else '{}',
+        'interview_data': json.dumps(session.interview_data) if session else '{}',
+        'ai_analysis': json.dumps(session.ai_analysis) if session else '{}',
+        'current_step': session.current_step if session else 1,
+        'wizard_status': session.status if session else 'not_started',
+        'analysis_status': session.analysis_status if session else 'pending',
+    }
+
+    # Include test stories for test users
+    if request.user.is_test_user:
+        from .test_stories import get_test_stories
+        context['test_stories'] = get_test_stories()
+
+    return render(request, 'documents/wizard.html', context)
 
 
 def _process_story_background(document_id, story_text):

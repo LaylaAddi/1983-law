@@ -24,6 +24,9 @@ urlpatterns = [
     path('<str:document_slug>/generate-pdf/', views.start_pdf_generation, name='start_pdf_generation'),
     path('<str:document_slug>/generate-pdf/status/', views.pdf_generation_status, name='pdf_generation_status'),
 
+    # Guided wizard
+    path('<str:document_slug>/wizard/', views.wizard, name='wizard'),
+
     # Section editing (interview style)
     path('<str:document_slug>/section/<str:section_type>/', views.section_edit, name='section_edit'),
     path('<str:document_slug>/section/<str:section_type>/add/', views.add_multiple_item, name='add_multiple_item'),
