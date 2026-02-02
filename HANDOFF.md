@@ -2,160 +2,227 @@
 
 ## What This App Does
 
-A web application to help people create Section 1983 civil rights complaints. Users fill out an interview-style form, and the app helps them build their legal document step by step.
+A web application to help people create Section 1983 civil rights complaints. Users are guided through a step-by-step wizard interview, AI analyzes their case, and the app builds their legal document.
 
 ---
 
-## Current State (January 29, 2026)
+## Current State (February 2, 2026)
 
-The app is fully functional with all core features complete.
+The app is fully functional. A guided wizard API layer has been added for the new interview flow. URLs now use opaque slugs instead of integer IDs.
 
-### Document Flow
+### Document Flow (Current)
 ```
 Register → Complete Profile → Create Document → Tell Your Story → Fill Sections → Final Review → Download PDF
 ```
 
-### Key Features
-
-1. **User Authentication** (`accounts` app)
-   - Email-based login
-   - Profile completion required before creating documents
-   - `is_test_user` flag for testing
-
-2. **Document Builder** (`documents` app)
-   - 10 interview sections
-   - Tell Your Story is MANDATORY first step
-   - Section status tracking (not started, in progress, completed, needs work, N/A)
-
-3. **Interview Sections** (in order)
-   - Plaintiff Information (from profile)
-   - Incident Overview (with court lookup)
-   - Defendants (multiple)
-   - Incident Narrative
-   - Rights Violated
-   - Witnesses (multiple)
-   - Evidence (multiple)
-   - Damages
-   - Prior Complaints
-   - Relief Sought
-
-4. **AI Features** (OpenAI GPT-4o-mini)
-   - Story parsing and auto-fill
-   - Per-section suggestions (damages, witnesses, evidence, rights)
-   - Legal document generation
-   - Document review with issue highlighting
-   - **All AI prompts stored in database via seed files**
-
-5. **Final Review Pathway** (`/documents/{id}/final/`) - NEW
-   - Auto-generates legal document on page load
-   - Inline editing of all sections
-   - AI review of actual document text
-   - Regenerate individual sections or entire document
-   - Download PDF with proper legal formatting
-   - **Requires 100% section completion**
-
-6. **PDF Generation**
-   - Proper court caption with bordered case box
-   - Document title: "COMPLAINT FOR VIOLATION OF CIVIL RIGHTS PURSUANT TO 42 U.S.C. § 1983"
-   - Section headers: Jurisdiction, Parties, Facts, Causes of Action, Prayer, Jury Demand
-   - Times New Roman, 12pt, double-spaced
-   - Page numbers, signature block
-   - Draft watermark for unpaid documents
-
-7. **Payments** (Stripe)
-   - Per-document purchase or subscription
-   - Draft documents expire after 7 days
+### Document Flow (New Wizard - In Progress)
+```
+Register → Profile → Create Document → Tell Story → 7-Step Guided Interview → AI Case Analysis → Build Complaint → Final Review → PDF
+```
 
 ---
 
-## Tech Stack
+## Architecture
 
+### Tech Stack
 - **Backend**: Django 4.2, Python 3.11
-- **Frontend**: Bootstrap 5, vanilla JS
+- **API**: Django REST Framework + SimpleJWT (new)
+- **Frontend**: Bootstrap 5, vanilla JS (Alpine.js planned for wizard UI)
 - **Database**: PostgreSQL
 - **AI**: OpenAI GPT-4o-mini
 - **PDF**: WeasyPrint
 - **Payments**: Stripe
-- **Deployment**: Docker, Nginx
+- **Deployment**: Docker on Render
+
+### URL Structure
+- **Web app**: `/documents/<slug>/...` (Django templates)
+- **API**: `/api/v1/wizard/...` (DRF, JSON)
+- **Auth**: Session auth (web) + JWT (mobile/API)
+- **All URLs use 8-char random slugs** (e.g., `/documents/xK9mR2pL/`)
+
+---
+
+## Key Features
+
+1. **User Authentication** (`accounts` app)
+   - Email-based login (custom User model)
+   - Profile completion required before creating documents
+   - `is_test_user` flag for testing
+
+2. **Document Builder** (`documents` app)
+   - 10 interview sections with status tracking
+   - Tell Your Story is mandatory first step
+   - AI-powered auto-fill from story text
+
+3. **Guided Wizard** (`documents/api/`) — NEW
+   - 7-step interview with AI pre-fill
+   - Case analysis with violations, case law, document preview
+   - Same API serves web and future mobile app
+   - See "Wizard Implementation Plan" section below
+
+4. **AI Features** (OpenAI GPT-4o-mini)
+   - Story parsing and auto-fill
+   - Per-section suggestions
+   - Legal document generation
+   - Document review with issue highlighting
+   - Case analysis with violation strength ratings
+   - Case law suggestions (opt-in)
+   - **All AI prompts stored in database via seed files**
+
+5. **Video Evidence** (YouTube)
+   - YouTube transcript extraction via Supadata API
+   - Speaker attribution (plaintiff, defendants, witnesses)
+   - AI-powered evidence suggestions from transcripts
+   - Applied suggestions tracking with duplicate detection
+
+6. **Final Review Pathway** (`/documents/{slug}/final/`)
+   - Auto-generates legal document on page load
+   - Inline editing of all sections
+   - AI review of actual document text
+   - Download PDF with proper legal formatting
+   - Requires 100% section completion
+
+7. **PDF Generation** (WeasyPrint)
+   - Court caption: "UNITED STATES DISTRICT COURT" / "{DISTRICT} DISTRICT OF {STATE}"
+   - Times New Roman, 12pt, double-spaced
+   - Page numbers, signature block, draft watermark
+
+8. **Payments** (Stripe)
+   - Per-document purchase or subscription
+   - Referral/promo code system
+   - Draft documents expire after 48 hours
+
+---
+
+## Wizard Implementation Plan
+
+### Overview
+Replace the current "dump everything at once" flow with a guided 7-step interview. The user tells their story, AI extracts details, then the user confirms/edits each section one at a time. After all steps, AI provides a case analysis with potential violations, case law, and a document preview.
+
+### Phase 1: API Foundation ✅ COMPLETE
+- Django REST Framework + SimpleJWT installed
+- `WizardSession` model with JSONField storage
+- 7 API endpoints for wizard flow
+- JWT auth endpoints for future mobile app
+- Step serializers with validation
+
+### Phase 2: Web Frontend (NEXT)
+- Single Django template with Alpine.js stepper
+- Terminal animation during AI extraction
+- Pre-filled forms with "AI suggested" badges
+- Step-by-step navigation (back/next/skip)
+- Voice input via Web Speech API (progressive enhancement)
+
+### Phase 3: Analysis Screen
+- Violations with strength ratings (strong/moderate/worth including)
+- Case law references (opt-in, with verification disclaimer)
+- Document preview (styled HTML, not full PDF)
+- "Build My Complaint" button → applies all data
+
+### Phase 4: Mobile Readiness
+- API already supports JWT auth
+- Step-by-step flow maps to mobile screens
+- React Native or Flutter frontend
+- Native speech-to-text replaces Web Speech API
+
+### Wizard Steps
+1. **When & Where** — Date, time, location, city, state
+2. **Who Was Involved** — Defendants (officers/agencies) + witnesses
+3. **What Happened** — Narrative breakdown (initial contact, dialogue, actions, ending)
+4. **Why It Was Wrong** — Plain-language violation selection with amendment mapping
+5. **How It Affected You** — Physical, emotional, financial damages
+6. **Evidence & Proof** — Evidence types, items, YouTube links
+7. **Preferences** — Case law opt-in/out
+
+### API Endpoints
+```
+POST   /api/v1/wizard/{doc_slug}/start/           → Submit story, AI extracts
+GET    /api/v1/wizard/{session_slug}/status/       → Poll extraction progress
+GET    /api/v1/wizard/{session_slug}/              → Get full wizard state
+PUT    /api/v1/wizard/{session_slug}/step/{1-7}/   → Save step data
+POST   /api/v1/wizard/{session_slug}/analyze/      → Run case analysis
+GET    /api/v1/wizard/{session_slug}/analysis/     → Poll analysis results
+POST   /api/v1/wizard/{session_slug}/complete/     → Apply to document models
+
+POST   /api/v1/auth/token/                         → JWT login
+POST   /api/v1/auth/token/refresh/                 → Refresh JWT
+```
 
 ---
 
 ## Key Files
 
 ### Models
-- `documents/models.py` - Document, Defendant, Witness, Evidence, etc.
+- `documents/models.py` — Document, Defendant, Witness, Evidence, WizardSession, etc.
+  - All URL-exposed models have `slug` field (8-char random)
+  - `WizardSession` — OneToOne with Document, tracks wizard progress
   - `final_*` fields for editable final document text
-  - `has_final_document()` method
 
 ### Views
-- `documents/views.py` - All document views
-  - `final_review` - Main final review page (line ~5180)
-  - `generate_final_document` - Generate/regenerate (line ~5210)
-  - `save_final_section` - Save inline edits (line ~5230)
-  - `ai_review_final` - AI review endpoint (line ~5250)
-  - `download_final_pdf` - PDF generation (line ~5270)
+- `documents/views.py` (~5400 lines) — All document views (function-based)
+- `documents/api/views.py` — Wizard API endpoints (DRF)
+- `documents/api/serializers.py` — Step serializers with validation
+- `documents/api/urls.py` — API URL routing
 
 ### Templates
-- `templates/documents/final_review.html` - Final review page with inline editing
-- `templates/documents/final_pdf.html` - PDF template with legal formatting
-- `templates/documents/document_detail.html` - Document overview page
+- `templates/documents/tell_your_story.html` — Current story entry
+- `templates/documents/section_edit.html` — Section editing (largest template)
+- `templates/documents/final_review.html` — Final review with inline editing
+- `templates/documents/final_pdf.html` — PDF template
+- `templates/documents/video_analysis.html` — YouTube video analysis
+- `templates/documents/document_detail.html` — Document overview hub
+- `templates/documents/document_review.html` — Document review
 
 ### Services
-- `documents/services/openai_service.py` - OpenAI integration
-  - `review_final_document()` - Reviews actual document text
-- `documents/services/document_generator.py` - Generates legal document sections
+- `documents/services/openai_service.py` — OpenAI integration
+- `documents/services/document_generator.py` — Legal document generation
+- `documents/services/youtube_service.py` — YouTube transcript extraction
+- `documents/services/court_lookup_service.py` — Federal court lookup
 
-### AI Prompts (Database Seeds)
-- `documents/management/commands/seed_ai_prompts.py` - All AI prompts
-  - `review_final_document` - Reviews the generated legal document
+### Migrations
+- `0007_document_applied_video_suggestions.py` — Video suggestion tracking
+- `0008_add_slugs_to_models.py` — Slug fields for all URL-exposed models
+- `0009_add_wizard_session.py` — WizardSession model
 
 ---
 
 ## Recent Changes
 
+### Session 4 Updates (February 2, 2026)
+
+1. **URL Masking with Short Random Slugs** — Replaced all integer IDs in URLs with 8-char alphanumeric slugs across 20 files (models, URLs, views, templates, JS). Admin/referral routes kept with integer IDs.
+
+2. **Wizard API Foundation** — Added DRF + JWT, WizardSession model, 7 API endpoints, step serializers. Phase 1 of guided interview wizard.
+
+3. **Court Caption Fix** — PDF now shows "UNITED STATES DISTRICT COURT" / "{DISTRICT} DISTRICT OF {STATE}" instead of redundant format.
+
+4. **AI Uses Display** — Profile page shows remaining AI uses per paid document and subscription with color-coded badges.
+
+5. **Video Evidence Improvements** — Mandatory date/time/location before AI analysis, applied suggestions tracking with "Previously Applied" history, duplicate detection, fixed damages BooleanField bug.
+
+6. **Slug Excluded from Forms** — Defendant, Witness, and Evidence forms properly exclude the auto-generated slug field.
+
 ### Session 3 Updates (January 29, 2026)
 
-1. **Fixed Final Review Edit Buttons** - After inline editing and saving/canceling, edit buttons were inaccessible because toolbar's `display: none` wasn't being reset. Fixed in `final_review.html`
-
-2. **Removed Redundant AI Assistant from Rights Violated** - The "Analyze Story & Suggest" box was redundant since rights_violated has dedicated "Analyze My Case" functionality via `rights-analyze.js`. Now only shows for damages section
-
-3. **Improved PDF Page Utilization** - Added CSS to keep jury demand and signature block together on same page when possible using `page-break-inside: avoid` and a wrapper div
-
-4. **Fixed AI Generating Fake Timestamps** - AI was inventing timestamps when `was_recording=True` even without video transcripts. Updated prompt to only reference timestamps when actual `VIDEO EVIDENCE TRANSCRIPTS` are provided
-
-5. **Added generate_facts Prompt to Seed File** - Moved the Statement of Facts generation prompt from hardcoded to database via `seed_ai_prompts.py`. Document generator now loads prompt from database with fallback
-
-6. **YouTube for Paid Documents** - YouTube video analysis is now available for paid documents (not just subscribers). Each API call counts against the document's 100 AI uses. Added `Document.can_use_video_analysis()` method
-
-7. **Fixed Profile Display for Paid Documents** - Users who paid for documents were showing "Free Trial". Added "Pay Per Document" section that shows before free trial check, displaying paid document count and AI uses
-
-8. **Dark Mode Fixes for Profile Page** - Fixed table backgrounds showing white in dark mode. Added CSS for tables, bg-opacity backgrounds, and card-body tables
+1. Fixed Final Review edit button accessibility
+2. Removed redundant AI assistant from Rights Violated section
+3. Improved PDF page utilization (jury demand + signature together)
+4. Fixed AI generating fake timestamps
+5. Added generate_facts prompt to seed file
+6. YouTube for paid documents (not just subscribers)
+7. Fixed profile display for paid documents
+8. Dark mode fixes for profile page
 
 ### Session 2 Updates (January 28, 2026)
 
-1. **Smart Regenerate Detection** - Final review page now shows a banner only when interview data has changed since the document was generated (compares `document.updated_at` vs `document.final_generated_at`), instead of always showing a Regenerate All button
-
-2. **Terminal Animation for Regeneration** - Added inline terminal-style animation with document-specific data (plaintiff name, defendants, court) when regenerating the document on final review page, matching the tell-your-story page experience
-
-3. **Fixed Subscription Display** - Added `@property` decorator to `Subscription.is_active` in `accounts/models.py` so templates can use `subscription.is_active` without parentheses
-
-4. **Fixed Dark Mode Table Styling** - Added CSS for Purchase History table links on profile page to show proper blue color in dark mode
-
-5. **Fixed Pricing Page Flow** - For logged-in users, one-time purchase buttons now show "Go to My Documents" instead of "Get Started" (which redirected to register page)
-
-6. **Removed 3-Document Pack** - Removed from pricing page, purchase_required page, and pricing view context. Kept in model/profile for backward compatibility with existing purchases
-
-7. **Fixed Analyze Story Evidence Button** - Button had id `aiSuggestEvidenceBtn` but JS function looked for `aiSuggestBtn`. Updated `suggestSectionContent()` function in section_edit.html to find correct button based on section type
-
-8. **Document ID Through Pricing Flow** - "View Plans" links from document pages now include `?document_id=X`. Pricing page captures this and shows "Purchase for This Document" button that links directly to `/documents/{id}/checkout/` instead of generic documents list
-
-### Session 1 Updates
-
-1. **Final Review Button** - Only clickable at 100% completion
-2. **Removed Finalize button** from document detail page (moved to final review)
-3. **PDF Template** - Proper legal document format with court caption
-4. **Preview Template** - Matches PDF format for consistency
-5. **AI Review** - Reviews actual document text, not raw input data
+1. Smart regenerate detection on final review
+2. Terminal animation for regeneration
+3. Fixed subscription display
+4. Fixed dark mode table styling
+5. Fixed pricing page flow
+6. Removed 3-document pack
+7. Fixed analyze story evidence button
+8. Document ID through pricing flow
 
 ---
 
@@ -167,6 +234,14 @@ docker-compose exec web python manage.py migrate
 docker-compose exec web python manage.py seed_ai_prompts
 ```
 
+## Rollback
+
+A git tag `pre-wizard-v1` marks the stable state before wizard implementation.
+```bash
+git reset --hard pre-wizard-v1
+git push origin master --force
+```
+
 ## Environment Variables
 
 ```
@@ -174,15 +249,26 @@ OPENAI_API_KEY=sk-...
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_SINGLE=price_...
+STRIPE_PRICE_MONTHLY=price_...
+STRIPE_PRICE_ANNUAL=price_...
 DATABASE_URL=postgres://...
 SECRET_KEY=...
+SUPADATA_API_KEY=...
+EMAIL_HOST=...
+EMAIL_HOST_USER=...
+EMAIL_HOST_PASSWORD=...
 ```
 
 ---
 
 ## Known Issues / TODO
 
-- None currently blocking
+- CKEditor 4 bundled version has security warnings (consider migrating to CKEditor 5)
+- Migration numbering: if server has a different `0008`, run `python manage.py makemigrations --merge`
+- Wizard web frontend (Phase 2) not yet built
+- Pricing simplification planned ($99 per document, drop subscription tiers)
+- Mobile app planned (API layer ready)
 
 ---
 
@@ -199,3 +285,15 @@ Test document flow:
 6. Click "Final Review" (only enabled at 100%)
 7. Review/edit document
 8. Download PDF
+
+Test wizard API:
+```bash
+# Get JWT token
+curl -X POST /api/v1/auth/token/ -d '{"email":"user@test.com","password":"pass"}'
+
+# Start wizard
+curl -X POST /api/v1/wizard/{doc_slug}/start/ -H "Authorization: Bearer {token}" -d '{"story":"..."}'
+
+# Save step
+curl -X PUT /api/v1/wizard/{session_slug}/step/1/ -H "Authorization: Bearer {token}" -d '{"incident_date":"2024-03-15",...}'
+```
