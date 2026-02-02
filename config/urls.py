@@ -11,6 +11,7 @@ ADMIN_URL = os.getenv('ADMIN_URL', 'manage-x7k9m2/')
 
 urlpatterns = [
     path(ADMIN_URL, admin.site.urls),
+    path('api/v1/', include('documents.api.urls')),
     path('accounts/', include('accounts.urls')),
     path('documents/', include('documents.urls')),
     path('legal/', include('accounts.legal_urls')),

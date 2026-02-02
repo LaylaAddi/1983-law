@@ -1274,3 +1274,87 @@ class VideoSpeaker(models.Model):
         elif self.is_plaintiff:
             return "Plaintiff"
         return self.label
+
+
+class WizardSession(models.Model):
+    """Guided interview wizard for building a Section 1983 complaint step-by-step."""
+
+    STATUS_CHOICES = [
+        ('not_started', 'Not Started'),
+        ('in_progress', 'In Progress'),
+        ('analyzing', 'Analyzing'),
+        ('analyzed', 'Analyzed'),
+        ('completed', 'Completed'),
+        ('abandoned', 'Abandoned'),
+    ]
+
+    TOTAL_STEPS = 7
+
+    document = models.OneToOneField(
+        'Document',
+        on_delete=models.CASCADE,
+        related_name='wizard_session'
+    )
+    slug = models.CharField(max_length=12, unique=True, default=generate_slug, db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_started')
+    current_step = models.PositiveIntegerField(default=1)
+
+    # Raw story input
+    raw_story = models.TextField(blank=True)
+
+    # AI extraction from the raw story (pre-fill data for steps)
+    ai_extracted = models.JSONField(default=dict, blank=True)
+
+    # User-confirmed data from each wizard step
+    interview_data = models.JSONField(default=dict, blank=True)
+
+    # User preference: include case law in analysis
+    use_case_law = models.BooleanField(default=True)
+
+    # Final AI analysis results (violations, case law, preview)
+    ai_analysis = models.JSONField(default=dict, blank=True)
+    analysis_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('processing', 'Processing'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed'),
+        ],
+        default='pending'
+    )
+    analysis_error = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Wizard Session'
+        verbose_name_plural = 'Wizard Sessions'
+
+    def __str__(self):
+        return f"Wizard for {self.document.title} (step {self.current_step}/{self.TOTAL_STEPS})"
+
+    @property
+    def progress_percent(self):
+        """Return wizard completion percentage."""
+        if self.status == 'completed':
+            return 100
+        return int((self.current_step - 1) / self.TOTAL_STEPS * 100)
+
+    @property
+    def is_complete(self):
+        return self.status == 'completed'
+
+    def get_step_data(self, step_number):
+        """Get user-confirmed data for a specific step."""
+        return self.interview_data.get(f'step_{step_number}', {})
+
+    def set_step_data(self, step_number, data):
+        """Save user-confirmed data for a specific step."""
+        self.interview_data[f'step_{step_number}'] = data
+        if step_number >= self.current_step:
+            self.current_step = min(step_number + 1, self.TOTAL_STEPS + 1)
+        if self.status == 'not_started':
+            self.status = 'in_progress'
+        self.save()

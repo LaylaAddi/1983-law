@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.sitemaps',   # XML sitemap for SEO
     # Third-party apps
     'ckeditor',
+    'rest_framework',
     # Local apps
     'accounts',
     'documents',
@@ -199,6 +200,31 @@ APP_NAME = os.getenv('APP_NAME', '1983law.com')  # Used in footer and watermark
 HEADER_APP_NAME = os.getenv('HEADER_APP_NAME', '1983 Law')  # Used in header/navbar
 
 # CKEditor Configuration
+# =============================================================================
+# REST FRAMEWORK (API for wizard + future mobile app)
+# =============================================================================
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',      # Web app (existing)
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # Mobile app (future)
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+}
+
+# JWT Settings
+from datetime import timedelta as _timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': _timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': _timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
 CKEDITOR_CONFIGS = {
     'default': {
         'toolbar': 'full',
