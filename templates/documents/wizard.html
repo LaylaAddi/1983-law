@@ -98,6 +98,25 @@
                     <p class="text-muted">Describe what happened in your own words. Include as much detail as you can about dates, locations, who was involved, and what they did. AI will extract the key details to help build your complaint.</p>
 
                     <div class="mb-3">
+                        {% if test_stories %}
+                        <!-- Test User: Sample Stories Dropdown -->
+                        <div class="mb-3">
+                            <div class="alert alert-info py-2">
+                                <i class="bi bi-lightning me-1"></i>
+                                <strong>Test Mode:</strong> Select a sample story to test the AI parsing
+                            </div>
+                            <label for="testStorySelect" class="form-label fw-bold">Select Sample Story</label>
+                            <select id="testStorySelect" class="form-select mb-2"
+                                    @change="if ($event.target.selectedOptions[0].dataset.story) story = $event.target.selectedOptions[0].dataset.story">
+                                <option value="">-- Choose a test story --</option>
+                                {% for s in test_stories %}
+                                <option value="{{ s.id }}" data-story="{{ s.story|escapejs }}">
+                                    {{ s.id }}. {{ s.title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
                         <label class="form-label fw-bold">Your Story</label>
                         <div class="position-relative">
                             <textarea x-model="story" class="form-control" rows="12"
