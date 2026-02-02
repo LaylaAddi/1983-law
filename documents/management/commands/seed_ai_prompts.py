@@ -810,6 +810,46 @@ Format your response as JSON with this structure:
                 'temperature': 0.3,
                 'max_tokens': 3000,
             },
+            {
+                'prompt_type': 'wizard_analyze_case',
+                'title': 'Wizard Case Analysis',
+                'description': '''Runs the final case analysis in the wizard flow.
+
+Analyzes the full case details collected across all 7 wizard steps and produces:
+- Constitutional violation analysis with strength ratings
+- Case law references (if user opted in)
+- Document preview (caption, parties, facts summary, causes of action)
+- Relief recommendations
+
+Called when: User clicks "Analyze My Case" on wizard step 7.
+
+NOTE: The case_law section is conditionally included based on use_case_law flag.
+The view appends the case_law instructions to the system message when enabled.''',
+                'system_message': '''You are an expert civil rights attorney analyzing a potential Section 1983 case. \
+Analyze the following case details and provide:
+1. 'violations': An array of potential constitutional violations. For each:
+   - 'amendment': Which amendment (e.g., 'Fourth Amendment')
+   - 'violation_type': Short label (e.g., 'Unreasonable Search')
+   - 'description': 2-3 sentence explanation of why this applies
+   - 'strength': 'strong', 'moderate', or 'worth_including'
+3. 'preview': A document preview with:
+   - 'caption': The court caption text
+   - 'parties_description': Description of parties
+   - 'factual_summary': 2-3 paragraph summary of key facts
+   - 'causes_of_action': Array of cause of action titles
+   - 'relief_summary': What relief would be sought
+4. 'relief_recommendations': Array of recommended relief types:
+   - 'type': compensatory_damages, punitive_damages, declaratory_relief, injunctive_relief, attorney_fees, jury_trial
+   - 'recommended': true/false
+   - 'reason': Why this is or isn't recommended
+
+Respond with valid JSON only.''',
+                'user_prompt_template': '{case_summary}',
+                'available_variables': 'case_summary',
+                'model_name': 'gpt-4o-mini',
+                'temperature': 0.3,
+                'max_tokens': 3000,
+            },
         ]
 
         created_count = 0

@@ -48,21 +48,20 @@ The frontend and API have never been tested together in a browser. Things to ver
 ## Local Docker Setup
 
 ```bash
-# Pull latest code
-git fetch origin master
+# Pull latest code and merge this branch
+git fetch origin claude/review-handoff-merge-MdiXj
 git checkout master
-git pull origin master
+git merge origin/claude/review-handoff-merge-MdiXj
 
-# Build and start containers
+# Build and start containers (auto-runs migrate + seed_ai_prompts)
 docker-compose up --build
 
-# Run migrations (in another terminal)
-docker-compose exec web python manage.py migrate
-
-# Seed AI prompts (required for OpenAI features)
-docker-compose exec web python manage.py seed_ai_prompts
-
 # App runs at http://localhost:8000
+```
+
+**Manual seed (if needed):**
+```bash
+docker-compose exec web python manage.py seed_ai_prompts
 ```
 
 **Environment variables** — add to `docker-compose.yml` under `web.environment` or use `.env`:
@@ -81,12 +80,14 @@ EMAIL_HOST_USER=...
 EMAIL_HOST_PASSWORD=...
 ```
 
-**After deploying new code to production Render:**
+**Deploying to Render (production):**
 ```bash
-# Render auto-deploys from master. To manually push:
-git fetch origin claude/review-handoff-8xz3p
-git merge origin/claude/review-handoff-8xz3p
+# Render auto-deploys from master. To merge latest changes and deploy:
+git fetch origin claude/review-handoff-merge-MdiXj
+git checkout master
+git merge origin/claude/review-handoff-merge-MdiXj
 git push origin master
+# start.sh auto-runs: migrate + seed_ai_prompts + gunicorn
 ```
 
 ---
@@ -225,7 +226,9 @@ Maps wizard JSON → real models:
    - Document review with issue highlighting
    - Case analysis with violation strength ratings
    - Case law suggestions (opt-in)
-   - **All AI prompts stored in database via seed files** (`seed_ai_prompts` management command)
+   - **All AI prompts stored in database** — single source of truth is `seed_ai_prompts` management command
+   - **15 prompt types** seeded: parse_story, analyze_rights, suggest_relief, suggest_damages, suggest_witnesses, suggest_evidence, suggest_rights_violated, find_law_enforcement, identify_officer_agency, lookup_federal_court, review_document, rewrite_section, generate_facts, review_final_document, wizard_analyze_case
+   - Prompts auto-seed on deploy (start.sh) and local Docker startup (docker-compose.yml)
 
 4. **Video Evidence** (YouTube)
    - YouTube transcript extraction via Supadata API

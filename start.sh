@@ -8,6 +8,11 @@ python manage.py migrate --noinput || echo "migrate had issues"
 
 echo "=== Migrations done ==="
 
+echo "Seeding AI prompts..."
+python manage.py seed_ai_prompts || echo "seed_ai_prompts had issues"
+
+echo "=== Seeding done ==="
+
 echo "Testing Django imports..."
 python -c "import django; django.setup(); from config.wsgi import application; print('WSGI app loaded successfully')" || echo "Django import failed"
 

@@ -393,22 +393,26 @@ def _analyze_case_background(session_id):
         interview = session.interview_data
         case_summary = _build_case_summary(interview, session.raw_story)
 
-        # Build the analysis prompt
+        # Fetch the wizard analysis prompt from the database
+        from documents.models import AIPrompt
+        prompt = AIPrompt.objects.filter(
+            prompt_type='wizard_analyze_case',
+            is_active=True,
+        ).first()
+
+        if not prompt:
+            raise ValueError(
+                "AI prompt 'wizard_analyze_case' not found or inactive. "
+                "Run 'python manage.py seed_ai_prompts' to populate prompts."
+            )
+
+        system_message = prompt.system_message
+
+        # Conditionally add case law instructions if user opted in
         use_case_law = session.use_case_law
-
-        system_message = (
-            "You are an expert civil rights attorney analyzing a potential Section 1983 case. "
-            "Analyze the following case details and provide:\n"
-            "1. 'violations': An array of potential constitutional violations. For each:\n"
-            "   - 'amendment': Which amendment (e.g., 'Fourth Amendment')\n"
-            "   - 'violation_type': Short label (e.g., 'Unreasonable Search')\n"
-            "   - 'description': 2-3 sentence explanation of why this applies\n"
-            "   - 'strength': 'strong', 'moderate', or 'worth_including'\n"
-        )
-
         if use_case_law:
             system_message += (
-                "2. 'case_law': An array of relevant cases. For each:\n"
+                "\n2. 'case_law': An array of relevant cases. For each:\n"
                 "   - 'case_name': Full case citation (e.g., 'Graham v. Connor, 490 U.S. 386 (1989)')\n"
                 "   - 'relevance': One sentence on why this case applies\n"
                 "   - 'key_holding': The key legal principle from this case\n"
@@ -416,30 +420,15 @@ def _analyze_case_background(session_id):
                 "   Do NOT fabricate citations.\n"
             )
 
-        system_message += (
-            "3. 'preview': A document preview with:\n"
-            "   - 'caption': The court caption text\n"
-            "   - 'parties_description': Description of parties\n"
-            "   - 'factual_summary': 2-3 paragraph summary of key facts\n"
-            "   - 'causes_of_action': Array of cause of action titles\n"
-            "   - 'relief_summary': What relief would be sought\n"
-            "4. 'relief_recommendations': Array of recommended relief types:\n"
-            "   - 'type': compensatory_damages, punitive_damages, declaratory_relief, "
-            "     injunctive_relief, attorney_fees, jury_trial\n"
-            "   - 'recommended': true/false\n"
-            "   - 'reason': Why this is or isn't recommended\n"
-            "\nRespond with valid JSON only."
-        )
-
         response = ai_service.client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=prompt.model_name,
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": case_summary},
             ],
             response_format={"type": "json_object"},
-            temperature=0.3,
-            max_tokens=3000,
+            temperature=prompt.temperature,
+            max_tokens=prompt.max_tokens,
         )
 
         import json
