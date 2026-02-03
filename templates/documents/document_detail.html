@@ -85,8 +85,11 @@
             </div>
             <div class="col-md-4 text-md-end mt-3 mt-md-0">
                 {% if document.has_story %}
-                <a href="{% url 'documents:wizard' document.slug %}" class="btn btn-outline-primary">
-                    <i class="bi bi-pencil me-1"></i>Update Story
+                <a href="{% url 'documents:wizard' document.slug %}" class="btn btn-primary me-2">
+                    <i class="bi bi-magic me-1"></i>Continue Wizard
+                </a>
+                <a href="{% url 'documents:wizard' document.slug %}?view=story" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil me-1"></i>Edit Story
                 </a>
                 {% else %}
                 <a href="{% url 'documents:wizard' document.slug %}" class="btn btn-primary">

@@ -743,7 +743,7 @@ function wizardApp() {
         documentSlug: '{{ document.slug }}',
         sessionSlug: '{{ session_slug }}',
         hasSession: {{ has_session|yesno:"true,false" }},
-        currentView: '{{ wizard_status }}' === 'not_started' || !'{{ session_slug }}' ? 'story' : ('{{ wizard_status }}' === 'analyzed' ? 'analysis' : 'steps'),
+        currentView: new URLSearchParams(window.location.search).get('view') === 'story' ? 'story' : ('{{ wizard_status }}' === 'not_started' || !'{{ session_slug }}' ? 'story' : ('{{ wizard_status }}' === 'analyzed' ? 'analysis' : 'steps')),
         currentStep: {{ current_step }},
         story: '{{ document.story_text|escapejs }}',
         isProcessing: false,
