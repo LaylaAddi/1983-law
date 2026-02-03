@@ -188,6 +188,10 @@
                                     <button class="voice-btn btn btn-outline-secondary" type="button" x-show="speechSupported" @click="toggleVoiceInput('stepData[1].incident_location')"><i class="bi bi-mic"></i></button>
                                 </div>
                             </div>
+                            <div class="col-12">
+                                <label class="form-label">Address <small class="text-muted">(if known)</small></label>
+                                <input type="text" class="form-control" x-model="stepData[1].address" placeholder="e.g., 123 Main St, Suite 200">
+                            </div>
                             <div class="col-md-6">
                                 <label class="form-label">City <span x-show="aiSuggested(1, 'city')" class="ai-badge">AI suggested</span></label>
                                 <input type="text" class="form-control" x-model="stepData[1].city" placeholder="City">
@@ -205,14 +209,32 @@
                                 <select class="form-select" x-model="stepData[1].location_type">
                                     <option value="">Select...</option>
                                     <option value="sidewalk">Sidewalk / Public Street</option>
+                                    <option value="public_easement">Public Easement</option>
                                     <option value="home">Home / Residence</option>
                                     <option value="vehicle">Vehicle</option>
                                     <option value="business">Business / Store</option>
-                                    <option value="park">Park / Public Space</option>
-                                    <option value="government">Government Building</option>
+                                    <option value="park">Public Park</option>
+                                    <option value="police_station">Police Station</option>
+                                    <option value="fire_station">Fire Station</option>
+                                    <option value="courthouse">Courthouse</option>
+                                    <option value="city_hall">City Hall</option>
+                                    <option value="dmv">DMV Office</option>
+                                    <option value="post_office">Post Office</option>
+                                    <option value="public_library">Public Library</option>
+                                    <option value="government_office">Other Government Office</option>
+                                    <option value="dot_inspection">DOT Inspection Area</option>
+                                    <option value="jail_prison">Jail / Prison</option>
                                     <option value="school">School / Campus</option>
+                                    <option value="hospital">Hospital / Medical Facility</option>
+                                    <option value="public_transit">Public Transit / Bus Stop</option>
+                                    <option value="parking_lot">Parking Lot</option>
+                                    <option value="highway">Highway / Interstate</option>
                                     <option value="other">Other</option>
                                 </select>
+                            </div>
+                            <div class="col-md-6" x-show="stepData[1].location_type === 'other'" x-transition>
+                                <label class="form-label">Describe Location</label>
+                                <input type="text" class="form-control" x-model="stepData[1].location_type_other" placeholder="e.g., Private driveway, church parking lot">
                             </div>
                         </div>
                     </div>
@@ -651,7 +673,7 @@ function wizardApp() {
 
         // Step data (user-confirmed)
         stepData: {
-            1: { incident_date: '', incident_time: '', incident_location: '', city: '', state: '', location_type: '' },
+            1: { incident_date: '', incident_time: '', incident_location: '', address: '', city: '', state: '', location_type: '', location_type_other: '' },
             2: { defendants: [{ name: '', badge_number: '', title_rank: '', agency_name: '', defendant_type: 'individual', description: '' }], witnesses: [] },
             3: { summary: '', detailed_narrative: '', what_were_you_doing: '', initial_contact: '', what_was_said: '', physical_actions: '', how_it_ended: '' },
             4: { selections: [], additional_text: '' },
