@@ -917,17 +917,52 @@ function wizardApp() {
         startTerminal(commands) {
             this.terminalLines = [];
             let idx = 0;
+            let phase = 0;
+
+            // Additional lines to cycle through after initial commands
+            const processingLines = [
+                'scanning narrative for temporal markers...',
+                'cross-referencing agency databases...',
+                'mapping incident to federal jurisdiction...',
+                'analyzing use-of-force indicators...',
+                'extracting witness identifiers...',
+                'parsing dialogue and quoted statements...',
+                'evaluating Fourth Amendment implications...',
+                'checking First Amendment protections...',
+                'identifying evidence preservation needs...',
+                'reviewing Fourteenth Amendment factors...',
+                'computing damages assessment...',
+                'correlating defendant actions to violations...',
+                'building chronological incident timeline...',
+                'validating extracted entity relationships...',
+                'preparing structured case data...',
+                'finalizing extraction results...',
+            ];
+
             this.terminalInterval = setInterval(() => {
+                let line;
                 if (idx < commands.length) {
-                    this.terminalLines.push({ id: idx, text: commands[idx] });
-                    idx++;
-                    // Auto-scroll
-                    this.$nextTick(() => {
-                        const el = this.$refs.terminal;
-                        if (el) el.scrollTop = el.scrollHeight;
-                    });
+                    // Phase 1: Show initial commands
+                    line = commands[idx];
+                } else {
+                    // Phase 2: Cycle through processing lines
+                    const pIdx = (idx - commands.length) % processingLines.length;
+                    line = processingLines[pIdx];
                 }
-            }, 800);
+                this.terminalLines.push({ id: idx, text: line });
+                idx++;
+
+                // Keep max 15 lines visible to avoid growing forever
+                if (this.terminalLines.length > 15) {
+                    this.terminalLines.shift();
+                }
+
+                // Auto-scroll
+                this.$nextTick(() => {
+                    const el = this.$refs.terminal;
+                    if (el) el.scrollTop = el.scrollHeight;
+                });
+            }, 1200);
         },
 
         stopTerminal() {
