@@ -344,8 +344,8 @@ def section_edit(request, document_slug, section_type):
 
     # Block section access until user tells their story
     if not document.has_story():
-        messages.info(request, 'Please tell your story first. This helps us understand your case and pre-fill relevant sections.')
-        return redirect('documents:tell_your_story', document_slug=document.slug)
+        messages.info(request, 'Please start with the guided interview. This helps us understand your case and build your complaint.')
+        return redirect('documents:wizard', document_slug=document.slug)
 
     section = get_object_or_404(DocumentSection, document=document, section_type=section_type)
 

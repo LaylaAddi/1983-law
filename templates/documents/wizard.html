@@ -95,7 +95,37 @@
             <div class="card">
                 <div class="card-body p-4">
                     <h3 class="mb-3"><i class="bi bi-journal-text me-2"></i>Tell Your Story</h3>
-                    <p class="text-muted">Describe what happened in your own words. Include as much detail as you can about dates, locations, who was involved, and what they did. AI will extract the key details to help build your complaint.</p>
+
+                    <div class="alert alert-primary mb-3">
+                        <h5 class="alert-heading"><i class="bi bi-shield-check me-2"></i>This is a Legal Document</h5>
+                        <p class="mb-2">
+                            Your story will form the foundation of your Section 1983 civil rights complaint, which will be filed in federal court.
+                            <strong>Accuracy matters.</strong> Take your time and include as much detail as you can remember.
+                        </p>
+                        <hr>
+                        <p class="mb-0 small">
+                            <i class="bi bi-mic me-1"></i>
+                            <strong>Prefer to speak?</strong> Click the microphone icon to dictate your story using voice.
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <h5>What to Include:</h5>
+                        <p class="text-muted">
+                            Describe what happened in your own words. Don't worry about legal language - just tell us your story
+                            as if you're explaining it to a friend. The more detail you provide, the better we can help build your case.
+                        </p>
+                        <ul class="text-muted small">
+                            <li><strong>When and where</strong> did this happen? (dates, times, addresses, city, state)</li>
+                            <li><strong>Who was involved?</strong> (officer names, badge numbers, agencies)</li>
+                            <li><strong>What was said?</strong> (quote conversations as accurately as possible)</li>
+                            <li><strong>What was done?</strong> (physical actions, arrests, searches)</li>
+                            <li><strong>What harm did you suffer?</strong> (injuries, emotional distress, financial losses)</li>
+                            <li><strong>Who else saw this?</strong> (witnesses, bystanders)</li>
+                            <li><strong>Do you have evidence?</strong> (video, photos, documents)</li>
+                            <li><strong>Were you recording?</strong> (phone, camera, dashcam - mention the device)</li>
+                        </ul>
+                    </div>
 
                     <div class="mb-3">
                         {% if test_stories %}
@@ -107,10 +137,10 @@
                             </div>
                             <label for="testStorySelect" class="form-label fw-bold">Select Sample Story</label>
                             <select id="testStorySelect" class="form-select mb-2"
-                                    @change="if ($event.target.selectedOptions[0].dataset.story) story = $event.target.selectedOptions[0].dataset.story">
+                                    @change="let id = parseInt($event.target.value); if (id && testStories[id]) story = testStories[id];">
                                 <option value="">-- Choose a test story --</option>
                                 {% for s in test_stories %}
-                                <option value="{{ s.id }}" data-story="{{ s.story|escapejs }}">
+                                <option value="{{ s.id }}">
                                     {{ s.id }}. {{ s.title }}
                                 </option>
                                 {% endfor %}
@@ -132,6 +162,24 @@
                         </div>
                         <div class="form-text" x-show="speechSupported">
                             <i class="bi bi-mic me-1"></i>Click the microphone to dictate your story
+                        </div>
+                    </div>
+
+                    <!-- Tips -->
+                    <div class="card mb-3 border-info" x-show="!isProcessing">
+                        <div class="card-header bg-info text-white py-2">
+                            <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Tips for a Good Story</h6>
+                        </div>
+                        <div class="card-body py-2">
+                            <ul class="mb-0 small">
+                                <li class="mb-1"><strong>Be specific about dates and times</strong> - "August 8th at 1:15 PM" instead of "last week"</li>
+                                <li class="mb-1"><strong>Name the people involved</strong> - Include officer names, badge numbers if you know them</li>
+                                <li class="mb-1"><strong>Describe the location</strong> - Include the city, state, and specific address or intersection</li>
+                                <li class="mb-1"><strong>Quote what was said</strong> - Include dialogue as accurately as you can remember</li>
+                                <li class="mb-1"><strong>Describe physical actions</strong> - Did anyone push, grab, handcuff, or use a weapon?</li>
+                                <li class="mb-1"><strong>Mention witnesses</strong> - Were there other people who saw what happened? Were they recording?</li>
+                                <li><strong>Note any evidence</strong> - Video, photos, documents, medical records? Mention the device you used.</li>
+                            </ul>
                         </div>
                     </div>
 
@@ -630,6 +678,10 @@
 
 </div>
 
+{% if test_stories %}
+{{ test_stories|json_script:"test-stories-data" }}
+{% endif %}
+
 <!-- Alpine.js -->
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js" defer></script>
 
@@ -650,8 +702,18 @@ function getCookie(name) {
 }
 
 function wizardApp() {
+    // Build test stories lookup (id → story text) from JSON script tag
+    const _testStories = {};
+    {% if test_stories %}
+    try {
+        const _raw = JSON.parse(document.getElementById('test-stories-data').textContent);
+        _raw.forEach(s => { _testStories[s.id] = s.story; });
+    } catch(e) {}
+    {% endif %}
+
     return {
         // State
+        testStories: _testStories,
         documentSlug: '{{ document.slug }}',
         sessionSlug: '{{ session_slug }}',
         hasSession: {{ has_session|yesno:"true,false" }},
