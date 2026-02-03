@@ -263,6 +263,46 @@ def wizard_complete(request, session_slug):
 # Background processing functions
 # =============================================================================
 
+import re
+
+
+def _convert_to_24h(time_str):
+    """Convert AI time strings like '2:00 PM', '2pm', '14:00' to 'HH:MM' for HTML time input."""
+    if not time_str:
+        return ''
+    time_str = time_str.strip()
+
+    # Already in HH:MM 24-hour format?
+    match = re.match(r'^(\d{1,2}):(\d{2})$', time_str)
+    if match:
+        h, m = int(match.group(1)), int(match.group(2))
+        if 0 <= h <= 23 and 0 <= m <= 59:
+            return f'{h:02d}:{m:02d}'
+
+    # Patterns like "2:00 PM", "2:30PM", "2:00 pm", "11:15 AM"
+    match = re.match(r'^(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)$', time_str)
+    if match:
+        h, m, ampm = int(match.group(1)), int(match.group(2)), match.group(3).upper()
+        if ampm == 'PM' and h != 12:
+            h += 12
+        elif ampm == 'AM' and h == 12:
+            h = 0
+        return f'{h:02d}:{m:02d}'
+
+    # Patterns like "2 PM", "2pm", "11 AM", "3PM"
+    match = re.match(r'^(\d{1,2})\s*(am|pm|AM|PM)$', time_str)
+    if match:
+        h, ampm = int(match.group(1)), match.group(2).upper()
+        if ampm == 'PM' and h != 12:
+            h += 12
+        elif ampm == 'AM' and h == 12:
+            h = 0
+        return f'{h:02d}:00'
+
+    # Couldn't parse — return empty so the field stays blank rather than showing garbage
+    return ''
+
+
 def _extract_story_background(session_id, story_text):
     """Background thread: parse story with AI and populate ai_extracted."""
     try:
@@ -290,9 +330,13 @@ def _extract_story_background(session_id, story_text):
         # Step 1: When & Where
         overview = sections.get('incident_overview', {})
         if overview:
+            # Convert AI time format (e.g., "2:00 PM") to HTML time input format ("14:00")
+            raw_time = overview.get('incident_time', '') or ''
+            incident_time = _convert_to_24h(raw_time)
+
             ai_steps['step_1'] = {
                 'incident_date': overview.get('incident_date', '') or '',
-                'incident_time': overview.get('incident_time', '') or '',
+                'incident_time': incident_time,
                 'incident_location': overview.get('incident_location', '') or '',
                 'address': overview.get('address', '') or '',
                 'city': overview.get('city', '') or '',

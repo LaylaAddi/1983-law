@@ -53,6 +53,7 @@
     [data-theme="dark"] .alert-primary hr { border-color: #4a7ab0; }
     [data-theme="dark"] .card.border-info { border-color: #2c5a6a !important; }
     [data-theme="dark"] .card.border-info .card-header.bg-info { background-color: #1a3a4a !important; border-color: #2c5a6a; }
+    [data-theme="dark"] .alert-light { background-color: #2a2a3e; border-color: #3a3a4e; color: #e0e0e0; }
     [data-theme="dark"] .preview-section { background: #1a1a2e; color: #e0e0e0; border-color: #333; }
 </style>
 {% endblock %}
@@ -220,6 +221,17 @@
     <!-- ==================== STEP VIEWS ==================== -->
     <div x-show="currentView === 'steps'" class="row justify-content-center">
         <div class="col-lg-8">
+
+            <!-- Edit Story Banner -->
+            <div class="alert alert-light border d-flex align-items-center justify-content-between mb-3 py-2">
+                <div>
+                    <i class="bi bi-pencil-square me-1"></i>
+                    <span class="small">AI extracted the details below from your story. Review and correct each step.</span>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" @click="currentView = 'story'">
+                    <i class="bi bi-arrow-left me-1"></i>Edit Story
+                </button>
+            </div>
 
             <!-- STEP 1: When & Where -->
             <div class="step-card" :class="{ 'active': currentStep === 1 }">
