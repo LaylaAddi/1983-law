@@ -68,21 +68,24 @@ Be conservative: If uncertain whether a place has local police, assume it does N
                 'description': '''Analyzes the user's story about their civil rights incident and extracts structured data.
 
 This is the MAIN prompt that processes "Tell Your Story" input. It extracts:
-- Incident details (date, time, location)
-- Officer/defendant information
-- Witness information
-- Evidence mentioned
-- Damages suffered
+- Incident details (date, time, location, address)
+- Officer/defendant information (individual officers AND government agencies)
+- Witness information (including whether witnesses were recording)
+- Evidence mentioned (plaintiff recordings, body cams, surveillance, etc.)
+- Damages suffered (physical, emotional, financial, medical, lost wages)
 - Rights that may have been violated
+- Recording details (was plaintiff recording? what device?)
 
-Called when: User submits their story in the "Tell Your Story" step.''',
-                'system_message': 'You are a legal document assistant that extracts structured information from personal narratives. Be thorough - extract all information stated and reasonably inferred from context. Include evidence even if it was deleted or seized. Always respond with valid JSON.',
-                'user_prompt_template': '''Analyze this personal account of a civil rights incident and extract specific information that can be used to fill out a Section 1983 complaint form.
+Called when: User submits their story in the wizard or "Tell Your Story" step.
+Field names match wizard stepData keys directly for clean mapping.''',
+                'system_message': 'You are a legal document assistant that extracts structured information from personal narratives about civil rights violations. Be EXTREMELY thorough - extract every detail stated AND reasonably inferred from context. If the plaintiff mentions recording, that is evidence they HAVE. If officers had body cameras, that is evidence to OBTAIN. Include evidence even if it was deleted or seized. Always respond with valid JSON.',
+                'user_prompt_template': '''Analyze this personal account of a civil rights incident and extract ALL possible information for a Section 1983 complaint.
 
 IMPORTANT RULES:
-- Extract ALL information from the text, including details that can be inferred from context
-- Example: "city hall in Oklahoma City" means location="City Hall", city="Oklahoma City", state="OK", location_type="government building"
-- Example: "I was recording" means was_recording=true
+- Extract EVERY detail from the text, including details inferred from context
+- Example: "city hall in Oklahoma City" → incident_location="City Hall", address="", city="Oklahoma City", state="OK", location_type="city_hall"
+- Example: "I was recording on my Samsung" → was_recording=true, recording_device="Samsung phone"
+- Example: "my friend was filming" → witness with was_recording=true
 - For dates/times, extract if mentioned in any format (e.g., "last Tuesday", "March 15th", "around 3pm")
 - If the story contains "Not applicable or unknown:", DO NOT ask questions about those topics
 
@@ -106,6 +109,12 @@ AGENCY INFERENCE RULES - CRITICAL:
 - When uncertain if a place has local police, mark agency_inferred=true and use "Unknown - verify jurisdiction"
 - Set "agency_inferred" to true when you infer the agency, false when explicitly stated
 
+DEFENDANT TYPE RULES:
+- "individual" = a specific person (officer, guard, clerk, etc.)
+- "agency" = a government entity (police department, sheriff's office, city, county)
+- ALWAYS include BOTH the individual officers AND their employing agency as separate defendants
+- Example: If "Officer Smith of Tampa PD" → two defendants: Officer Smith (individual) + Tampa Police Department (agency)
+
 USER'S STORY:
 {story_text}
 
@@ -115,37 +124,42 @@ Extract information for the following sections. Fill in as many fields as possib
     "incident_overview": {{
         "incident_date": "YYYY-MM-DD format or partial date, null if not mentioned",
         "incident_time": "HH:MM AM/PM format ONLY if AM/PM is clear, description like 'afternoon' if general, null if not mentioned or if AM/PM is ambiguous",
-        "incident_location": "address or location name like 'City Hall', 'Main Street', etc.",
+        "incident_location": "location name like 'City Hall', 'Corner of 5th and Main St', etc.",
+        "address": "street address if mentioned or known (e.g., '123 Main St'), empty string if not known",
         "city": "city name - extract from context",
         "state": "two-letter state code - infer from city if possible",
-        "location_type": "type of location: 'government building', 'public sidewalk', etc.",
-        "was_recording": "true if recording/filming mentioned, false if explicitly not, null if unknown",
-        "recording_device": "device used: 'cell phone', 'camera', etc. if mentioned"
+        "location_type": "MUST be one of these exact keys: sidewalk, public_easement, home, vehicle, business, park, police_station, fire_station, courthouse, city_hall, dmv, post_office, public_library, government_office, dot_inspection, jail_prison, school, hospital, public_transit, parking_lot, highway, other",
+        "location_type_other": "description if location_type is 'other', empty string otherwise",
+        "was_recording": true/false/null,
+        "recording_device": "device used: 'cell phone', 'Samsung phone', 'GoPro', etc. if mentioned, empty string otherwise"
     }},
     "incident_narrative": {{
         "summary": "2-3 sentence summary of what happened, written in third person",
-        "detailed_narrative": "full chronological account, written in third person",
+        "detailed_narrative": "full chronological account, written in third person - be thorough",
         "what_were_you_doing": "what the plaintiff was doing before/during incident",
         "initial_contact": "how the encounter with officials began",
-        "what_was_said": "dialogue or statements made by parties",
-        "physical_actions": "any physical actions taken by anyone",
-        "how_it_ended": "how the encounter concluded"
+        "what_was_said": "ALL dialogue or statements made by any parties - quote when possible",
+        "physical_actions": "ALL physical actions taken by anyone - be specific about force used",
+        "how_it_ended": "how the encounter concluded - arrests, citations, release, etc."
     }},
     "defendants": [
         {{
-            "name": "officer/official name if mentioned, null otherwise",
-            "badge_number": "badge number if mentioned, null otherwise",
-            "title": "title like 'Officer', 'Sergeant', etc. if mentioned",
-            "agency": "department or agency name - use County Sheriff for small towns",
-            "agency_inferred": "true if agency was inferred from location",
-            "description": "description of this defendant's role/actions"
+            "name": "officer/official name if mentioned, 'Unknown Officer' if unnamed but described",
+            "badge_number": "badge number if mentioned, empty string otherwise",
+            "title_rank": "title like 'Officer', 'Sergeant', 'Deputy', 'Security Guard', etc.",
+            "agency_name": "department or agency name - use County Sheriff for small towns",
+            "agency_inferred": true/false,
+            "defendant_type": "individual or agency",
+            "description": "description of this defendant's role/actions in the incident"
         }}
     ],
     "witnesses": [
         {{
-            "name": "witness name if known, or descriptive label like 'bystander', 'store employee'",
-            "description": "brief description of who they are",
-            "what_they_saw": "what they witnessed"
+            "name": "witness name if known, or descriptive label like 'bystander', 'store employee', 'friend'",
+            "description": "brief description of who they are and their relationship to plaintiff",
+            "what_they_saw": "what they witnessed - be specific",
+            "was_recording": true/false/null,
+            "recording_device": "device used if mentioned, empty string otherwise"
         }}
     ],
     "evidence": [
@@ -154,15 +168,41 @@ Extract information for the following sections. Fill in as many fields as possib
             "title": "brief title like 'My cell phone recording' or 'Body camera footage'",
             "description": "what this evidence shows or contains",
             "date_created": "YYYY-MM-DD if mentioned, use incident date if evidence was captured during incident, null otherwise",
-            "is_in_possession": "true if user has/captured this evidence, false if it needs to be requested (body cam, dash cam, surveillance)",
-            "needs_subpoena": "true if evidence needs to be subpoenaed from police/third party",
+            "is_in_possession": true/false,
+            "needs_subpoena": true/false,
             "notes": "additional details like duration, file format, or how to obtain"
         }}
     ],
-    "damages": {{...}},
-    "rights_violated": {{...}},
-    "questions_to_ask": []
+    "damages": {{
+        "physical_injuries": "describe ALL physical injuries mentioned (bruises, cuts, pain, etc.) or empty string",
+        "medical_treatment": "describe any medical treatment received or needed (ER visit, ambulance, etc.) or empty string",
+        "emotional_distress": "describe emotional/psychological impact (anxiety, fear, PTSD, humiliation, etc.) or empty string",
+        "financial_losses": "describe financial losses (property damage, phone broken, car towed, etc.) or empty string",
+        "lost_wages": "describe any missed work or lost income mentioned, or empty string",
+        "ongoing_effects": "describe any ongoing or lasting effects mentioned, or empty string"
+    }},
+    "rights_violated": {{
+        "suggested_violations": [
+            {{
+                "right": "the specific right violated (e.g., 'Fourth Amendment - Excessive Force', 'First Amendment - Recording')",
+                "amendment": "first|fourth|fifth|fourteenth",
+                "explanation": "1-2 sentence explanation of how this right was violated based on the facts"
+            }}
+        ]
+    }},
+    "questions_to_ask": [
+        "question text here - ask about missing critical details"
+    ]
 }}
+
+EVIDENCE EXTRACTION - BE THOROUGH:
+- If plaintiff was recording → include their recording as evidence they HAVE
+- If officers wore body cameras → include body cam footage as evidence to OBTAIN
+- If dashcam likely exists (traffic stop) → include dashcam as evidence to OBTAIN
+- If incident was near businesses → suggest surveillance footage to OBTAIN
+- If plaintiff was injured → suggest medical records as evidence to OBTAIN
+- If there was an arrest → suggest arrest report, booking records as evidence to OBTAIN
+- 911 calls → suggest 911 recordings as evidence to OBTAIN
 
 QUESTIONS TO ASK - Generate follow-up questions for CRITICAL missing information:
 
@@ -178,7 +218,7 @@ Respond with ONLY the JSON object.''',
                 'available_variables': 'story_text',
                 'model_name': 'gpt-4o-mini',
                 'temperature': 0.1,
-                'max_tokens': 3000,
+                'max_tokens': 4000,
             },
             {
                 'prompt_type': 'analyze_rights',

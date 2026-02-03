@@ -291,34 +291,63 @@ def _extract_story_background(session_id, story_text):
         overview = sections.get('incident_overview', {})
         if overview:
             ai_steps['step_1'] = {
-                'incident_date': overview.get('incident_date', ''),
-                'incident_time': overview.get('incident_time', ''),
-                'incident_location': overview.get('incident_location', ''),
-                'city': overview.get('city', ''),
-                'state': overview.get('state', ''),
-                'location_type': overview.get('location_type', ''),
+                'incident_date': overview.get('incident_date', '') or '',
+                'incident_time': overview.get('incident_time', '') or '',
+                'incident_location': overview.get('incident_location', '') or '',
+                'address': overview.get('address', '') or '',
+                'city': overview.get('city', '') or '',
+                'state': overview.get('state', '') or '',
+                'location_type': overview.get('location_type', '') or '',
+                'location_type_other': overview.get('location_type_other', '') or '',
+                'was_recording': overview.get('was_recording'),
+                'recording_device': overview.get('recording_device', '') or '',
             }
 
-        # Step 2: Who
+        # Step 2: Who — field names now match wizard directly
+        # (prompt returns title_rank, agency_name, defendant_type)
         defendants = sections.get('defendants', [])
         witnesses = sections.get('witnesses', [])
         if defendants or witnesses:
+            # Normalize defendant fields (handle old prompt format gracefully)
+            normalized_defendants = []
+            for d in defendants:
+                normalized_defendants.append({
+                    'name': d.get('name', '') or '',
+                    'badge_number': d.get('badge_number', '') or '',
+                    'title_rank': d.get('title_rank', '') or d.get('title', '') or '',
+                    'agency_name': d.get('agency_name', '') or d.get('agency', '') or '',
+                    'defendant_type': d.get('defendant_type', 'individual') or 'individual',
+                    'description': d.get('description', '') or '',
+                    'agency_inferred': d.get('agency_inferred', False),
+                })
+
+            # Normalize witness fields
+            normalized_witnesses = []
+            for w in witnesses:
+                normalized_witnesses.append({
+                    'name': w.get('name', '') or '',
+                    'description': w.get('description', '') or '',
+                    'what_they_saw': w.get('what_they_saw', '') or '',
+                    'was_recording': w.get('was_recording'),
+                    'recording_device': w.get('recording_device', '') or '',
+                })
+
             ai_steps['step_2'] = {
-                'defendants': defendants,
-                'witnesses': witnesses,
+                'defendants': normalized_defendants,
+                'witnesses': normalized_witnesses,
             }
 
         # Step 3: What happened
         narrative = sections.get('incident_narrative', {})
         if narrative:
             ai_steps['step_3'] = {
-                'summary': narrative.get('summary', ''),
-                'detailed_narrative': narrative.get('detailed_narrative', ''),
-                'what_were_you_doing': narrative.get('what_were_you_doing', ''),
-                'initial_contact': narrative.get('initial_contact', ''),
-                'what_was_said': narrative.get('what_was_said', ''),
-                'physical_actions': narrative.get('physical_actions', ''),
-                'how_it_ended': narrative.get('how_it_ended', ''),
+                'summary': narrative.get('summary', '') or '',
+                'detailed_narrative': narrative.get('detailed_narrative', '') or '',
+                'what_were_you_doing': narrative.get('what_were_you_doing', '') or '',
+                'initial_contact': narrative.get('initial_contact', '') or '',
+                'what_was_said': narrative.get('what_was_said', '') or '',
+                'physical_actions': narrative.get('physical_actions', '') or '',
+                'how_it_ended': narrative.get('how_it_ended', '') or '',
             }
 
         # Step 4: Why (from rights_violated)
@@ -329,20 +358,35 @@ def _extract_story_background(session_id, story_text):
             selections = []
             for v in violations:
                 right = v.get('right', '').lower()
-                if 'search' in right or 'seizure' in right:
+                # Check multiple keywords per category for better matching
+                if 'search' in right and 'warrant' not in right:
                     selections.append('searched_without_warrant')
-                elif 'arrest' in right:
+                if 'unreasonable search' in right or 'illegal search' in right or 'warrantless search' in right:
+                    selections.append('searched_without_warrant')
+                if 'arrest' in right or 'detention' in right or 'detain' in right:
                     selections.append('arrested_no_cause')
-                elif 'force' in right:
+                if 'force' in right or 'brutal' in right or 'assault' in right or 'taser' in right or 'pepper spray' in right:
                     selections.append('excessive_force')
-                elif 'speech' in right or 'first' in right:
+                if 'seizure' in right or 'property' in right or 'confiscat' in right:
+                    selections.append('unlawful_seizure')
+                if 'speech' in right or 'recording' in right or 'film' in right or 'press' in right:
                     selections.append('punished_for_speech')
-                elif 'equal' in right or 'discrimination' in right:
+                if 'recording' in right or 'film' in right or 'photograph' in right:
+                    selections.append('punished_for_recording')
+                if 'assembl' in right or 'protest' in right or 'gather' in right:
+                    selections.append('punished_for_assembly')
+                if 'racial' in right or 'race' in right or 'profil' in right:
                     selections.append('racial_discrimination')
-                elif 'due process' in right:
+                if 'gender' in right or 'sex' in right:
+                    selections.append('gender_discrimination')
+                if 'due process' in right:
                     selections.append('denied_due_process')
-                elif 'self-incrimination' in right or 'fifth' in right:
+                if 'self-incrimination' in right or 'miranda' in right or 'fifth' in right or 'forced statement' in right:
                     selections.append('forced_statements')
+                if 'medical' in right or 'deliberate indifference' in right:
+                    selections.append('denied_medical_care')
+                if 'retaliat' in right:
+                    selections.append('retaliation')
             ai_steps['step_4'] = {
                 'selections': list(set(selections)),
                 'ai_violations': violations,  # Keep the full AI output for reference
@@ -352,10 +396,12 @@ def _extract_story_background(session_id, story_text):
         damages = sections.get('damages', {})
         if damages:
             ai_steps['step_5'] = {
-                'physical_injuries': damages.get('physical_injuries', ''),
-                'emotional_distress': damages.get('emotional_distress', ''),
-                'financial_losses': damages.get('financial_losses', ''),
-                'ongoing_effects': damages.get('other_damages', ''),
+                'physical_injuries': damages.get('physical_injuries', '') or '',
+                'medical_treatment': damages.get('medical_treatment', '') or '',
+                'emotional_distress': damages.get('emotional_distress', '') or '',
+                'financial_losses': damages.get('financial_losses', '') or '',
+                'lost_wages': damages.get('lost_wages', '') or '',
+                'ongoing_effects': damages.get('ongoing_effects', '') or damages.get('other_damages', '') or '',
             }
 
         # Step 6: Evidence
@@ -364,7 +410,9 @@ def _extract_story_background(session_id, story_text):
             ai_steps['step_6'] = {
                 'items': evidence,
                 'evidence_types': list(set(
-                    e.get('type', '') for e in evidence if e.get('type')
+                    e.get('evidence_type', '') or e.get('type', '')
+                    for e in evidence
+                    if e.get('evidence_type') or e.get('type')
                 )),
             }
 

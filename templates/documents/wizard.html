@@ -673,10 +673,10 @@ function wizardApp() {
 
         // Step data (user-confirmed)
         stepData: {
-            1: { incident_date: '', incident_time: '', incident_location: '', address: '', city: '', state: '', location_type: '', location_type_other: '' },
+            1: { incident_date: '', incident_time: '', incident_location: '', address: '', city: '', state: '', location_type: '', location_type_other: '', was_recording: null, recording_device: '' },
             2: { defendants: [{ name: '', badge_number: '', title_rank: '', agency_name: '', defendant_type: 'individual', description: '' }], witnesses: [] },
             3: { summary: '', detailed_narrative: '', what_were_you_doing: '', initial_contact: '', what_was_said: '', physical_actions: '', how_it_ended: '' },
-            4: { selections: [], additional_text: '' },
+            4: { selections: [], additional_text: '', ai_violations: [] },
             5: { physical_injuries: '', medical_treatment: '', emotional_distress: '', financial_losses: '', lost_wages: '', ongoing_effects: '' },
             6: { evidence_types: [], items: [], youtube_url: '' },
             7: { use_case_law: true },
@@ -746,13 +746,27 @@ function wizardApp() {
                 const key = 'step_' + i;
                 if (ai[key]) {
                     for (const [field, value] of Object.entries(ai[key])) {
-                        if (value && !this.stepData[i][field]) {
-                            if (Array.isArray(value) && Array.isArray(this.stepData[i][field])) {
-                                if (this.stepData[i][field].length === 0 ||
-                                    (this.stepData[i][field].length === 1 && !this.stepData[i][field][0].name)) {
-                                    this.stepData[i][field] = value;
-                                }
-                            } else if (typeof value === 'string' || typeof value === 'boolean') {
+                        // Skip null/undefined but allow false and empty arrays
+                        if (value === null || value === undefined) continue;
+                        // Skip if field doesn't exist in stepData
+                        if (!(field in this.stepData[i])) continue;
+
+                        const current = this.stepData[i][field];
+
+                        if (Array.isArray(value) && Array.isArray(current)) {
+                            // Only overwrite arrays if current is empty or has a single blank entry
+                            if (current.length === 0 ||
+                                (current.length === 1 && !current[0].name)) {
+                                this.stepData[i][field] = value;
+                            }
+                        } else if (typeof value === 'boolean') {
+                            // Always set booleans (was_recording: true/false)
+                            if (current === null || current === undefined) {
+                                this.stepData[i][field] = value;
+                            }
+                        } else if (typeof value === 'string' && value) {
+                            // Only set strings if current is empty
+                            if (!current) {
                                 this.stepData[i][field] = value;
                             }
                         }
