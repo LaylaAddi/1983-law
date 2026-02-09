@@ -1141,6 +1141,18 @@ function wizardApp() {
         async completeWizard() {
             this.isCompleting = true;
             try {
+                // Save ALL step data before completing to ensure nothing is lost
+                for (let step = 1; step <= 7; step++) {
+                    await fetch(`/api/v1/wizard/${this.sessionSlug}/step/${step}/`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken'),
+                        },
+                        body: JSON.stringify(this.stepData[step]),
+                    });
+                }
+
                 const response = await fetch(`/api/v1/wizard/${this.sessionSlug}/complete/`, {
                     method: 'POST',
                     headers: {
