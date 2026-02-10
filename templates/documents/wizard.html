@@ -700,9 +700,10 @@
                                         <div class="flex-grow-1">
                                             <div class="d-flex justify-content-between align-items-start">
                                                 <div class="fw-bold include-label" x-text="caseRef.case_name"></div>
-                                                <a :href="'https://scholar.google.com/scholar?q=' + encodeURIComponent('\"' + (caseRef.case_name || '') + '\"')"
+                                                <a :href="'https://scholar.google.com/scholar?q=' + encodeURIComponent('&quot;' + (caseRef.case_name || '') + '&quot;')"
                                                    target="_blank" rel="noopener noreferrer"
                                                    class="research-link text-primary ms-2 text-nowrap"
+                                                   @click.stop
                                                    title="Research this case on Google Scholar">
                                                     <i class="bi bi-box-arrow-up-right"></i> Research
                                                 </a>
