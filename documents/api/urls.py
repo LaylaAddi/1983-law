@@ -18,4 +18,5 @@ urlpatterns = [
     path('wizard/<str:session_slug>/analyze/', views.wizard_analyze, name='wizard_analyze'),
     path('wizard/<str:session_slug>/analysis/', views.wizard_analysis_status, name='wizard_analysis_status'),
     path('wizard/<str:session_slug>/complete/', views.wizard_complete, name='wizard_complete'),
+    path('wizard/<str:session_slug>/analysis-selections/', views.wizard_analysis_selections, name='wizard_analysis_selections'),
 ]

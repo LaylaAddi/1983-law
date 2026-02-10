@@ -44,8 +44,20 @@
     .terminal-cursor { display: inline-block; width: 8px; height: 14px; background: #00ff88; animation: blink 1s step-end infinite; vertical-align: middle; }
     @keyframes blink { 50% { opacity: 0; } }
 
-    .preview-section { background: #fff; color: #000; padding: 2rem; border: 1px solid #ddd; border-radius: 4px; font-family: 'Times New Roman', serif; line-height: 2; }
-    .preview-section h4 { font-family: 'Times New Roman', serif; font-weight: bold; text-transform: uppercase; text-align: center; }
+    /* Include toggle for analysis cards */
+    .analysis-card .include-toggle { opacity: 0.7; transition: opacity 0.2s; }
+    .analysis-card .include-toggle:hover { opacity: 1; }
+    .analysis-card.excluded { opacity: 0.5; border-left-style: dashed; }
+    .analysis-card.excluded .include-label { text-decoration: line-through; }
+    .case-law-card { transition: opacity 0.2s; }
+    .case-law-card.excluded { opacity: 0.5; }
+    .research-link { font-size: 0.8rem; text-decoration: none; }
+    .research-link:hover { text-decoration: underline; }
+
+    /* Violation explanation modal */
+    .violation-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050; display: flex; align-items: center; justify-content: center; }
+    .violation-modal-content { background: var(--bs-body-bg, #fff); border-radius: 12px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem; position: relative; }
+    .violation-modal-content .close-btn { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--bs-body-color); }
 
     /* Dark mode overrides */
     [data-theme="dark"] .alert-primary { background-color: #1e3a5f; border-color: #2c5282; color: #e0e0e0; }
@@ -54,7 +66,7 @@
     [data-theme="dark"] .card.border-info { border-color: #2c5a6a !important; }
     [data-theme="dark"] .card.border-info .card-header.bg-info { background-color: #1a3a4a !important; border-color: #2c5a6a; }
     [data-theme="dark"] .alert-light { background-color: #2a2a3e; border-color: #3a3a4e; color: #e0e0e0; }
-    [data-theme="dark"] .preview-section { background: #1a1a2e; color: #e0e0e0; border-color: #333; }
+    [data-theme="dark"] .violation-modal-content { background: #1a1a2e; color: #e0e0e0; }
 </style>
 {% endblock %}
 
@@ -629,16 +641,40 @@
 
                 <h3 class="mb-4"><i class="bi bi-lightning me-2"></i>Case Analysis</h3>
 
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Select what to include.</strong> Toggle items on or off to control what goes into your complaint.
+                    Items marked <span class="strength-badge strong">strong</span> and <span class="strength-badge moderate">moderate</span> are included by default.
+                </div>
+
                 <!-- Potential Violations -->
-                <h5 class="mb-3">Potential Violations</h5>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Potential Violations</h5>
+                    <small class="text-muted" x-text="(analysisData.violations || []).filter(v => v.included !== false).length + ' of ' + (analysisData.violations || []).length + ' included'"></small>
+                </div>
                 <template x-for="(violation, i) in analysisData.violations || []" :key="'v'+i">
-                    <div class="analysis-card" :class="violation.strength">
+                    <div class="analysis-card" :class="[violation.strength, violation.included === false ? 'excluded' : '']">
                         <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <span class="fw-bold" x-text="violation.amendment"></span>
-                                <span class="ms-2 text-muted" x-text="violation.violation_type"></span>
+                            <div class="d-flex align-items-start flex-grow-1">
+                                <div class="form-check form-switch include-toggle me-3 mt-1">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           :id="'v_toggle_' + i"
+                                           :checked="violation.included !== false"
+                                           @change="violation.included = $event.target.checked; saveAnalysisSelections()">
+                                </div>
+                                <div>
+                                    <span class="fw-bold include-label" x-text="violation.amendment"></span>
+                                    <span class="ms-2 text-muted include-label" x-text="violation.violation_type"></span>
+                                </div>
                             </div>
-                            <span class="strength-badge" :class="violation.strength" x-text="(violation.strength || '').replace('_', ' ')"></span>
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="#" class="research-link text-primary"
+                                   @click.prevent="showViolationExplanation(violation)"
+                                   title="Learn more about this violation">
+                                    <i class="bi bi-question-circle"></i> Learn more
+                                </a>
+                                <span class="strength-badge" :class="violation.strength" x-text="(violation.strength || '').replace('_', ' ')"></span>
+                            </div>
                         </div>
                         <p class="mb-0" x-text="violation.description"></p>
                     </div>
@@ -647,43 +683,40 @@
                 <!-- Case Law -->
                 <template x-if="analysisData.case_law && analysisData.case_law.length > 0">
                     <div class="mt-4">
-                        <h5 class="mb-3"><i class="bi bi-book me-2"></i>Supporting Case Law</h5>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0"><i class="bi bi-book me-2"></i>Supporting Case Law</h5>
+                            <small class="text-muted" x-text="(analysisData.case_law || []).filter(c => c.included !== false).length + ' of ' + (analysisData.case_law || []).length + ' included'"></small>
+                        </div>
                         <template x-for="(caseRef, i) in analysisData.case_law" :key="'c'+i">
-                            <div class="card mb-2">
+                            <div class="card mb-2 case-law-card" :class="caseRef.included === false ? 'excluded' : ''">
                                 <div class="card-body p-3">
-                                    <div class="fw-bold" x-text="caseRef.case_name"></div>
-                                    <p class="mb-1 text-muted" x-text="caseRef.relevance"></p>
-                                    <small class="text-muted fst-italic" x-text="caseRef.key_holding"></small>
+                                    <div class="d-flex align-items-start">
+                                        <div class="form-check form-switch include-toggle me-3 mt-1">
+                                            <input class="form-check-input" type="checkbox" role="switch"
+                                                   :id="'c_toggle_' + i"
+                                                   :checked="caseRef.included !== false"
+                                                   @change="caseRef.included = $event.target.checked; saveAnalysisSelections()">
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="fw-bold include-label" x-text="caseRef.case_name"></div>
+                                                <a :href="'https://scholar.google.com/scholar?q=' + encodeURIComponent('\"' + (caseRef.case_name || '') + '\"')"
+                                                   target="_blank" rel="noopener noreferrer"
+                                                   class="research-link text-primary ms-2 text-nowrap"
+                                                   title="Research this case on Google Scholar">
+                                                    <i class="bi bi-box-arrow-up-right"></i> Research
+                                                </a>
+                                            </div>
+                                            <p class="mb-1 text-muted" x-text="caseRef.relevance"></p>
+                                            <small class="text-muted fst-italic" x-text="caseRef.key_holding"></small>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </template>
                         <div class="alert alert-warning mt-2">
                             <i class="bi bi-exclamation-triangle me-1"></i>
                             AI-suggested citations. A legal professional should verify these before filing.
-                        </div>
-                    </div>
-                </template>
-
-                <!-- Document Preview -->
-                <template x-if="analysisData.preview">
-                    <div class="mt-4">
-                        <h5 class="mb-3"><i class="bi bi-file-earmark-text me-2"></i>Complaint Preview</h5>
-                        <div class="preview-section">
-                            <h4 x-text="analysisData.preview.caption || 'COMPLAINT'"></h4>
-                            <p x-text="analysisData.preview.parties_description"></p>
-                            <hr>
-                            <div style="white-space: pre-line;" x-text="analysisData.preview.factual_summary"></div>
-                            <hr>
-                            <template x-if="analysisData.preview.causes_of_action">
-                                <div>
-                                    <h4>CAUSES OF ACTION</h4>
-                                    <template x-for="(cause, i) in analysisData.preview.causes_of_action" :key="'cause'+i">
-                                        <p><strong x-text="'Count ' + (i+1) + ': '"></strong><span x-text="cause"></span></p>
-                                    </template>
-                                </div>
-                            </template>
-                            <hr>
-                            <p><strong>RELIEF:</strong> <span x-text="analysisData.preview.relief_summary"></span></p>
                         </div>
                     </div>
                 </template>
@@ -698,6 +731,34 @@
                         <span x-show="isCompleting"><span class="spinner-border spinner-border-sm me-1"></span>Building...</span>
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Violation Explanation Modal -->
+    <div x-show="showingViolationModal" x-transition class="violation-modal-overlay" @click.self="showingViolationModal = false" style="display: none;">
+        <div class="violation-modal-content">
+            <button class="close-btn" @click="showingViolationModal = false"><i class="bi bi-x-lg"></i></button>
+            <h4 class="mb-1" x-text="violationModalData.title"></h4>
+            <span class="badge bg-secondary mb-3" x-text="violationModalData.amendment"></span>
+            <div class="mb-3">
+                <h6>What This Means</h6>
+                <p x-text="violationModalData.explanation"></p>
+            </div>
+            <div class="mb-3">
+                <h6>Elements to Prove</h6>
+                <ul>
+                    <template x-for="(element, i) in violationModalData.elements || []" :key="'el'+i">
+                        <li x-text="element"></li>
+                    </template>
+                </ul>
+            </div>
+            <div class="mb-3">
+                <h6>Why It Matters in a Section 1983 Case</h6>
+                <p x-text="violationModalData.significance"></p>
+            </div>
+            <div class="text-end">
+                <button class="btn btn-outline-secondary" @click="showingViolationModal = false">Close</button>
             </div>
         </div>
     </div>
@@ -754,6 +815,8 @@ function wizardApp() {
         speechSupported: false,
         terminalLines: [],
         terminalInterval: null,
+        showingViolationModal: false,
+        violationModalData: {},
 
         // AI data
         aiExtracted: JSON.parse('{{ ai_extracted|escapejs }}'),
@@ -824,6 +887,7 @@ function wizardApp() {
 
             // If analysis is done, show analysis view
             if ('{{ analysis_status }}' === 'completed' && this.analysisData.violations) {
+                this.initAnalysisDefaults();
                 this.currentView = 'analysis';
             }
         },
@@ -1122,6 +1186,7 @@ function wizardApp() {
                         this.stopTerminal();
                         this.isAnalyzing = false;
                         this.analysisData = data.analysis;
+                        this.initAnalysisDefaults();
                         return;
                     } else if (data.status === 'failed') {
                         this.stopTerminal();
@@ -1153,6 +1218,9 @@ function wizardApp() {
                     });
                 }
 
+                // Save analysis selections (included/excluded violations and case law)
+                await this.saveAnalysisSelections();
+
                 const response = await fetch(`/api/v1/wizard/${this.sessionSlug}/complete/`, {
                     method: 'POST',
                     headers: {
@@ -1171,6 +1239,253 @@ function wizardApp() {
                 alert('Error building complaint. Please try again.');
                 this.isCompleting = false;
             }
+        },
+
+        // --- Analysis selection methods ---
+
+        initAnalysisDefaults() {
+            // Set default included state based on strength: strong/moderate = included, weak/worth_including = excluded
+            if (this.analysisData.violations) {
+                for (const v of this.analysisData.violations) {
+                    if (v.included === undefined) {
+                        v.included = (v.strength === 'strong' || v.strength === 'moderate');
+                    }
+                }
+            }
+            if (this.analysisData.case_law) {
+                for (const c of this.analysisData.case_law) {
+                    if (c.included === undefined) {
+                        c.included = true;
+                    }
+                }
+            }
+        },
+
+        async saveAnalysisSelections() {
+            if (!this.sessionSlug) return;
+            try {
+                await fetch(`/api/v1/wizard/${this.sessionSlug}/analysis-selections/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({
+                        violations: (this.analysisData.violations || []).map((v, i) => ({ index: i, included: v.included !== false })),
+                        case_law: (this.analysisData.case_law || []).map((c, i) => ({ index: i, included: c.included !== false })),
+                    }),
+                });
+            } catch (err) {
+                console.error('Error saving analysis selections:', err);
+            }
+        },
+
+        // Violation explanation data
+        violationExplanations: {
+            'Fourth Amendment': {
+                'Excessive Force': {
+                    title: 'Excessive Force',
+                    amendment: 'Fourth Amendment',
+                    explanation: 'The Fourth Amendment protects against unreasonable seizures, which includes the use of excessive force by law enforcement during an arrest, investigatory stop, or other seizure of a person. Force is "excessive" when it is objectively unreasonable given the totality of the circumstances.',
+                    elements: [
+                        'A seizure occurred (arrest, stop, or physical restraint)',
+                        'The officer used force during the seizure',
+                        'The force was objectively unreasonable under the circumstances',
+                        'The force caused injury or harm',
+                    ],
+                    significance: 'Excessive force is one of the most common Section 1983 claims. Courts use the "objective reasonableness" standard from Graham v. Connor, considering the severity of the crime, whether the suspect posed a threat, and whether the suspect was resisting.',
+                },
+                'Unreasonable Search': {
+                    title: 'Unreasonable Search',
+                    amendment: 'Fourth Amendment',
+                    explanation: 'The Fourth Amendment protects against unreasonable searches of your person, home, vehicle, and belongings. Generally, police need a warrant based on probable cause to conduct a search, though several exceptions exist (consent, plain view, search incident to arrest, exigent circumstances).',
+                    elements: [
+                        'A search occurred (of your person, property, vehicle, or home)',
+                        'The search was conducted by a government actor',
+                        'No valid warrant was obtained, and no exception to the warrant requirement applied',
+                        'You had a reasonable expectation of privacy in the area searched',
+                    ],
+                    significance: 'Warrantless searches are presumptively unreasonable. The burden falls on the government to prove an exception applies. Evidence obtained through an illegal search may also be suppressed in related criminal proceedings.',
+                },
+                'False Arrest': {
+                    title: 'False Arrest / Arrest Without Probable Cause',
+                    amendment: 'Fourth Amendment',
+                    explanation: 'The Fourth Amendment requires that arrests be supported by probable cause — a reasonable belief, based on facts, that a person has committed or is committing a crime. An arrest without probable cause violates the Constitution.',
+                    elements: [
+                        'You were arrested or detained against your will',
+                        'The arresting officer lacked probable cause',
+                        'The arrest was not supported by a valid warrant',
+                        'You suffered harm as a result (loss of liberty, emotional distress, etc.)',
+                    ],
+                    significance: 'False arrest claims are evaluated based on what the officer knew at the time of the arrest. If no reasonable officer would have believed probable cause existed, the arrest violates the Fourth Amendment.',
+                },
+                'Unreasonable Seizure': {
+                    title: 'Unreasonable Seizure of Property',
+                    amendment: 'Fourth Amendment',
+                    explanation: 'The Fourth Amendment protects against unreasonable seizure of your property. This includes taking your phone, vehicle, money, or other possessions without legal justification.',
+                    elements: [
+                        'Your property was seized by a government actor',
+                        'The seizure was without a warrant or legal justification',
+                        'You had a possessory interest in the property',
+                        'The seizure was unreasonable under the circumstances',
+                    ],
+                    significance: 'Property seizures without proper legal process can form the basis of a Section 1983 claim. This is especially relevant when police confiscate recording devices or other personal property.',
+                },
+            },
+            'First Amendment': {
+                'Freedom of Speech': {
+                    title: 'Retaliation for Speech / Expression',
+                    amendment: 'First Amendment',
+                    explanation: 'The First Amendment protects your right to free speech and expression, including the right to criticize government officials. Officers cannot arrest, detain, or retaliate against you for exercising your right to speak.',
+                    elements: [
+                        'You engaged in constitutionally protected speech or expression',
+                        'The government official took adverse action against you',
+                        'Your protected speech was a substantial or motivating factor in the adverse action',
+                        'The action would chill a person of ordinary firmness from continuing to engage in that activity',
+                    ],
+                    significance: 'First Amendment retaliation claims are powerful in Section 1983 cases. Even if an arrest was technically supported by probable cause, you may still have a claim if the true motivation was to punish you for your speech.',
+                },
+                'Freedom of Press': {
+                    title: 'Right to Record / Freedom of Press',
+                    amendment: 'First Amendment',
+                    explanation: 'The First Amendment protects your right to record police officers performing their duties in public. Multiple federal courts have recognized this as a clearly established right. Officers cannot order you to stop recording, seize your device, or arrest you for filming.',
+                    elements: [
+                        'You were recording police activity in a public place',
+                        'You were not interfering with police operations',
+                        'An officer ordered you to stop, seized your device, or arrested you for recording',
+                        'The officer\'s actions were motivated by your recording activity',
+                    ],
+                    significance: 'The right to record police is increasingly well-established across federal circuits. Courts recognize that recording officers is a form of speech and press activity that serves the public interest in government accountability.',
+                },
+                'Freedom of Assembly': {
+                    title: 'Freedom of Assembly',
+                    amendment: 'First Amendment',
+                    explanation: 'The First Amendment protects your right to peacefully assemble, including the right to protest, demonstrate, and gather in public spaces. Government officials cannot disperse, arrest, or use force against peaceful assemblies without lawful justification.',
+                    elements: [
+                        'You were engaged in a peaceful assembly or protest',
+                        'Government officials interfered with the assembly',
+                        'The interference was not justified by a compelling government interest',
+                        'The interference was not narrowly tailored to serve that interest',
+                    ],
+                    significance: 'Peaceful protest is among the most protected forms of First Amendment activity. Mass arrests of protesters, use of force to disperse peaceful demonstrations, and imposing unconstitutional conditions on assembly permits are common Section 1983 claims.',
+                },
+                'Right to Petition': {
+                    title: 'Retaliation for Filing Complaints',
+                    amendment: 'First Amendment',
+                    explanation: 'The First Amendment\'s Petition Clause protects your right to file complaints against government officials, sue the government, or seek redress for grievances without fear of retaliation.',
+                    elements: [
+                        'You filed a complaint, lawsuit, or grievance against a government official',
+                        'A government official took adverse action against you',
+                        'The adverse action was motivated by your complaint or petition',
+                        'The action would deter a reasonable person from exercising their right to petition',
+                    ],
+                    significance: 'Retaliation for filing complaints is a serious constitutional violation. If officers harass, arrest, or target you because you filed an internal affairs complaint or lawsuit, that itself is a separate Section 1983 claim.',
+                },
+            },
+            'Fifth Amendment': {
+                'Self-Incrimination': {
+                    title: 'Coerced Self-Incrimination',
+                    amendment: 'Fifth Amendment',
+                    explanation: 'The Fifth Amendment protects your right against compelled self-incrimination. This includes the right to remain silent during police interrogation and the requirement that officers provide Miranda warnings before custodial interrogation.',
+                    elements: [
+                        'You were in custody or otherwise deprived of freedom in a significant way',
+                        'You were subjected to interrogation',
+                        'You were not advised of your Miranda rights (or your invocation of rights was not honored)',
+                        'Statements were coerced through physical or psychological pressure',
+                    ],
+                    significance: 'While Miranda violations alone may not support a Section 1983 claim for damages, coerced confessions and the use of compelled statements against you in court proceedings can form the basis of a civil rights action.',
+                },
+                'Due Process': {
+                    title: 'Due Process Violation (Fifth Amendment)',
+                    amendment: 'Fifth Amendment',
+                    explanation: 'The Fifth Amendment\'s Due Process Clause prohibits the federal government from depriving you of life, liberty, or property without due process of law. This includes both procedural protections (notice, hearing) and substantive protections against arbitrary government action.',
+                    elements: [
+                        'The government deprived you of life, liberty, or property',
+                        'The deprivation was without adequate legal process',
+                        'The government action was arbitrary or conscience-shocking',
+                    ],
+                    significance: 'Fifth Amendment due process applies to federal actors. For state and local officials, the Fourteenth Amendment\'s Due Process Clause provides equivalent protection and is more commonly invoked in Section 1983 cases.',
+                },
+            },
+            'Fourteenth Amendment': {
+                'Equal Protection': {
+                    title: 'Discrimination / Equal Protection Violation',
+                    amendment: 'Fourteenth Amendment',
+                    explanation: 'The Fourteenth Amendment\'s Equal Protection Clause requires that government officials treat similarly situated people equally. Discrimination based on race, ethnicity, gender, religion, or other protected characteristics violates equal protection.',
+                    elements: [
+                        'You were treated differently from others who are similarly situated',
+                        'The differential treatment was based on a protected characteristic (race, gender, etc.)',
+                        'The government actor intended to discriminate',
+                        'You suffered harm as a result of the discriminatory treatment',
+                    ],
+                    significance: 'Equal protection claims in Section 1983 cases often involve racial profiling, selective enforcement, and discriminatory policing practices. Statistical evidence of disparate treatment can help establish discriminatory intent.',
+                },
+                'Due Process': {
+                    title: 'Due Process Violation (Fourteenth Amendment)',
+                    amendment: 'Fourteenth Amendment',
+                    explanation: 'The Fourteenth Amendment\'s Due Process Clause prohibits state and local officials from depriving you of life, liberty, or property without due process. This covers both procedural due process (fair procedures) and substantive due process (protection against arbitrary government action).',
+                    elements: [
+                        'A state or local government actor deprived you of life, liberty, or property',
+                        'The deprivation was without adequate legal process (procedural), OR',
+                        'The government conduct was so egregious it "shocks the conscience" (substantive)',
+                    ],
+                    significance: 'Substantive due process protects against government conduct that is arbitrary, conscience-shocking, or oppressive. This is often invoked for claims of deliberate indifference to serious medical needs, conditions of confinement, and abuse of government power.',
+                },
+                'Deliberate Indifference': {
+                    title: 'Deliberate Indifference to Medical Needs',
+                    amendment: 'Fourteenth Amendment',
+                    explanation: 'When a person is in government custody (jail, prison, or police detention), officials have a constitutional duty to provide adequate medical care. Deliberately ignoring a serious medical need violates the Constitution.',
+                    elements: [
+                        'You were in government custody or control',
+                        'You had a serious medical need',
+                        'The official knew of and disregarded the serious medical need',
+                        'The official\'s response was unreasonable given the circumstances',
+                    ],
+                    significance: 'Deliberate indifference claims require more than negligence — the official must have known of a substantial risk of serious harm and failed to act. This standard applies to pretrial detainees under the Fourteenth Amendment and convicted prisoners under the Eighth Amendment.',
+                },
+            },
+        },
+
+        showViolationExplanation(violation) {
+            const amendment = violation.amendment || '';
+            const violationType = violation.violation_type || '';
+
+            // Try to find a matching explanation
+            const amendmentData = this.violationExplanations[amendment];
+            if (amendmentData) {
+                // Try exact match first, then partial match
+                let match = amendmentData[violationType];
+                if (!match) {
+                    // Search for partial keyword match
+                    const typeWords = violationType.toLowerCase();
+                    for (const [key, data] of Object.entries(amendmentData)) {
+                        if (typeWords.includes(key.toLowerCase().split(' ')[0]) ||
+                            key.toLowerCase().includes(typeWords.split(' ')[0])) {
+                            match = data;
+                            break;
+                        }
+                    }
+                }
+                if (!match) {
+                    // Use first entry as fallback for the amendment
+                    match = Object.values(amendmentData)[0];
+                }
+                if (match) {
+                    this.violationModalData = match;
+                    this.showingViolationModal = true;
+                    return;
+                }
+            }
+
+            // Generic fallback
+            this.violationModalData = {
+                title: violationType || 'Constitutional Violation',
+                amendment: amendment,
+                explanation: violation.description || 'This violation involves a potential breach of your constitutional rights under ' + amendment + '.',
+                elements: ['The government actor violated your constitutional rights', 'You suffered harm as a result', 'The violation was committed under color of state law'],
+                significance: 'Section 1983 allows individuals to sue state and local officials who violate their constitutional rights while acting under color of law. This applies to police officers, corrections officers, and other government employees.',
+            };
+            this.showingViolationModal = true;
         },
 
         // Voice input

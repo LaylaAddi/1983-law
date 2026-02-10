@@ -37,6 +37,55 @@ VIOLATION_MAP = {
 }
 
 
+def _map_ai_violation_to_field(amendment_key, violation_type):
+    """Map an AI analysis violation type string to a RightsViolated model sub-field."""
+    vt = violation_type.lower()
+    mappings = {
+        'fourth': {
+            'force': 'fourth_amendment_force',
+            'excessive': 'fourth_amendment_force',
+            'search': 'fourth_amendment_search',
+            'seizure': 'fourth_amendment_seizure',
+            'arrest': 'fourth_amendment_arrest',
+            'false arrest': 'fourth_amendment_arrest',
+            'probable cause': 'fourth_amendment_arrest',
+        },
+        'first': {
+            'speech': 'first_amendment_speech',
+            'expression': 'first_amendment_speech',
+            'press': 'first_amendment_press',
+            'record': 'first_amendment_press',
+            'film': 'first_amendment_press',
+            'assembl': 'first_amendment_assembly',
+            'protest': 'first_amendment_assembly',
+            'petition': 'first_amendment_petition',
+            'retaliat': 'first_amendment_petition',
+            'complaint': 'first_amendment_petition',
+        },
+        'fifth': {
+            'self-incrimination': 'fifth_amendment_self_incrimination',
+            'miranda': 'fifth_amendment_self_incrimination',
+            'forced statement': 'fifth_amendment_self_incrimination',
+            'coerce': 'fifth_amendment_self_incrimination',
+            'due process': 'fifth_amendment_due_process',
+        },
+        'fourteenth': {
+            'equal protection': 'fourteenth_amendment_equal_protection',
+            'discrimination': 'fourteenth_amendment_equal_protection',
+            'racial': 'fourteenth_amendment_equal_protection',
+            'profil': 'fourteenth_amendment_equal_protection',
+            'due process': 'fourteenth_amendment_due_process',
+            'medical': 'fourteenth_amendment_due_process',
+            'deliberate indifference': 'fourteenth_amendment_due_process',
+        },
+    }
+    amendment_map = mappings.get(amendment_key, {})
+    for keyword, field in amendment_map.items():
+        if keyword in vt:
+            return field
+    return None
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def wizard_start(request, document_slug):
@@ -220,6 +269,46 @@ def wizard_analysis_status(request, session_slug):
             'status': 'processing',
             'message': 'Still analyzing...',
         })
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def wizard_analysis_selections(request, session_slug):
+    """Save user's include/exclude selections on analysis violations and case law."""
+    session = get_object_or_404(
+        WizardSession,
+        slug=session_slug,
+        document__user=request.user
+    )
+
+    analysis = session.ai_analysis
+    if not analysis:
+        return Response(
+            {'error': 'No analysis data found.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    violations_selections = request.data.get('violations', [])
+    case_law_selections = request.data.get('case_law', [])
+
+    # Update violation included flags
+    violations = analysis.get('violations', [])
+    for sel in violations_selections:
+        idx = sel.get('index')
+        if isinstance(idx, int) and 0 <= idx < len(violations):
+            violations[idx]['included'] = sel.get('included', True)
+
+    # Update case law included flags
+    case_law = analysis.get('case_law', [])
+    for sel in case_law_selections:
+        idx = sel.get('index')
+        if isinstance(idx, int) and 0 <= idx < len(case_law):
+            case_law[idx]['included'] = sel.get('included', True)
+
+    session.ai_analysis = analysis
+    session.save(update_fields=['ai_analysis'])
+
+    return Response({'saved': True})
 
 
 @api_view(['POST'])
@@ -747,6 +836,57 @@ def _apply_wizard_to_document(session, document, errors):
 
             if additional:
                 rights.other_rights = additional
+
+            # Also apply INCLUDED AI analysis violations
+            analysis = session.ai_analysis
+            ai_violations = analysis.get('violations', [])
+            # Collect details per amendment from included violations
+            amendment_details = {}
+            for v in ai_violations:
+                if v.get('included') is False:
+                    continue
+                amendment_str = (v.get('amendment') or '').lower()
+                violation_type = (v.get('violation_type') or '').lower()
+                description = v.get('description', '')
+
+                # Map AI amendment names to model field prefixes
+                amendment_key = None
+                if 'fourth' in amendment_str:
+                    amendment_key = 'fourth'
+                elif 'first' in amendment_str:
+                    amendment_key = 'first'
+                elif 'fifth' in amendment_str:
+                    amendment_key = 'fifth'
+                elif 'fourteenth' in amendment_str:
+                    amendment_key = 'fourteenth'
+
+                if amendment_key:
+                    setattr(rights, f'{amendment_key}_amendment', True)
+
+                    # Try to set specific sub-violation fields
+                    sub_field = _map_ai_violation_to_field(amendment_key, violation_type)
+                    if sub_field and hasattr(rights, sub_field):
+                        setattr(rights, sub_field, True)
+
+                    # Collect descriptions for amendment details
+                    if description:
+                        if amendment_key not in amendment_details:
+                            amendment_details[amendment_key] = []
+                        label = v.get('violation_type', '')
+                        amendment_details[amendment_key].append(
+                            f"{label}: {description}" if label else description
+                        )
+
+            # Write collected details to amendment detail fields
+            for amendment_key, details in amendment_details.items():
+                details_field = f'{amendment_key}_amendment_details'
+                if hasattr(rights, details_field):
+                    existing = getattr(rights, details_field) or ''
+                    new_details = '\n'.join(details)
+                    if existing:
+                        setattr(rights, details_field, f"{existing}\n{new_details}")
+                    else:
+                        setattr(rights, details_field, new_details)
 
             rights.save()
             if any(getattr(rights, f'{a}_amendment', False)
