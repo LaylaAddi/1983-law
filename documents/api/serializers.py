@@ -15,6 +15,9 @@ class StepWhenWhereSerializer(serializers.Serializer):
     city = serializers.CharField(required=False, allow_blank=True, max_length=200)
     state = serializers.CharField(required=False, allow_blank=True, max_length=2)
     location_type = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    federal_district_court = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    use_manual_court = serializers.BooleanField(required=False, default=False)
+    court_district_confirmed = serializers.BooleanField(required=False, default=False)
 
 
 class DefendantEntrySerializer(serializers.Serializer):

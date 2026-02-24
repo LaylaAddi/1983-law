@@ -749,6 +749,13 @@ def _apply_wizard_to_document(session, document, errors):
                 if step_1.get(field):
                     setattr(overview, field, step_1[field])
 
+            if step_1.get('federal_district_court'):
+                overview.federal_district_court = step_1['federal_district_court']
+            if step_1.get('use_manual_court'):
+                overview.use_manual_court = step_1['use_manual_court']
+            if step_1.get('court_district_confirmed'):
+                overview.court_district_confirmed = step_1['court_district_confirmed']
+
             overview.save()
             section.status = 'completed'
             section.save(update_fields=['status'])
