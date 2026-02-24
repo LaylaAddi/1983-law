@@ -323,12 +323,12 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">City <span class="text-danger">*</span> <span x-show="aiSuggested(1, 'city')" class="ai-badge">AI suggested</span></label>
-                                <input type="text" class="form-control" :class="{ 'is-invalid': step1CityError }" x-model="stepData[1].city" placeholder="City" @blur="lookupCourt()" @input="if(stepData[1].city) step1CityError = ''">
+                                <input type="text" class="form-control" :class="{ 'is-invalid': step1CityError }" x-model="stepData[1].city" placeholder="City" @input="step1CityError = ''">
                                 <div class="invalid-feedback" x-show="step1CityError" x-text="step1CityError"></div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">State <span class="text-danger">*</span> <span x-show="aiSuggested(1, 'state')" class="ai-badge">AI suggested</span></label>
-                                <select class="form-select" :class="{ 'is-invalid': step1StateError }" x-model="stepData[1].state" @change="step1StateError = ''; lookupCourt()">
+                                <select class="form-select" :class="{ 'is-invalid': step1StateError }" x-model="stepData[1].state" @change="step1StateError = ''">
                                     {% for value, label in us_states %}
                                     <option value="{{ value }}">{{ label }}</option>
                                     {% endfor %}
@@ -388,7 +388,7 @@
                                             :placeholder="stepData[1].use_manual_court ? 'Enter federal district court name' : 'Enter city & state above — court will be looked up automatically'">
                                         <div class="text-danger small mt-1" x-show="step1CourtError" x-text="step1CourtError"></div>
                                         <div class="mt-2">
-                                            <button class="btn btn-outline-primary" type="button" @click="lookupCourt()" :disabled="courtLookupLoading || !stepData[1].city || !stepData[1].state || stepData[1].use_manual_court">
+                                            <button class="btn btn-outline-primary" type="button" @click="lookupCourt(true)" :disabled="courtLookupLoading || !stepData[1].city || !stepData[1].state || stepData[1].use_manual_court">
                                                 <span x-show="!courtLookupLoading"><i class="bi bi-search me-1"></i>Lookup Court</span>
                                                 <span x-show="courtLookupLoading"><span class="spinner-border spinner-border-sm me-1"></span>Searching...</span>
                                             </button>
@@ -930,6 +930,7 @@ function wizardApp() {
         courtLookupLoading: false,
         courtLookupConfidence: '',
         courtLookupMessage: '',
+        _lastCourtLookupKey: '',
         step1CityError: '',
         step1StateError: '',
         step1CourtError: '',
@@ -1001,12 +1002,22 @@ function wizardApp() {
                 this.prefillFromAI();
             }
 
-            // Auto-lookup court if city/state are filled but court isn't
-            this.$nextTick(() => {
+            // Auto-lookup court when city or state changes
+            this.$watch('stepData[1].city', () => {
                 if (this.stepData[1].city && this.stepData[1].state && !this.stepData[1].federal_district_court) {
                     this.lookupCourt();
                 }
             });
+            this.$watch('stepData[1].state', () => {
+                if (this.stepData[1].city && this.stepData[1].state && !this.stepData[1].federal_district_court) {
+                    this.lookupCourt();
+                }
+            });
+
+            // Auto-lookup court on page load if city/state filled but court empty
+            if (this.stepData[1].city && this.stepData[1].state && !this.stepData[1].federal_district_court) {
+                this.lookupCourt();
+            }
 
             // If analysis is done, show analysis view
             if ('{{ analysis_status }}' === 'completed' && this.analysisData.violations) {
@@ -1108,7 +1119,7 @@ function wizardApp() {
             return valid;
         },
 
-        async lookupCourt() {
+        async lookupCourt(force = false) {
             const city = (this.stepData[1].city || '').trim();
             const state = (this.stepData[1].state || '').trim();
 
@@ -1118,6 +1129,12 @@ function wizardApp() {
 
             if (!city || !state) return;
             if (this.stepData[1].use_manual_court) return;
+            if (this.courtLookupLoading) return;
+
+            // Skip if we already looked up this exact city+state (unless forced)
+            const lookupKey = city.toLowerCase() + '|' + state.toUpperCase();
+            if (!force && this._lastCourtLookupKey === lookupKey) return;
+            this._lastCourtLookupKey = lookupKey;
 
             this.courtLookupLoading = true;
             this.courtLookupConfidence = '';
