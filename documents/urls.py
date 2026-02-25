@@ -4,6 +4,9 @@ from . import views
 app_name = 'documents'
 
 urlpatterns = [
+    # District court lookup (must be before <str:document_slug> catch-all)
+    path('lookup-district-court/', views.lookup_district_court, name='lookup_district_court'),
+
     # Document CRUD
     path('', views.document_list, name='document_list'),
     path('new/', views.document_create, name='document_create'),
@@ -46,9 +49,6 @@ urlpatterns = [
     # AJAX endpoints for preview page
     path('<str:document_slug>/section/<str:section_type>/save/', views.section_save_ajax, name='section_save_ajax'),
     path('<str:document_slug>/section/<str:section_type>/delete-item/<str:item_slug>/', views.delete_item_ajax, name='delete_item_ajax'),
-
-    # District court lookup
-    path('lookup-district-court/', views.lookup_district_court, name='lookup_district_court'),
 
     # AI rights analysis endpoint
     path('<str:document_slug>/analyze-rights/', views.analyze_rights, name='analyze_rights'),

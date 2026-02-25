@@ -1141,6 +1141,12 @@ function wizardApp() {
 
             try {
                 const response = await fetch('/documents/lookup-district-court/?city=' + encodeURIComponent(city) + '&state=' + encodeURIComponent(state));
+                if (!response.ok) {
+                    console.error('Court lookup HTTP error:', response.status, response.statusText);
+                    this.courtLookupConfidence = 'failed';
+                    this.courtLookupMessage = 'Lookup failed (HTTP ' + response.status + '). Check the "enter manually" box below to type it yourself.';
+                    return;
+                }
                 const data = await response.json();
 
                 if (data.success && data.court_name) {
@@ -1156,7 +1162,7 @@ function wizardApp() {
             } catch (err) {
                 console.error('Court lookup error:', err);
                 this.courtLookupConfidence = 'failed';
-                this.courtLookupMessage = 'Lookup failed. Please enter court manually.';
+                this.courtLookupMessage = 'Lookup error: ' + err.message + '. Check the "enter manually" box below to type it yourself.';
             } finally {
                 this.courtLookupLoading = false;
             }
