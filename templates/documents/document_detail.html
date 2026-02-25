@@ -2,9 +2,29 @@
 
 {% block title %}{{ document.title }} - {{ header_app_name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    .wizard-hub-step { border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; transition: all 0.2s; border: 1px solid rgba(0,0,0,0.1); }
+    .wizard-hub-step:hover { border-color: #0d6efd; }
+    .wizard-hub-step .step-number { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; flex-shrink: 0; }
+    .wizard-hub-step .step-number.completed { background: #198754; color: #fff; }
+    .wizard-hub-step .step-number.active { background: #0d6efd; color: #fff; }
+    .wizard-hub-step .step-number.pending { background: #e9ecef; color: #6c757d; }
+    .case-summary-item { padding: 0.5rem 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
+    .case-summary-item:last-child { border-bottom: none; }
+    .case-summary-label { font-size: 0.8rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    [data-theme="dark"] .wizard-hub-step { border-color: rgba(255,255,255,0.1); }
+    [data-theme="dark"] .wizard-hub-step:hover { border-color: #6ea8fe; }
+    [data-theme="dark"] .wizard-hub-step .step-number.pending { background: #2a2a3e; color: #999; }
+    [data-theme="dark"] .case-summary-item { border-bottom-color: rgba(255,255,255,0.06); }
+</style>
+{% endblock %}
+
 {% block content %}
 {% include 'documents/partials/status_banner.html' %}
 
+<!-- Header -->
 <div class="d-flex justify-content-between align-items-start mb-4">
     <div>
         <h2>{{ document.title }}</h2>
@@ -20,241 +40,277 @@
     </div>
 </div>
 
-<!-- Progress Overview -->
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h5 class="mb-2">Overall Progress</h5>
-                <div class="progress" style="height: 25px;">
-                    <div class="progress-bar bg-success" role="progressbar"
-                         style="width: {{ document.get_completion_percentage }}%">
-                        {{ document.get_completion_percentage }}% Complete
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                <span class="badge bg-{% if document.payment_status == 'paid' %}success{% elif document.payment_status == 'finalized' %}info{% elif document.payment_status == 'expired' %}danger{% else %}secondary{% endif %} fs-6">
-                    {{ document.get_payment_status_display }}
-                </span>
-            </div>
-        </div>
-
-        {% if document.has_sections_needing_work %}
-            <div class="alert alert-warning mt-3 mb-0">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                <strong>Attention:</strong> Some sections are flagged as needing work.
-                Look for the <span class="badge bg-warning text-dark">Needs Work</span> badges below.
-            </div>
-        {% endif %}
-
-        {% if document.get_completion_percentage < 100 %}
-            <div class="alert alert-info mt-3 mb-0">
-                <div class="d-flex">
-                    <i class="bi bi-info-circle me-2 mt-1"></i>
-                    <div>
-                        <strong>To generate your PDF:</strong> All sections must be completed or marked as N/A.
-                        <ul class="mb-0 mt-2 small">
-                            <li><strong>Complete</strong> sections that apply to your case</li>
-                            <li><strong>Mark as "Not Applicable"</strong> sections that don't apply (e.g., no witnesses, no prior complaints)</li>
-                            <li>To mark a section as N/A: Open it → scroll to "Section Status" on the right → select "Not Applicable" → Save</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        {% endif %}
+<!-- Primary Action -->
+{% if wizard_status == 'not_started' %}
+<div class="card mb-4 border-primary">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-chat-quote display-4 text-primary mb-3 d-block"></i>
+        <h4>Start Your Case Interview</h4>
+        <p class="text-muted mb-4">
+            Tell us what happened in your own words. Our AI will analyze your story and guide you through
+            7 simple steps to build your Section 1983 civil rights complaint.
+        </p>
+        <a href="{% url 'documents:wizard' document.slug %}" class="btn btn-primary btn-lg">
+            <i class="bi bi-play-circle me-1"></i>Begin Interview
+        </a>
     </div>
 </div>
 
-<!-- AI-Assisted Quick Start -->
+{% elif wizard_status == 'in_progress' or wizard_status == 'analyzing' %}
 <div class="card mb-4 border-primary">
     <div class="card-body">
         <div class="row align-items-center">
             <div class="col-md-8">
-                {% if document.has_story %}
-                <h5 class="mb-1"><i class="bi bi-check-circle text-success me-2"></i>Story Saved</h5>
+                <h5 class="mb-1"><i class="bi bi-pencil-square text-primary me-2"></i>Interview In Progress</h5>
                 <p class="text-muted mb-0">
-                    You've already shared your story. You can update it and re-analyze to refresh the auto-filled sections.
+                    You're on step {{ wizard_current_step }} of 7. Continue where you left off.
                 </p>
-                {% else %}
-                <h5 class="mb-1"><i class="bi bi-stars text-primary me-2"></i>Quick Start with AI</h5>
-                <p class="text-muted mb-0">
-                    Tell us what happened in your own words, and our AI will help fill out multiple sections automatically.
-                </p>
-                {% endif %}
+                <div class="progress mt-2" style="height: 8px;">
+                    <div class="progress-bar bg-primary" role="progressbar"
+                         style="width: {{ wizard_progress }}%"></div>
+                </div>
             </div>
             <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                {% if document.has_story %}
-                <a href="{% url 'documents:wizard' document.slug %}" class="btn btn-primary me-2">
-                    <i class="bi bi-magic me-1"></i>Continue Wizard
+                <a href="{% url 'documents:wizard' document.slug %}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-arrow-right-circle me-1"></i>Continue Interview
                 </a>
-                <a href="{% url 'documents:wizard' document.slug %}?view=story" class="btn btn-outline-primary">
-                    <i class="bi bi-pencil me-1"></i>Edit Story
-                </a>
-                {% else %}
-                <a href="{% url 'documents:wizard' document.slug %}" class="btn btn-primary">
-                    <i class="bi bi-chat-quote me-1"></i>Tell Your Story
-                </a>
-                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<!-- Sections -->
-<div class="row">
-    {% for item in sections %}
-        <div class="col-md-6 mb-3">
-            <div class="card h-100 {% if item.section.status == 'needs_work' %}border-warning border-2{% elif item.section.status == 'completed' %}border-success{% elif item.section.status == 'not_applicable' %}border-secondary{% elif item.section.story_relevance == 'may_not_apply' and item.section.status == 'not_started' %}border-secondary opacity-75{% endif %}">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h5 class="card-title mb-0 {% if item.section.story_relevance == 'may_not_apply' and item.section.status == 'not_started' %}text-muted{% endif %}">
-                            <span class="text-muted me-2">{{ forloop.counter }}.</span>
-                            {{ item.title }}
-                        </h5>
-
-                        <div class="d-flex flex-column align-items-end gap-1">
-                            {% if item.section.status == 'not_started' %}
-                                <span class="badge bg-secondary">Not Started</span>
-                            {% elif item.section.status == 'in_progress' %}
-                                <span class="badge bg-info">In Progress</span>
-                            {% elif item.section.status == 'needs_work' %}
-                                <span class="badge bg-warning text-dark">
-                                    <i class="bi bi-exclamation-triangle me-1"></i>Needs Work
-                                </span>
-                            {% elif item.section.status == 'completed' %}
-                                <span class="badge bg-success">
-                                    <i class="bi bi-check-lg me-1"></i>Completed
-                                </span>
-                            {% elif item.section.status == 'not_applicable' %}
-                                <span class="badge bg-secondary">
-                                    <i class="bi bi-dash-lg me-1"></i>N/A
-                                </span>
-                            {% endif %}
-
-                            {% if item.section.story_relevance == 'may_not_apply' and item.section.status == 'not_started' %}
-                                <span class="badge bg-light text-muted border" style="font-size: 0.7rem;">
-                                    <i class="bi bi-info-circle me-1"></i>May not apply
-                                </span>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <p class="card-text text-muted small mb-3">{{ item.description }}</p>
-
-                    {% if item.section.notes %}
-                        <div class="alert alert-warning py-2 small mb-3">
-                            <i class="bi bi-sticky me-1"></i>{{ item.section.notes }}
-                        </div>
-                    {% endif %}
-
-                    {% if item.section.section_type == 'defendants' and defendants_missing_address %}
-                        <div class="alert alert-danger py-2 small mb-3">
-                            <i class="bi bi-geo-alt me-1"></i>
-                            <strong>Address Required:</strong> {{ defendants_missing_address|length }} defendant{% if defendants_missing_address|length != 1 %}s{% endif %}
-                            {% if defendants_missing_address|length == 1 %}is{% else %}are{% endif %} missing an address. Click Edit → use "Lookup Address" for each defendant.
-                        </div>
-                    {% endif %}
-                    {% if item.section.section_type == 'defendants' and defendants_needing_review %}
-                        <div class="alert alert-info py-2 small mb-3">
-                            <i class="bi bi-robot me-1"></i>
-                            <strong>AI-Suggested Agencies:</strong> {{ defendants_needing_review|length }} defendant{% if defendants_needing_review|length != 1 %}s{% endif %}
-                            ha{% if defendants_needing_review|length == 1 %}s{% else %}ve{% endif %} AI-inferred agencies that should be reviewed for accuracy.
-                        </div>
-                    {% endif %}
-                    {% if item.section.section_type == 'incident_overview' and court_district_issue %}
-                        <div class="alert alert-danger py-2 small mb-3">
-                            <i class="bi bi-building me-1"></i>
-                            <strong>Court District Required:</strong>
-                            {% if not court_district_filled %}
-                                Federal district court has not been looked up. Click Edit → use "Lookup Court" to find the correct court.
-                            {% elif not court_district_confirmed %}
-                                Federal district court needs confirmation. Click Edit → check the confirmation box.
-                            {% endif %}
-                        </div>
-                    {% endif %}
-
-                    <a href="{% url 'documents:section_edit' document.slug item.section.section_type %}"
-                       class="btn btn-sm {% if item.section.status == 'needs_work' %}btn-warning{% elif item.section.status == 'completed' %}btn-outline-success{% elif item.section.status == 'not_applicable' %}btn-outline-secondary{% else %}btn-outline-primary{% endif %}">
-                        {% if item.section.status == 'not_started' %}
-                            <i class="bi bi-play me-1"></i>Start
-                        {% elif item.section.status == 'needs_work' %}
-                            <i class="bi bi-pencil me-1"></i>Review & Fix
-                        {% elif item.section.status == 'not_applicable' %}
-                            <i class="bi bi-pencil me-1"></i>Edit
-                        {% else %}
-                            <i class="bi bi-pencil me-1"></i>Edit
-                        {% endif %}
-                    </a>
-                </div>
-            </div>
-        </div>
-    {% endfor %}
-</div>
-
-<!-- Video Evidence Analysis (Pro Subscribers and Paid Documents) -->
-{% if document.can_use_video_analysis %}
-<div class="card mt-4 mb-4 border-danger">
+{% elif wizard_status == 'analyzed' %}
+<div class="card mb-4 border-success">
     <div class="card-body">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h5 class="mb-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="#FF0000" class="me-2" viewBox="0 0 16 16" style="vertical-align: -5px;">
-                        <path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.101.38.172.883.22 1.402l.01.104.022.26.008.104c.065.914.073 1.77.074 1.957v.075c-.001.194-.01 1.108-.082 2.06l-.008.105-.009.104c-.05.572-.124 1.14-.235 1.558a2.007 2.007 0 0 1-1.415 1.42c-1.16.312-5.569.334-6.18.335h-.142c-.309 0-1.587-.006-2.927-.052l-.17-.006-.087-.004-.171-.007-.171-.007c-1.11-.049-2.167-.128-2.654-.26a2.007 2.007 0 0 1-1.415-1.419c-.111-.417-.185-.986-.235-1.558L.09 9.82l-.008-.104A31.4 31.4 0 0 1 0 7.68v-.123c.002-.215.01-.958.064-1.778l.007-.103.003-.052.008-.104.022-.26.01-.104c.048-.519.119-1.023.22-1.402a2.007 2.007 0 0 1 1.415-1.42c.487-.13 1.544-.21 2.654-.26l.17-.007.172-.006.086-.003.171-.007A99.788 99.788 0 0 1 7.858 2h.193zM6.4 5.209v4.818l4.157-2.408L6.4 5.209z"/>
-                    </svg>
-                    Video Evidence Analysis
-                </h5>
+                <h5 class="mb-1"><i class="bi bi-lightning text-success me-2"></i>Analysis Complete</h5>
                 <p class="text-muted mb-0">
-                    Extract transcripts from YouTube videos (body cam footage, witness recordings, personal videos) to use as evidence in your complaint.
+                    AI has analyzed your case. Review the results and build your complaint.
                 </p>
             </div>
             <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                <a href="{% url 'documents:video_analysis' document.slug %}" class="btn btn-outline-danger">
-                    <i class="bi bi-youtube me-1"></i>Analyze Video Evidence
+                <a href="{% url 'documents:wizard' document.slug %}" class="btn btn-success btn-lg">
+                    <i class="bi bi-check-circle me-1"></i>Review &amp; Build Complaint
                 </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% elif wizard_status == 'completed' %}
+<div class="card mb-4 border-success">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-7">
+                <h5 class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Complaint Built</h5>
+                <p class="text-muted mb-0">
+                    Your complaint data has been compiled. Review and edit any section below, then proceed to Final Review to generate your legal document.
+                </p>
+            </div>
+            <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                {% if document.payment_status == 'finalized' %}
+                    <a href="{% url 'documents:download_final_pdf' document.slug %}" class="btn btn-success btn-lg">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+                    </a>
+                {% elif document.get_completion_percentage == 100 %}
+                    <a href="{% url 'documents:final_review' document.slug %}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-file-text me-1"></i>Final Review &amp; Generate PDF
+                    </a>
+                {% else %}
+                    <button class="btn btn-primary btn-lg disabled" disabled>
+                        <i class="bi bi-file-text me-1"></i>Final Review
+                    </button>
+                    <div class="text-muted small mt-1">
+                        <i class="bi bi-info-circle me-1"></i>{{ document.get_completion_percentage }}% complete — finish all sections first
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 {% endif %}
 
-<!-- Actions -->
-<div class="card mt-4">
-    <div class="card-body">
-        <div class="d-flex justify-content-between">
-            <div>
-                <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
-                    <i class="bi bi-trash me-1"></i>Delete Document
-                </button>
+<div class="row">
+    <!-- Left Column: Case Data / Wizard Steps -->
+    <div class="col-lg-8">
+        {% if wizard_status == 'completed' or wizard_status == 'analyzed' %}
+        <!-- Case Summary -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-journal-text me-2"></i>Case Summary</h5>
+            </div>
+            <div class="card-body">
+                {% if case_summary.incident_date or case_summary.city %}
+                <div class="case-summary-item">
+                    <div class="case-summary-label">When &amp; Where</div>
+                    <div>
+                        {% if case_summary.incident_date %}{{ case_summary.incident_date }}{% endif %}
+                        {% if case_summary.incident_time %} at {{ case_summary.incident_time }}{% endif %}
+                        {% if case_summary.city or case_summary.state %}
+                            <br>{{ case_summary.city }}{% if case_summary.city and case_summary.state %}, {% endif %}{{ case_summary.state }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
 
-                {% if user.is_test_user %}
-                    <form method="post" action="{% url 'documents:fill_test_data' document.slug %}" class="d-inline ms-2">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-outline-info" onclick="return confirm('Fill all sections with sample test data? This will overwrite any existing data.')">
-                            <i class="bi bi-lightning me-1"></i>Fill Test Data
-                        </button>
-                    </form>
+                {% if case_summary.federal_district_court %}
+                <div class="case-summary-item">
+                    <div class="case-summary-label">Federal District Court</div>
+                    <div>
+                        {{ case_summary.federal_district_court }}
+                        {% if case_summary.court_district_confirmed %}
+                            <span class="badge bg-success ms-1"><i class="bi bi-check-lg"></i> Confirmed</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark ms-1"><i class="bi bi-exclamation-triangle"></i> Not Confirmed</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if case_summary.defendants %}
+                <div class="case-summary-item">
+                    <div class="case-summary-label">Defendants</div>
+                    <div>
+                        {% for d in case_summary.defendants %}
+                            <span class="badge bg-secondary me-1 mb-1">{{ d }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if case_summary.violations %}
+                <div class="case-summary-item">
+                    <div class="case-summary-label">Violations Identified</div>
+                    <div>
+                        {% for v in case_summary.violations %}
+                            <span class="badge bg-danger me-1 mb-1">{{ v }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if not case_summary.incident_date and not case_summary.city and not case_summary.defendants %}
+                <p class="text-muted mb-0">Case details will appear here after you complete the interview.</p>
                 {% endif %}
             </div>
-            <div>
-                {% if document.payment_status == 'finalized' %}
-                    <a href="{% url 'documents:download_final_pdf' document.slug %}" class="btn btn-success">
-                        <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+        </div>
+        {% endif %}
+
+        <!-- Wizard Steps / Edit Sections -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Interview Steps</h5>
+                {% if wizard_status != 'not_started' %}
+                <a href="{% url 'documents:wizard' document.slug %}?view=story" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil me-1"></i>Edit Story
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% for step in wizard_steps %}
+                <a href="{% url 'documents:wizard' document.slug %}?step={{ step.number }}"
+                   class="wizard-hub-step d-flex align-items-center text-decoration-none text-body">
+                    <div class="step-number {{ step.status }} me-3">
+                        {% if step.status == 'completed' %}
+                            <i class="bi bi-check-lg"></i>
+                        {% else %}
+                            {{ step.number }}
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold">{{ step.title }}</div>
+                        <div class="text-muted small">{{ step.description }}</div>
+                        {% if step.summary %}
+                            <div class="small mt-1">{{ step.summary }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="ms-2">
+                        {% if step.status == 'completed' %}
+                            <span class="badge bg-success">Done</span>
+                        {% elif step.status == 'active' %}
+                            <span class="badge bg-primary">Current</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Pending</span>
+                        {% endif %}
+                    </div>
+                    <i class="bi bi-chevron-right text-muted ms-2"></i>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Quick Actions -->
+    <div class="col-lg-4">
+        <!-- Payment Status -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="mb-2"><i class="bi bi-credit-card me-2"></i>Status</h6>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Payment</span>
+                    <span class="badge bg-{% if document.payment_status == 'paid' %}success{% elif document.payment_status == 'finalized' %}info{% elif document.payment_status == 'expired' %}danger{% else %}secondary{% endif %}">
+                        {{ document.get_payment_status_display }}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <span>Completion</span>
+                    <span class="fw-bold">{{ document.get_completion_percentage }}%</span>
+                </div>
+                <div class="progress mt-1" style="height: 6px;">
+                    <div class="progress-bar bg-success" role="progressbar"
+                         style="width: {{ document.get_completion_percentage }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="mb-3"><i class="bi bi-lightning me-2"></i>Quick Actions</h6>
+                <div class="d-grid gap-2">
+                    {% if wizard_status != 'not_started' %}
+                    <a href="{% url 'documents:wizard' document.slug %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-magic me-1"></i>
+                        {% if wizard_status == 'completed' %}Re-open Wizard{% else %}Continue Wizard{% endif %}
                     </a>
-                {% else %}
-                    {% if document.get_completion_percentage == 100 %}
-                        <a href="{% url 'documents:final_review' document.slug %}" class="btn btn-primary">
+                    {% endif %}
+
+                    {% if document.can_use_video_analysis %}
+                    <a href="{% url 'documents:video_analysis' document.slug %}" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-youtube me-1"></i>Video Evidence
+                    </a>
+                    {% endif %}
+
+                    {% if document.payment_status == 'finalized' %}
+                        <a href="{% url 'documents:download_final_pdf' document.slug %}" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+                        </a>
+                    {% elif document.get_completion_percentage == 100 %}
+                        <a href="{% url 'documents:final_review' document.slug %}" class="btn btn-outline-success btn-sm">
                             <i class="bi bi-file-text me-1"></i>Final Review
                         </a>
-                    {% else %}
-                        <button class="btn btn-primary disabled" disabled title="Complete all sections first">
-                            <i class="bi bi-file-text me-1"></i>Final Review
-                        </button>
-                        <span class="text-muted ms-2 small">
-                            <i class="bi bi-info-circle me-1"></i>Complete all sections (or mark N/A) to enable
-                        </span>
                     {% endif %}
-                {% endif %}
+
+                    {% if user.is_test_user %}
+                        <form method="post" action="{% url 'documents:fill_test_data' document.slug %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-info btn-sm w-100" onclick="return confirm('Fill all sections with sample test data?')">
+                                <i class="bi bi-lightning me-1"></i>Fill Test Data
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="card border-danger">
+            <div class="card-body">
+                <h6 class="mb-2 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Danger Zone</h6>
+                <button class="btn btn-outline-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                    <i class="bi bi-trash me-1"></i>Delete Document
+                </button>
             </div>
         </div>
     </div>

@@ -269,63 +269,124 @@ def document_create(request):
 
 @login_required
 def document_detail(request, document_slug):
-    """Overview of document with all sections and their status."""
+    """Wizard-centric document hub — shows wizard progress, case summary, and edit links."""
     document = get_object_or_404(Document, slug=document_slug, user=request.user)
 
-    # Redirect to Wizard if story not completed yet
-    if not document.has_story():
+    # Get wizard session
+    session = getattr(document, 'wizard_session', None)
+    wizard_status = session.status if session else 'not_started'
+    wizard_current_step = session.current_step if session else 1
+    wizard_progress = session.progress_percent if session else 0
+
+    # If no story yet, redirect to wizard
+    if not document.has_story() and wizard_status == 'not_started':
         messages.info(request, 'Please start with the guided interview. This helps us understand your case and build your complaint.')
         return redirect('documents:wizard', document_slug=document.slug)
 
-    # Get sections and order them according to SECTION_TYPES
-    sections_queryset = document.sections.all()
-    section_type_order = [choice[0] for choice in DocumentSection.SECTION_TYPES]
-    sections = sorted(sections_queryset, key=lambda s: section_type_order.index(s.section_type) if s.section_type in section_type_order else 999)
+    # Build wizard steps data for the hub
+    step_meta = [
+        {'number': 1, 'title': 'When & Where', 'description': 'Date, time, location, and federal court district', 'icon': 'bi-geo-alt'},
+        {'number': 2, 'title': 'Who Was Involved', 'description': 'Officers, agencies, and witnesses', 'icon': 'bi-people'},
+        {'number': 3, 'title': 'What Happened', 'description': 'Detailed narrative of the incident', 'icon': 'bi-journal-text'},
+        {'number': 4, 'title': 'Why It Was Wrong', 'description': 'Constitutional rights that were violated', 'icon': 'bi-shield-exclamation'},
+        {'number': 5, 'title': 'How It Affected You', 'description': 'Physical, emotional, and financial damages', 'icon': 'bi-heart-pulse'},
+        {'number': 6, 'title': 'Evidence & Proof', 'description': 'Videos, photos, documents, and other evidence', 'icon': 'bi-camera'},
+        {'number': 7, 'title': 'Preferences', 'description': 'Case law and complaint options', 'icon': 'bi-gear'},
+    ]
 
-    # Check for defendants with AI-inferred agencies that need review
-    defendants_needing_review = []
-    defendants_missing_address = []
-    defendants_section = sections_queryset.filter(section_type='defendants').first()
-    if defendants_section:
-        defendants_needing_review = defendants_section.defendants.filter(agency_inferred=True)
-        # Check for defendants missing address (required for serving legal documents)
-        from django.db.models import Q
-        defendants_missing_address = defendants_section.defendants.filter(
-            Q(address__isnull=True) | Q(address='')
-        )
+    wizard_steps = []
+    for meta in step_meta:
+        step_num = meta['number']
+        step_data = session.get_step_data(step_num) if session else {}
+        has_data = bool(step_data)
 
-    # Check for court district issues
-    court_district_filled = False
-    court_district_confirmed = False
-    court_district_issue = False
-    incident_section = sections_queryset.filter(section_type='incident_overview').first()
-    if incident_section:
-        try:
-            incident_overview = incident_section.incident_overview
-            court_district_filled = bool(incident_overview.federal_district_court)
-            court_district_confirmed = incident_overview.court_district_confirmed
-            court_district_issue = not court_district_filled or not court_district_confirmed
-        except Exception:
-            court_district_issue = True
+        if wizard_status == 'completed' or wizard_status == 'analyzed':
+            step_status = 'completed' if has_data else 'pending'
+        elif step_num < wizard_current_step:
+            step_status = 'completed' if has_data else 'pending'
+        elif step_num == wizard_current_step:
+            step_status = 'active'
+        else:
+            step_status = 'pending'
 
-    # Add config info to each section
-    sections_with_config = []
-    for section in sections:
-        config = SECTION_CONFIG.get(section.section_type, {})
-        sections_with_config.append({
-            'section': section,
-            'title': config.get('title', section.get_section_type_display()),
-            'description': config.get('description', ''),
+        # Build a short summary from the step data
+        summary = ''
+        if has_data:
+            if step_num == 1:
+                parts = []
+                if step_data.get('incident_date'):
+                    parts.append(str(step_data['incident_date']))
+                if step_data.get('city'):
+                    city_state = step_data['city']
+                    if step_data.get('state'):
+                        city_state += ', ' + step_data['state']
+                    parts.append(city_state)
+                summary = ' — '.join(parts)
+            elif step_num == 2:
+                defendants = step_data.get('defendants', [])
+                names = [d.get('name', '') for d in defendants if d.get('name')]
+                if names:
+                    summary = ', '.join(names[:3])
+                    if len(names) > 3:
+                        summary += f' +{len(names) - 3} more'
+            elif step_num == 4:
+                selections = step_data.get('selections', [])
+                if selections:
+                    summary = f'{len(selections)} violation{"s" if len(selections) != 1 else ""} selected'
+
+        wizard_steps.append({
+            **meta,
+            'status': step_status,
+            'summary': summary,
         })
+
+    # Build case summary from interview data
+    case_summary = {}
+    if session and session.interview_data:
+        interview = session.interview_data
+
+        # Step 1 data
+        step_1 = interview.get('step_1', {})
+        if step_1:
+            case_summary['incident_date'] = step_1.get('incident_date', '')
+            case_summary['incident_time'] = step_1.get('incident_time', '')
+            case_summary['city'] = step_1.get('city', '')
+            case_summary['state'] = step_1.get('state', '')
+            case_summary['federal_district_court'] = step_1.get('federal_district_court', '')
+            case_summary['court_district_confirmed'] = step_1.get('court_district_confirmed', False)
+
+        # Step 2 data — defendant names
+        step_2 = interview.get('step_2', {})
+        if step_2:
+            defendants = step_2.get('defendants', [])
+            case_summary['defendants'] = [d.get('name', 'Unknown') for d in defendants if d.get('name')]
+
+        # Step 4 data — violation labels
+        step_4 = interview.get('step_4', {})
+        if step_4:
+            violation_map = {
+                'searched_without_warrant': 'Unreasonable Search',
+                'arrested_no_cause': 'False Arrest',
+                'excessive_force': 'Excessive Force',
+                'punished_for_speech': 'Free Speech',
+                'punished_for_recording': 'Right to Record',
+                'racial_discrimination': 'Racial Discrimination',
+                'gender_discrimination': 'Gender Discrimination',
+                'forced_statements': 'Coerced Statements',
+                'denied_medical_care': 'Denied Medical Care',
+                'denied_due_process': 'Due Process',
+                'retaliation': 'Retaliation',
+            }
+            selections = step_4.get('selections', [])
+            case_summary['violations'] = [violation_map.get(s, s) for s in selections]
 
     return render(request, 'documents/document_detail.html', {
         'document': document,
-        'sections': sections_with_config,
-        'defendants_needing_review': defendants_needing_review,
-        'defendants_missing_address': defendants_missing_address,
-        'court_district_filled': court_district_filled,
-        'court_district_confirmed': court_district_confirmed,
-        'court_district_issue': court_district_issue,
+        'wizard_status': wizard_status,
+        'wizard_current_step': wizard_current_step,
+        'wizard_progress': wizard_progress,
+        'wizard_steps': wizard_steps,
+        'case_summary': case_summary,
     })
 
 

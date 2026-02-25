@@ -928,8 +928,20 @@ function wizardApp() {
         documentSlug: '{{ document.slug }}',
         sessionSlug: '{{ session_slug }}',
         hasSession: {{ has_session|yesno:"true,false" }},
-        currentView: new URLSearchParams(window.location.search).get('view') === 'story' ? 'story' : ('{{ wizard_status }}' === 'not_started' || !'{{ session_slug }}' ? 'story' : ('{{ wizard_status }}' === 'analyzed' ? 'analysis' : 'steps')),
-        currentStep: {{ current_step }},
+        currentView: (() => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('view') === 'story') return 'story';
+            if (params.get('step')) return 'steps';
+            if ('{{ wizard_status }}' === 'not_started' || !'{{ session_slug }}') return 'story';
+            if ('{{ wizard_status }}' === 'analyzed') return 'analysis';
+            return 'steps';
+        })(),
+        currentStep: (() => {
+            const params = new URLSearchParams(window.location.search);
+            const step = parseInt(params.get('step'));
+            if (step >= 1 && step <= 7) return step;
+            return {{ current_step }};
+        })(),
         story: '{{ document.story_text|escapejs }}',
         isProcessing: false,
         isSaving: false,
