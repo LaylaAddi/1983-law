@@ -7,14 +7,34 @@ class WizardStartSerializer(serializers.Serializer):
     story = serializers.CharField(min_length=50)
 
 
+class EmptyStringDateField(serializers.DateField):
+    """DateField that treats empty strings as None."""
+    def to_internal_value(self, value):
+        if value == '' or value is None:
+            return None
+        return super().to_internal_value(value)
+
+
+class EmptyStringTimeField(serializers.TimeField):
+    """TimeField that treats empty strings as None."""
+    def to_internal_value(self, value):
+        if value == '' or value is None:
+            return None
+        return super().to_internal_value(value)
+
+
 class StepWhenWhereSerializer(serializers.Serializer):
     """Step 1: When and where did it happen?"""
-    incident_date = serializers.DateField(required=False, allow_null=True)
-    incident_time = serializers.TimeField(required=False, allow_null=True)
+    incident_date = EmptyStringDateField(required=False, allow_null=True)
+    incident_time = EmptyStringTimeField(required=False, allow_null=True)
     incident_location = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    address = serializers.CharField(required=False, allow_blank=True, max_length=500)
     city = serializers.CharField(required=False, allow_blank=True, max_length=200)
     state = serializers.CharField(required=False, allow_blank=True, max_length=2)
     location_type = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    location_type_other = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    was_recording = serializers.NullBooleanField(required=False)
+    recording_device = serializers.CharField(required=False, allow_blank=True, max_length=255)
     federal_district_court = serializers.CharField(required=False, allow_blank=True, max_length=255)
     use_manual_court = serializers.BooleanField(required=False, default=False)
     court_district_confirmed = serializers.BooleanField(required=False, default=False)

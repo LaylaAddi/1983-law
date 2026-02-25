@@ -108,8 +108,16 @@
     [data-theme="dark"] .violation-modal-content { background: #1a1a2e; color: #e0e0e0; }
     [data-theme="dark"] .wizard-court-box { background: linear-gradient(135deg, #2a2000 0%, #3a2e00 100%); border-color: #b36d00; }
     [data-theme="dark"] .wizard-court-box .box-header { color: #ffb74d; }
+    [data-theme="dark"] .wizard-court-box .btn-outline-primary { color: #6ea8fe; border-color: #6ea8fe; background: transparent; }
+    [data-theme="dark"] .wizard-court-box .btn-outline-primary:hover { color: #fff; background-color: #0d6efd; border-color: #0d6efd; }
+    [data-theme="dark"] .wizard-court-box .btn-outline-primary:disabled { color: #6c757d; border-color: #6c757d; }
+    [data-theme="dark"] .wizard-court-box .form-control { background-color: #1a1a2e; color: #e0e0e0; border-color: #444; }
+    [data-theme="dark"] .wizard-court-box .form-control:read-only { background-color: #111122; }
+    [data-theme="dark"] .wizard-court-box .form-text { color: #aaa; }
     [data-theme="dark"] .wizard-court-confirmation { background: #1a1a2e; border-color: #dc3545; }
     [data-theme="dark"] .wizard-court-confirmation.confirmed { background: #1a3a2e; border-color: #198754; }
+    [data-theme="dark"] .wizard-court-confirmation label { color: #f77; }
+    [data-theme="dark"] .wizard-court-confirmation.confirmed label { color: #5cb85c; }
 </style>
 {% endblock %}
 
@@ -375,9 +383,15 @@
                                         <i class="bi bi-building"></i>
                                         <span>Federal District Court - Required</span>
                                     </div>
+                                    <p class="small mb-3">
+                                        <strong>Why is this important?</strong> Section 1983 civil rights cases <strong>must</strong> be filed in the correct federal district court.
+                                        The United States is divided into 94 federal judicial districts. Your case must be filed in the district where the incident occurred.
+                                        <strong>Filing in the wrong district can result in your case being dismissed or transferred, delaying justice.</strong>
+                                    </p>
                                     <p class="small text-muted mb-3">
-                                        <strong>Why is this important?</strong> Section 1983 cases must be filed in federal court.
-                                        Filing in the wrong court can get your case dismissed. You must confirm the correct district.
+                                        We will attempt to look up the correct court based on the city and state you entered above.
+                                        <strong>Please verify the result is accurate</strong> — if your city is near a district boundary, the suggested court may not be correct.
+                                        You can check <a href="https://www.uscourts.gov/federal-court-finder/search" target="_blank" rel="noopener noreferrer">uscourts.gov</a> to verify.
                                     </p>
 
                                     <div class="mb-3">
@@ -425,6 +439,8 @@
                                         </div>
                                         <div class="form-text mt-2">
                                             <strong>You must check this box to continue.</strong> By checking, you confirm you have verified the court district is correct for where your incident occurred.
+                                            Getting this wrong could mean your complaint is filed in the wrong court. If you are unsure, visit
+                                            <a href="https://www.uscourts.gov/federal-court-finder/search" target="_blank" rel="noopener noreferrer">uscourts.gov</a> to verify before confirming.
                                         </div>
                                     </div>
                                 </div>
