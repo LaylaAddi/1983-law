@@ -323,12 +323,12 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">City <span class="text-danger">*</span> <span x-show="aiSuggested(1, 'city')" class="ai-badge">AI suggested</span></label>
-                                <input type="text" class="form-control" :class="{ 'is-invalid': step1CityError }" x-model="stepData[1].city" placeholder="City" @input="step1CityError = ''">
+                                <input type="text" class="form-control" :class="{ 'is-invalid': step1CityError }" x-model="stepData[1].city" placeholder="City" @input="step1CityError = ''" @change="stepData[1].federal_district_court = ''; lookupCourt()">
                                 <div class="invalid-feedback" x-show="step1CityError" x-text="step1CityError"></div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">State <span class="text-danger">*</span> <span x-show="aiSuggested(1, 'state')" class="ai-badge">AI suggested</span></label>
-                                <select class="form-select" :class="{ 'is-invalid': step1StateError }" x-model="stepData[1].state" @change="step1StateError = ''">
+                                <select class="form-select" :class="{ 'is-invalid': step1StateError }" x-model="stepData[1].state" @change="step1StateError = ''; stepData[1].federal_district_court = ''; lookupCourt()">
                                     {% for value, label in us_states %}
                                     <option value="{{ value }}">{{ label }}</option>
                                     {% endfor %}
@@ -1002,22 +1002,21 @@ function wizardApp() {
                 this.prefillFromAI();
             }
 
-            // Auto-lookup court when city or state changes
-            this.$watch('stepData[1].city', () => {
-                if (this.stepData[1].city && this.stepData[1].state && !this.stepData[1].federal_district_court) {
+            // Auto-lookup court: poll for city+state after init and prefill
+            // ($watch doesn't support bracket notation, so we use a polling approach)
+            const _courtAutoCheck = () => {
+                const city = (this.stepData[1].city || '').trim();
+                const state = (this.stepData[1].state || '').trim();
+                const court = (this.stepData[1].federal_district_court || '').trim();
+                if (city && state && !court && !this.stepData[1].use_manual_court && !this.courtLookupLoading) {
                     this.lookupCourt();
                 }
-            });
-            this.$watch('stepData[1].state', () => {
-                if (this.stepData[1].city && this.stepData[1].state && !this.stepData[1].federal_district_court) {
-                    this.lookupCourt();
-                }
-            });
-
-            // Auto-lookup court on page load if city/state filled but court empty
-            if (this.stepData[1].city && this.stepData[1].state && !this.stepData[1].federal_district_court) {
-                this.lookupCourt();
-            }
+            };
+            // Check immediately (for pre-filled sessions)
+            _courtAutoCheck();
+            // Check again after a short delay (for AI prefill that runs after init)
+            setTimeout(_courtAutoCheck, 500);
+            setTimeout(_courtAutoCheck, 2000);
 
             // If analysis is done, show analysis view
             if ('{{ analysis_status }}' === 'completed' && this.analysisData.violations) {
