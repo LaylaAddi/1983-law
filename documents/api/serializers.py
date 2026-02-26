@@ -33,7 +33,7 @@ class StepWhenWhereSerializer(serializers.Serializer):
     state = serializers.CharField(required=False, allow_blank=True, max_length=2)
     location_type = serializers.CharField(required=False, allow_blank=True, max_length=100)
     location_type_other = serializers.CharField(required=False, allow_blank=True, max_length=255)
-    was_recording = serializers.NullBooleanField(required=False)
+    was_recording = serializers.BooleanField(required=False, allow_null=True, default=None)
     recording_device = serializers.CharField(required=False, allow_blank=True, max_length=255)
     federal_district_court = serializers.CharField(required=False, allow_blank=True, max_length=255)
     use_manual_court = serializers.BooleanField(required=False, default=False)
