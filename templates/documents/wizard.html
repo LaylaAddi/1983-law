@@ -66,6 +66,11 @@
         border-radius: 0.5rem;
         padding: 1.25rem;
         margin-top: 0.5rem;
+        transition: background 0.3s, border-color 0.3s;
+    }
+    .wizard-court-box.filled {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border-color: #198754;
     }
     .wizard-court-box .box-header {
         color: #e65100;
@@ -78,6 +83,9 @@
     .wizard-court-box .box-header i {
         font-size: 1.3rem;
         margin-right: 0.5rem;
+    }
+    .wizard-court-box.filled .box-header {
+        color: #146c43;
     }
     .wizard-court-confirmation {
         background: #fff;
@@ -107,7 +115,9 @@
     [data-theme="dark"] .alert-light { background-color: #2a2a3e; border-color: #3a3a4e; color: #e0e0e0; }
     [data-theme="dark"] .violation-modal-content { background: #1a1a2e; color: #e0e0e0; }
     [data-theme="dark"] .wizard-court-box { background: linear-gradient(135deg, #2a2000 0%, #3a2e00 100%); border-color: #b36d00; }
+    [data-theme="dark"] .wizard-court-box.filled { background: linear-gradient(135deg, #0a2e1a 0%, #143d26 100%); border-color: #198754; }
     [data-theme="dark"] .wizard-court-box .box-header { color: #ffb74d; }
+    [data-theme="dark"] .wizard-court-box.filled .box-header { color: #5cb85c; }
     [data-theme="dark"] .wizard-court-box .btn-outline-primary { color: #6ea8fe; border-color: #6ea8fe; background: transparent; }
     [data-theme="dark"] .wizard-court-box .btn-outline-primary:hover { color: #fff; background-color: #0d6efd; border-color: #0d6efd; }
     [data-theme="dark"] .wizard-court-box .btn-outline-primary:disabled { color: #6c757d; border-color: #6c757d; }
@@ -378,10 +388,10 @@
 
                             <!-- Federal District Court -->
                             <div class="col-12">
-                                <div class="wizard-court-box">
+                                <div class="wizard-court-box" :class="{ 'filled': stepData[1].federal_district_court && stepData[1].federal_district_court.trim() }">
                                     <div class="box-header">
-                                        <i class="bi bi-building"></i>
-                                        <span>Federal District Court - Required</span>
+                                        <i class="bi" :class="stepData[1].federal_district_court && stepData[1].federal_district_court.trim() ? 'bi-check-circle-fill' : 'bi-building'"></i>
+                                        <span x-text="stepData[1].federal_district_court && stepData[1].federal_district_court.trim() ? 'Federal District Court - Found' : 'Federal District Court - Required'"></span>
                                     </div>
                                     <p class="small mb-3">
                                         <strong>Why is this important?</strong> Section 1983 civil rights cases <strong>must</strong> be filed in the correct federal district court.
