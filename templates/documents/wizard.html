@@ -1056,8 +1056,9 @@ function wizardApp() {
             setTimeout(_courtAutoCheck, 500);
             setTimeout(_courtAutoCheck, 2000);
 
-            // If analysis is done, show analysis view
-            if ('{{ analysis_status }}' === 'completed' && this.analysisData.violations) {
+            // If analysis is done, show analysis view (unless user requested a specific step)
+            const _urlParams = new URLSearchParams(window.location.search);
+            if ('{{ analysis_status }}' === 'completed' && this.analysisData.violations && !_urlParams.get('step')) {
                 this.initAnalysisDefaults();
                 this.currentView = 'analysis';
             }
