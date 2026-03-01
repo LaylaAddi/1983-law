@@ -83,6 +83,35 @@
                             <i class="bi bi-house-door me-1"></i>Home
                         </a>
                     </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-shield-check me-1"></i>Know Your Rights
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'public_pages:know_your_rights' %}">
+                                <i class="bi bi-book me-2"></i>Overview
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'public_pages:section_1983' %}">
+                                <i class="bi bi-file-earmark-text me-2"></i>Section 1983
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'public_pages:right_to_record' %}">
+                                <i class="bi bi-camera-video me-2"></i>Right to Record Police
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'public_pages:rights_violated' %}">
+                                <i class="bi bi-exclamation-triangle me-2"></i>When Rights Are Violated
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'public_pages:fourth_amendment' %}">
+                                <i class="bi bi-4-circle me-2"></i>Fourth Amendment
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'public_pages:fifth_amendment' %}">
+                                <i class="bi bi-5-circle me-2"></i>Fifth Amendment
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'public_pages:first_amendment_auditors' %}">
+                                <i class="bi bi-1-circle me-2"></i>First Amendment Auditors
+                            </a></li>
+                        </ul>
+                    </li>
                     {% if user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'documents:document_list' %}">

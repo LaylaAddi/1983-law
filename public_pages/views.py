@@ -57,11 +57,8 @@ def landing_page(request):
     Main public landing page with civil rights information.
     For now, uses hardcoded sample data. Will be replaced with CMS + News API later.
 
-    Authenticated users are redirected to their documents list.
+    All users (including authenticated) can view the public landing page.
     """
-    # Redirect authenticated users to their documents
-    if request.user.is_authenticated:
-        return redirect('documents:document_list')
 
     # Sample featured articles (will come from CMS later)
     featured_articles = [
