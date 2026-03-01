@@ -464,7 +464,7 @@
 
                                     <div class="wizard-court-confirmation" :class="{ 'confirmed': stepData[1].court_district_confirmed }">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="wizardCourtConfirm" x-model="stepData[1].court_district_confirmed" @change="if(stepData[1].court_district_confirmed) { step1BlockedMessage = ''; step1CourtError = ''; step1NeedsConfirmation = false; }">
+                                            <input class="form-check-input" type="checkbox" id="wizardCourtConfirm" x-model="stepData[1].court_district_confirmed" @change="if(stepData[1].court_district_confirmed) { step1BlockedMessage = ''; step1CourtError = ''; step1NeedsConfirmation = false; } saveCurrentStep(true)">
                                             <label class="form-check-label" for="wizardCourtConfirm">
                                                 <i class="bi bi-exclamation-triangle-fill me-1"></i>
                                                 I confirm this is the correct federal district court for my case
