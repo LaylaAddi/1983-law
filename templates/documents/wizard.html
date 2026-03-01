@@ -105,6 +105,29 @@
     .wizard-court-confirmation.confirmed label {
         color: #198754;
     }
+    @keyframes pulse-attention {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+        50% { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
+    }
+    .wizard-court-confirmation.needs-attention {
+        animation: pulse-attention 1.5s ease-in-out 3;
+        border-color: #dc3545;
+        background: #fff5f5;
+    }
+    .step1-blocked-banner {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+    }
+    .step1-blocked-banner .action-link {
+        cursor: pointer;
+        text-decoration: underline;
+        font-weight: 600;
+    }
+    [data-theme="dark"] .step1-blocked-banner { background: #332d00; border-color: #665a00; color: #e0e0e0; }
+    [data-theme="dark"] .wizard-court-confirmation.needs-attention { background: #2a1a1a; }
 
     /* Dark mode overrides */
     [data-theme="dark"] .alert-primary { background-color: #1e3a5f; border-color: #2c5282; color: #e0e0e0; }
@@ -388,7 +411,7 @@
 
                             <!-- Federal District Court -->
                             <div class="col-12">
-                                <div class="wizard-court-box" :class="{ 'filled': stepData[1].federal_district_court && stepData[1].federal_district_court.trim() }">
+                                <div id="wizardCourtBox" class="wizard-court-box" :class="{ 'filled': stepData[1].federal_district_court && stepData[1].federal_district_court.trim() }">
                                     <div class="box-header">
                                         <i class="bi" :class="stepData[1].federal_district_court && stepData[1].federal_district_court.trim() ? 'bi-check-circle-fill' : 'bi-building'"></i>
                                         <span x-text="stepData[1].federal_district_court && stepData[1].federal_district_court.trim() ? 'Federal District Court - Found' : 'Federal District Court - Required'"></span>
@@ -441,7 +464,7 @@
 
                                     <div class="wizard-court-confirmation" :class="{ 'confirmed': stepData[1].court_district_confirmed }">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="wizardCourtConfirm" x-model="stepData[1].court_district_confirmed">
+                                            <input class="form-check-input" type="checkbox" id="wizardCourtConfirm" x-model="stepData[1].court_district_confirmed" @change="if(stepData[1].court_district_confirmed) { step1BlockedMessage = ''; step1CourtError = ''; step1NeedsConfirmation = false; }">
                                             <label class="form-check-label" for="wizardCourtConfirm">
                                                 <i class="bi bi-exclamation-triangle-fill me-1"></i>
                                                 I confirm this is the correct federal district court for my case
@@ -728,6 +751,29 @@
                 </div>
             </div>
 
+            <!-- Step 1 Validation Banner -->
+            <div x-show="currentStep === 1 && step1BlockedMessage" x-transition class="mt-4" style="display:none;">
+                <div class="step1-blocked-banner">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-exclamation-circle-fill text-warning me-2 mt-1" style="font-size:1.2rem;"></i>
+                        <div>
+                            <strong>Cannot proceed to next step</strong>
+                            <div class="mt-1" x-text="step1BlockedMessage"></div>
+                            <div class="mt-2" x-show="step1NeedsConfirmation">
+                                <span class="action-link text-primary" @click="document.getElementById('wizardCourtConfirm').scrollIntoView({behavior:'smooth',block:'center'}); document.getElementById('wizardCourtConfirm').focus();">
+                                    <i class="bi bi-arrow-down me-1"></i>Take me to the confirmation checkbox
+                                </span>
+                            </div>
+                            <div class="mt-2" x-show="!stepData[1].federal_district_court && stepData[1].city && stepData[1].state && !courtLookupLoading">
+                                <span class="action-link text-primary" @click="document.getElementById('wizardCourtBox').scrollIntoView({behavior:'smooth',block:'center'});">
+                                    <i class="bi bi-arrow-down me-1"></i>Take me to the court lookup
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Navigation Buttons -->
             <div class="d-flex justify-content-between mt-4" x-show="currentView === 'steps'">
                 <button class="btn btn-outline-secondary" @click="prevStep()">
@@ -972,6 +1018,8 @@ function wizardApp() {
         step1CityError: '',
         step1StateError: '',
         step1CourtError: '',
+        step1BlockedMessage: '',
+        step1NeedsConfirmation: false,
 
         // AI data
         aiExtracted: JSON.parse('{{ ai_extracted|escapejs }}'),
@@ -1137,23 +1185,64 @@ function wizardApp() {
             this.step1CityError = '';
             this.step1StateError = '';
             this.step1CourtError = '';
+            this.step1BlockedMessage = '';
+            this.step1NeedsConfirmation = false;
 
-            if (!this.stepData[1].city || !this.stepData[1].city.trim()) {
+            const hasCity = this.stepData[1].city && this.stepData[1].city.trim();
+            const hasState = !!this.stepData[1].state;
+            const hasCourt = this.stepData[1].federal_district_court && this.stepData[1].federal_district_court.trim();
+            const confirmed = !!this.stepData[1].court_district_confirmed;
+
+            if (!hasCity) {
                 this.step1CityError = 'City is required.';
                 valid = false;
             }
-            if (!this.stepData[1].state) {
+            if (!hasState) {
                 this.step1StateError = 'State is required.';
                 valid = false;
             }
-            if (!this.stepData[1].federal_district_court || !this.stepData[1].federal_district_court.trim()) {
-                this.step1CourtError = 'Federal district court is required. Use the Lookup button or enter manually.';
+
+            if (!hasCity || !hasState) {
+                this.step1BlockedMessage = 'Please enter the city and state where the incident occurred. This is needed to determine the correct federal court.';
+            } else if (!hasCourt) {
+                if (this.courtLookupLoading) {
+                    this.step1BlockedMessage = 'Court lookup is in progress — please wait a moment and try again.';
+                } else {
+                    this.step1BlockedMessage = 'The federal district court has not been determined yet. Scroll down to the court section and click "Lookup Court", or check "I want to enter the court name manually" to type it yourself.';
+                }
+                this.step1CourtError = 'Federal district court is required.';
+                valid = false;
+            } else if (!confirmed) {
+                this.step1BlockedMessage = 'Almost there! Please scroll down and check the box to confirm the federal district court is correct for your case.';
+                this.step1CourtError = 'Please check the confirmation box below.';
+                this.step1NeedsConfirmation = true;
                 valid = false;
             }
-            if (this.stepData[1].federal_district_court && !this.stepData[1].court_district_confirmed) {
-                this.step1CourtError = 'Please confirm the federal district court is correct.';
-                valid = false;
+
+            if (!valid) {
+                // Scroll to the problem area
+                this.$nextTick(() => {
+                    if (!hasCity || !hasState) {
+                        // Scroll to city/state fields
+                        const cityField = document.querySelector('[x-model="stepData[1].city"]');
+                        if (cityField) cityField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else {
+                        // Scroll to court box
+                        const courtBox = document.getElementById('wizardCourtBox');
+                        if (courtBox) courtBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                        // Pulse the confirmation checkbox if that's the blocker
+                        if (this.step1NeedsConfirmation) {
+                            const confirmBox = document.querySelector('.wizard-court-confirmation');
+                            if (confirmBox) {
+                                confirmBox.classList.add('needs-attention');
+                                setTimeout(() => confirmBox.classList.remove('needs-attention'), 5000);
+                            }
+                        }
+                    }
+                });
             }
+
             return valid;
         },
 
