@@ -1171,12 +1171,12 @@ function wizardApp() {
             }
         },
 
-        goToStep(n) {
+        async goToStep(n) {
             if (this.currentView === 'story') return;
             if (this.currentStep === 1 && n !== 1 && !this.validateStep1()) {
                 return;
             }
-            this.saveCurrentStep(true);
+            await this.saveCurrentStep(true);
             this.currentStep = n;
         },
 
@@ -1296,19 +1296,19 @@ function wizardApp() {
             }
         },
 
-        nextStep() {
+        async nextStep() {
             if (this.currentStep === 1 && !this.validateStep1()) {
                 return;
             }
-            this.saveCurrentStep(true);
+            await this.saveCurrentStep(true);
             if (this.currentStep < 7) this.currentStep++;
         },
 
-        prevStep() {
+        async prevStep() {
             if (this.currentStep === 1) {
                 this.currentView = 'story';
             } else {
-                this.saveCurrentStep(true);
+                await this.saveCurrentStep(true);
                 this.currentStep--;
             }
         },
