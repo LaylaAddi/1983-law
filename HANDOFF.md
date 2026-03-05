@@ -12,11 +12,11 @@ A web application to help people create Section 1983 civil rights complaints. Us
 
 ```bash
 # Development branch
-git fetch origin claude/review-handoff-yKGkf
+git fetch origin claude/fix-wizard-confirmation-save-wczGQ
 
 # To deploy: merge to master and push (Render auto-deploys from master)
 git checkout master
-git merge origin/claude/review-handoff-yKGkf
+git merge origin/claude/fix-wizard-confirmation-save-wczGQ
 git push origin master
 # start.sh auto-runs: migrate + seed_ai_prompts + gunicorn
 ```
@@ -24,6 +24,16 @@ git push origin master
 ---
 
 ## Recent Session Work (This Branch)
+
+### Wizard Confirmation & Step Save Fixes
+- **Confirmation checkbox auto-save** — `court_district_confirmed` checkbox `@change` handler now calls `saveCurrentStep(true)` so checking the box persists immediately to the backend, even if the user navigates away without clicking Next
+- **Async save race condition** — `nextStep()`, `prevStep()`, and `goToStep()` were calling `saveCurrentStep(true)` without `await`; in-flight API calls were cancelled if the user navigated away before the fetch completed, silently losing step data and leaving the hub showing steps as "Pending"
+- **Admin/staff expiry bypass** — `can_edit()` now returns `True` for `has_unlimited_access()` users (staff/admin) on non-finalized documents, bypassing the 48-hour draft expiry that was silently redirecting wizard step links back to the hub
+- **Expired draft warning** — wizard view redirect now fires the expiry warning message when `is_expired()` is True even if `payment_status` hasn't been updated to `'expired'` yet
+
+---
+
+## Previous Session Work
 
 ### Federal District Court in Wizard Step 1
 - **Court lookup field** added to bottom of Step 1 (When & Where) with auto-lookup from city/state
