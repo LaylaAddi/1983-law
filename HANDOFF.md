@@ -30,6 +30,8 @@ git push origin master
 - **Async save race condition** — `nextStep()`, `prevStep()`, and `goToStep()` were calling `saveCurrentStep(true)` without `await`; in-flight API calls were cancelled if the user navigated away before the fetch completed, silently losing step data and leaving the hub showing steps as "Pending"
 - **Admin/staff expiry bypass** — `can_edit()` now returns `True` for `has_unlimited_access()` users (staff/admin) on non-finalized documents, bypassing the 48-hour draft expiry that was silently redirecting wizard step links back to the hub
 - **Expired draft warning** — wizard view redirect now fires the expiry warning message when `is_expired()` is True even if `payment_status` hasn't been updated to `'expired'` yet
+- **JSONField mutation bug** — `set_step_data()` was doing `self.interview_data[key] = data` (in-place dict mutation); Django's JSONField may not detect in-place mutations as dirty, silently skipping the DB write. Fixed by reassigning: `self.interview_data = {**self.interview_data, key: data}`. Also changed `save()` → `save(update_fields=['interview_data', 'current_step', 'status'])` for an explicit, targeted write. This was causing `court_district_confirmed` (and potentially other step fields) to appear saved in the UI but not persist on page reload.
+- **Silent save errors** — `saveCurrentStep()` in the wizard frontend was not checking `response.ok`, so a 400/500 from the API would be silently swallowed. Now logs `console.error` with the status and response body so failures are visible in browser DevTools.
 
 ---
 

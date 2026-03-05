@@ -1457,7 +1457,7 @@ function wizardApp() {
             if (!silent) this.isSaving = true;
 
             try {
-                await fetch(`/api/v1/wizard/${this.sessionSlug}/step/${this.currentStep}/`, {
+                const response = await fetch(`/api/v1/wizard/${this.sessionSlug}/step/${this.currentStep}/`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1465,6 +1465,10 @@ function wizardApp() {
                     },
                     body: JSON.stringify(this.stepData[this.currentStep]),
                 });
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('Step save failed (' + response.status + '):', text);
+                }
             } catch (err) {
                 console.error('Error saving step:', err);
             }
