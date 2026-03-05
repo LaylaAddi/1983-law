@@ -26,6 +26,8 @@ git push origin master
 ## Recent Session Work (This Branch)
 
 ### Wizard Confirmation & Step Save Fixes
+- **Confirmation checkbox Alpine.js ordering fix** — Replaced `x-model` with `:checked` + explicit `stepData[1].court_district_confirmed = $event.target.checked` in `@change`. Alpine.js v3 can fire `@change` before `x-model` updates the bound property, causing `saveCurrentStep(true)` to read stale `false` and persist it to the DB. Using `$event.target.checked` directly bypasses this ordering ambiguity.
+- **Stale confirmation reset** — When city or state changes (resetting the auto-looked-up court to empty), `court_district_confirmed` is now also reset to `false`, requiring the user to re-confirm after a new court lookup.
 - **Confirmation checkbox auto-save** — `court_district_confirmed` checkbox `@change` handler now calls `saveCurrentStep(true)` so checking the box persists immediately to the backend, even if the user navigates away without clicking Next
 - **Async save race condition** — `nextStep()`, `prevStep()`, and `goToStep()` were calling `saveCurrentStep(true)` without `await`; in-flight API calls were cancelled if the user navigated away before the fetch completed, silently losing step data and leaving the hub showing steps as "Pending"
 - **Admin/staff expiry bypass** — `can_edit()` now returns `True` for `has_unlimited_access()` users (staff/admin) on non-finalized documents, bypassing the 48-hour draft expiry that was silently redirecting wizard step links back to the hub

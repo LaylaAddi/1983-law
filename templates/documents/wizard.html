@@ -364,12 +364,12 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">City <span class="text-danger">*</span> <span x-show="aiSuggested(1, 'city')" class="ai-badge">AI suggested</span></label>
-                                <input type="text" class="form-control" :class="{ 'is-invalid': step1CityError }" x-model="stepData[1].city" placeholder="City" @input="step1CityError = ''" @change="stepData[1].federal_district_court = ''; lookupCourt()">
+                                <input type="text" class="form-control" :class="{ 'is-invalid': step1CityError }" x-model="stepData[1].city" placeholder="City" @input="step1CityError = ''" @change="stepData[1].federal_district_court = ''; stepData[1].court_district_confirmed = false; lookupCourt()">
                                 <div class="invalid-feedback" x-show="step1CityError" x-text="step1CityError"></div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">State <span class="text-danger">*</span> <span x-show="aiSuggested(1, 'state')" class="ai-badge">AI suggested</span></label>
-                                <select class="form-select" :class="{ 'is-invalid': step1StateError }" x-model="stepData[1].state" @change="step1StateError = ''; stepData[1].federal_district_court = ''; lookupCourt()">
+                                <select class="form-select" :class="{ 'is-invalid': step1StateError }" x-model="stepData[1].state" @change="step1StateError = ''; stepData[1].federal_district_court = ''; stepData[1].court_district_confirmed = false; lookupCourt()">
                                     {% for value, label in us_states %}
                                     <option value="{{ value }}">{{ label }}</option>
                                     {% endfor %}
@@ -464,7 +464,7 @@
 
                                     <div class="wizard-court-confirmation" :class="{ 'confirmed': stepData[1].court_district_confirmed }">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="wizardCourtConfirm" x-model="stepData[1].court_district_confirmed" @change="if(stepData[1].court_district_confirmed) { step1BlockedMessage = ''; step1CourtError = ''; step1NeedsConfirmation = false; } saveCurrentStep(true)">
+                                            <input class="form-check-input" type="checkbox" id="wizardCourtConfirm" :checked="stepData[1].court_district_confirmed" @change="stepData[1].court_district_confirmed = $event.target.checked; if($event.target.checked) { step1BlockedMessage = ''; step1CourtError = ''; step1NeedsConfirmation = false; } saveCurrentStep(true)">
                                             <label class="form-check-label" for="wizardCourtConfirm">
                                                 <i class="bi bi-exclamation-triangle-fill me-1"></i>
                                                 I confirm this is the correct federal district court for my case
