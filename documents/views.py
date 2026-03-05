@@ -2455,7 +2455,7 @@ def wizard(request, document_slug):
     if not document.can_edit():
         if document.payment_status == 'finalized':
             messages.info(request, 'This document has been finalized and cannot be edited.')
-        elif document.payment_status == 'expired':
+        elif document.payment_status == 'expired' or document.is_expired():
             messages.warning(request, 'This document has expired. Please upgrade to continue editing.')
         return redirect('documents:document_detail', document_slug=document.slug)
 

@@ -273,6 +273,9 @@ class Document(models.Model):
         """Check if document can be edited."""
         if self.payment_status == 'finalized':
             return False
+        # Staff/admins bypass expiry so they can always test and manage documents
+        if self.user.has_unlimited_access():
+            return True
         if self.payment_status == 'expired':
             return False
         if self.is_expired():
