@@ -194,6 +194,29 @@ def wizard_save_step(request, session_slug, step_number):
     # Save step data
     session.set_step_data(step_number, serializer.validated_data)
 
+    # If step 1, immediately write court fields to IncidentOverview (if it exists)
+    # so the DB value stays in sync without waiting for wizard_complete.
+    if step_number == 1:
+        data = serializer.validated_data
+        try:
+            section = session.document.sections.get(section_type='incident_overview')
+            overview = IncidentOverview.objects.filter(section=section).first()
+            if overview:
+                update_fields = []
+                if 'court_district_confirmed' in data:
+                    overview.court_district_confirmed = bool(data['court_district_confirmed'])
+                    update_fields.append('court_district_confirmed')
+                if 'use_manual_court' in data:
+                    overview.use_manual_court = bool(data['use_manual_court'])
+                    update_fields.append('use_manual_court')
+                if 'federal_district_court' in data:
+                    overview.federal_district_court = data['federal_district_court'] or ''
+                    update_fields.append('federal_district_court')
+                if update_fields:
+                    overview.save(update_fields=update_fields)
+        except Exception:
+            logger.exception(f"Error syncing step 1 court fields to IncidentOverview for session {session.slug}")
+
     # If step 7, capture the case law preference
     if step_number == 7:
         session.use_case_law = serializer.validated_data.get('use_case_law', True)
