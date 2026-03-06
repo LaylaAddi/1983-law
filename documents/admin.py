@@ -58,6 +58,23 @@ class PlaintiffInfoAdmin(admin.ModelAdmin):
     list_display = ['first_name', 'middle_name', 'last_name', 'email', 'is_pro_se']
 
 
+@admin.register(IncidentOverview)
+class IncidentOverviewAdmin(admin.ModelAdmin):
+    list_display = ['__str__', 'city', 'state', 'federal_district_court', 'court_district_confirmed', 'use_manual_court']
+    list_filter = ['court_district_confirmed', 'use_manual_court', 'district_lookup_confidence']
+    search_fields = ['city', 'state', 'federal_district_court', 'incident_location']
+    readonly_fields = ['section']
+
+    fieldsets = (
+        ('Incident Details', {
+            'fields': ('section', 'incident_date', 'incident_time', 'incident_location', 'city', 'state', 'location_type', 'was_recording', 'recording_device')
+        }),
+        ('Court District', {
+            'fields': ('federal_district_court', 'district_lookup_confidence', 'use_manual_court', 'court_district_confirmed')
+        }),
+    )
+
+
 @admin.register(Defendant)
 class DefendantAdmin(admin.ModelAdmin):
     list_display = ['name', 'defendant_type', 'badge_number', 'agency_name']
