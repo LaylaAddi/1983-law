@@ -5,7 +5,7 @@ from .models import (
     Defendant, IncidentNarrative, RightsViolated, Witness,
     Evidence, Damages, PriorComplaints, ReliefSought,
     PromoCode, PromoCodeUsage, PayoutRequest, AIPrompt,
-    VideoEvidence, VideoCapture, VideoSpeaker
+    VideoEvidence, VideoCapture, VideoSpeaker, WizardSession,
 )
 
 
@@ -51,6 +51,32 @@ class DocumentAdmin(admin.ModelAdmin):
 class DocumentSectionAdmin(admin.ModelAdmin):
     list_display = ['document', 'section_type', 'status', 'updated_at']
     list_filter = ['section_type', 'status']
+
+
+@admin.register(WizardSession)
+class WizardSessionAdmin(admin.ModelAdmin):
+    list_display = ['document', 'status', 'current_step', 'analysis_status', 'updated_at']
+    list_filter = ['status', 'analysis_status']
+    search_fields = ['document__title', 'document__user__email', 'slug']
+    readonly_fields = ['slug', 'created_at', 'updated_at']
+
+    fieldsets = (
+        ('Session', {
+            'fields': ('document', 'slug', 'status', 'current_step', 'analysis_status')
+        }),
+        ('Interview Data (JSON)', {
+            'fields': ('interview_data',),
+            'description': 'Raw step data saved by the user. court_district_confirmed lives in step_1.'
+        }),
+        ('AI Data', {
+            'fields': ('raw_story', 'ai_extracted', 'ai_analysis'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(PlaintiffInfo)
