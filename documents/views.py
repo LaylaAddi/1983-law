@@ -2447,6 +2447,25 @@ def tell_your_story(request, document_slug):
     return render(request, 'documents/tell_your_story.html', context)
 
 
+def _wizard_interview_data_for_template(session, document):
+    """Return interview_data JSON for the wizard template, patching in court_district_confirmed
+    from IncidentOverview so the checkbox reflects the canonical DB value on reload."""
+    if not session:
+        return '{}'
+    data = dict(session.interview_data)
+    if 'step_1' in data:
+        try:
+            section = document.sections.get(section_type='incident_overview')
+            overview = IncidentOverview.objects.filter(section=section).first()
+            if overview:
+                step_1 = dict(data['step_1'])
+                step_1['court_district_confirmed'] = bool(overview.court_district_confirmed)
+                data['step_1'] = step_1
+        except Exception:
+            pass
+    return json.dumps(data)
+
+
 @login_required
 def wizard(request, document_slug):
     """Guided interview wizard - serves the single-page wizard template."""
@@ -2470,7 +2489,7 @@ def wizard(request, document_slug):
         'has_session': session is not None,
         'session_slug': session.slug if session else '',
         'ai_extracted': json.dumps(session.ai_extracted) if session else '{}',
-        'interview_data': json.dumps(session.interview_data) if session else '{}',
+        'interview_data': _wizard_interview_data_for_template(session, document),
         'ai_analysis': json.dumps(session.ai_analysis) if session else '{}',
         'current_step': session.current_step if session else 1,
         'wizard_status': session.status if session else 'not_started',
