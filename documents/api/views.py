@@ -322,6 +322,18 @@ def wizard_complete(request, session_slug):
     )
 
     if session.status == 'completed':
+        # Still update safe non-duplicating fields (e.g. court_district_confirmed)
+        # in case user re-confirmed after initial completion.
+        try:
+            step_1 = session.interview_data.get('step_1', {})
+            if 'court_district_confirmed' in step_1:
+                section = session.document.sections.get(section_type='incident_overview')
+                overview = IncidentOverview.objects.filter(section=section).first()
+                if overview:
+                    overview.court_district_confirmed = bool(step_1['court_district_confirmed'])
+                    overview.save(update_fields=['court_district_confirmed'])
+        except Exception:
+            pass
         return Response({
             'already_completed': True,
             'document_slug': session.document.slug,
