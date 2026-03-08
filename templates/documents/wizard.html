@@ -1464,6 +1464,7 @@ function wizardApp() {
                         'X-CSRFToken': getCookie('csrftoken'),
                     },
                     body: JSON.stringify(this.stepData[this.currentStep]),
+                    keepalive: true,
                 });
                 if (!response.ok) {
                     const text = await response.text();
