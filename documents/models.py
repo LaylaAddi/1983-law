@@ -1355,9 +1355,12 @@ class WizardSession(models.Model):
 
     def set_step_data(self, step_number, data):
         """Save user-confirmed data for a specific step."""
+        import json
+        from django.core.serializers.json import DjangoJSONEncoder
         # Reassign (not mutate) so Django's JSONField detects the change
         interview_data = dict(self.interview_data)
-        interview_data[f'step_{step_number}'] = data
+        # Round-trip through DjangoJSONEncoder to convert date/time objects to strings
+        interview_data[f'step_{step_number}'] = json.loads(json.dumps(data, cls=DjangoJSONEncoder))
         self.interview_data = interview_data
         if step_number >= self.current_step:
             self.current_step = min(step_number + 1, self.TOTAL_STEPS + 1)
