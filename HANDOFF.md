@@ -12,11 +12,11 @@ A web application to help people create Section 1983 civil rights complaints. Us
 
 ```bash
 # Development branch
-git fetch origin claude/fix-wizard-confirmation-save-wczGQ
+git fetch origin claude/add-court-district-checkbox-BmDZ4
 
 # To deploy: merge to master and push (Render auto-deploys from master)
 git checkout master
-git merge origin/claude/fix-wizard-confirmation-save-wczGQ
+git merge origin/claude/add-court-district-checkbox-BmDZ4
 git push origin master
 # start.sh auto-runs: migrate + seed_ai_prompts + gunicorn
 ```
@@ -25,15 +25,21 @@ git push origin master
 
 ## Recent Session Work (This Branch)
 
-### Wizard Confirmation & Step Save Fixes
-- **Confirmation checkbox Alpine.js ordering fix** — Replaced `x-model` with `:checked` + explicit `stepData[1].court_district_confirmed = $event.target.checked` in `@change`. Alpine.js v3 can fire `@change` before `x-model` updates the bound property, causing `saveCurrentStep(true)` to read stale `false` and persist it to the DB. Using `$event.target.checked` directly bypasses this ordering ambiguity.
-- **Stale confirmation reset** — When city or state changes (resetting the auto-looked-up court to empty), `court_district_confirmed` is now also reset to `false`, requiring the user to re-confirm after a new court lookup.
-- **Confirmation checkbox auto-save** — `court_district_confirmed` checkbox `@change` handler now calls `saveCurrentStep(true)` so checking the box persists immediately to the backend, even if the user navigates away without clicking Next
-- **Async save race condition** — `nextStep()`, `prevStep()`, and `goToStep()` were calling `saveCurrentStep(true)` without `await`; in-flight API calls were cancelled if the user navigated away before the fetch completed, silently losing step data and leaving the hub showing steps as "Pending"
-- **Admin/staff expiry bypass** — `can_edit()` now returns `True` for `has_unlimited_access()` users (staff/admin) on non-finalized documents, bypassing the 48-hour draft expiry that was silently redirecting wizard step links back to the hub
-- **Expired draft warning** — wizard view redirect now fires the expiry warning message when `is_expired()` is True even if `payment_status` hasn't been updated to `'expired'` yet
-- **JSONField mutation bug** — `set_step_data()` was doing `self.interview_data[key] = data` (in-place dict mutation); Django's JSONField may not detect in-place mutations as dirty, silently skipping the DB write. Fixed by reassigning: `self.interview_data = {**self.interview_data, key: data}`. Also changed `save()` → `save(update_fields=['interview_data', 'current_step', 'status'])` for an explicit, targeted write. This was causing `court_district_confirmed` (and potentially other step fields) to appear saved in the UI but not persist on page reload.
-- **Silent save errors** — `saveCurrentStep()` in the wizard frontend was not checking `response.ok`, so a 400/500 from the API would be silently swallowed. Now logs `console.error` with the status and response body so failures are visible in browser DevTools.
+### Court District Checkbox — End-to-End Fix
+All fixes below combine to make `court_district_confirmed` reliably check, save, and reload:
+
+- **Confirmation checkbox Alpine.js ordering fix** — Replaced `x-model` with `:checked` + explicit `stepData[1].court_district_confirmed = $event.target.checked` in `@change`. Alpine.js v3 can fire `@change` before `x-model` updates the bound property, causing `saveCurrentStep(true)` to read stale `false`. Using `$event.target.checked` directly bypasses this.
+- **Stale confirmation reset** — When city or state changes (resetting the court), `court_district_confirmed` is also reset to `false`, requiring re-confirmation after a new lookup.
+- **Confirmation checkbox auto-save** — `@change` handler calls `saveCurrentStep(true)` so checking the box persists immediately without requiring the user to click Next.
+- **Async save race condition** — `nextStep()`, `prevStep()`, `goToStep()` were calling `saveCurrentStep(true)` without `await`; fetches were cancelled on navigation, silently losing data. Now all awaited.
+- **keepalive on fetch** — Added `keepalive: true` to the wizard step PUT fetch so the request completes even if the page navigates away before the response arrives.
+- **Step 1 sync to IncidentOverview on every save** — `court_district_confirmed`, `use_manual_court`, `federal_district_court` are now written to `IncidentOverview` on every step 1 PUT (not just on wizard complete), so the DB value stays current.
+- **IncidentOverview get_or_create** — `_ensure_sections_exist()` + `get_or_create` ensure the `IncidentOverview` row exists before the step 1 sync, even for documents that skipped the legacy create flow.
+- **Checkbox reload fix** — Wizard template now reads `court_district_confirmed` from `IncidentOverview` and passes it into `initialStepData` context, so the checkbox renders checked on page reload.
+- **JSONField 500 error fix** — DRF's `validated_data` contains Python `datetime.date`/`datetime.time` objects. Django's default `JSONField` encoder (`json.JSONEncoder`) cannot serialize these → `TypeError` → 500. Fixed in `set_step_data()` by round-tripping through `DjangoJSONEncoder`: `json.loads(json.dumps(data, cls=DjangoJSONEncoder))` before storing. This was the final blocker causing 500 on any save where `incident_date` or `incident_time` had a value.
+- **Admin/staff expiry bypass** — `can_edit()` now returns `True` for `has_unlimited_access()` users on non-finalized documents, bypassing 48-hour draft expiry.
+- **Expired draft warning** — Wizard view fires expiry warning when `is_expired()` is True even if `payment_status` hasn't updated yet.
+- **Silent save errors** — `saveCurrentStep()` now checks `response.ok` and logs `console.error` with status + body so failures show in browser DevTools.
 
 ---
 
@@ -292,21 +298,20 @@ git push origin master --force
 ## Recent Commit History
 
 ```
+bba99d5 Fix 500: serialize date/time objects before saving validated_data to JSONField
+bfce037 Add keepalive:true to wizard step fetch so saves survive page refresh/navigation
+e104848 Fix IncidentOverview not created until wizard complete: get_or_create on step 1 save
+ae94343 Fix court_district_confirmed not saving to DB: sync to IncidentOverview on every step 1 save
+dadf7c2 Register IncidentOverview in admin with court district fields
+52928df Fix wizard checkbox not showing checked on reload by syncing court_district_confirmed from IncidentOverview into template context
+a986a0e Fix court_district_confirmed not updating when wizard already completed
+f737b67 Fix court_district_confirmed checkbox: Alpine.js x-model/@change ordering + stale confirmation reset
 c99c4e5 Guide user through Step 1 validation with clear prompts and scroll
 2f720eb Add Know Your Rights nav dropdown, stop redirecting logged-in users from home
 05b8880 Fix wizard step links: don't override ?step=N with analysis view
 9e9c35b Highlight court district box green when populated
 a39c25b Fix NullBooleanField removed in DRF 3.14+
 092b522 Replace document detail with wizard-centric hub + fix court data saving
-a0b6c15 Fix court data not saving + improve dark mode + better explanation text
-d5d3b62 Fix court lookup 404: move URL route above document_slug catch-all
-3272f87 Fix court auto-lookup: replace broken $watch with polling + @change handlers
-c733f4e Fix court auto-lookup with $watch on city/state changes
-dae19b6 Fix court lookup button visibility and auto-lookup on page load
-944b7c6 Add Federal District Court to wizard Step 1 (When & Where)
-8fd4b3b Fix Google Scholar research links not opening in new tab
-404dbdc Add analysis selection toggles, violation explanations, and case law research links
-e0277d3 Fix wizard data flow to document sections, add dark mode for court lookup
 ```
 
 ---
