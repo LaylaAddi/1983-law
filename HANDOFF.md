@@ -25,6 +25,15 @@ git push origin master
 
 ## Recent Session Work (This Branch)
 
+### Wizard Step 6 Evidence UX Fixes (2026-03-11)
+
+**Problem**: AI pre-fills evidence items (e.g. body cam footage) inferred from the story, but users had no way to know which items were AI-suggested vs. things they entered themselves. Also, the `is_in_possession` field (have it vs. need to obtain) was stored in the serializer but never shown in the UI, and the delete button was hard to see.
+
+**Changes to `templates/documents/wizard.html`**:
+- **AI suggested badge** — In `prefillFromAI()`, step 6 items from AI are now tagged `ai_suggested: true`. The UI shows a blue "AI suggested — edit or remove" badge on those items.
+- **"I have this / Need to obtain" toggle** — Each evidence item now has a form-switch for `is_in_possession`. Shows green "I have this evidence" or amber "Need to obtain / request" depending on state.
+- **Visible delete button** — Changed from `btn-outline-danger` (subtle) to `btn-danger` with "Remove" label so it's obvious.
+
 ### Court District Checkbox — End-to-End Fix
 All fixes below combine to make `court_district_confirmed` reliably check, save, and reload:
 

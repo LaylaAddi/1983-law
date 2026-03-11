@@ -679,9 +679,12 @@
                         <template x-for="(item, i) in stepData[6].items" :key="'e'+i">
                             <div class="card mb-2 bg-light">
                                 <div class="card-body p-3">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="fw-bold" x-text="'Item ' + (i+1)"></span>
-                                        <button class="btn btn-sm btn-outline-danger" @click="stepData[6].items.splice(i,1)"><i class="bi bi-trash"></i></button>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fw-bold" x-text="'Item ' + (i+1)"></span>
+                                            <span x-show="item.ai_suggested" class="badge bg-info text-dark" style="font-size:0.7rem;"><i class="bi bi-stars me-1"></i>AI suggested — edit or remove</span>
+                                        </div>
+                                        <button class="btn btn-sm btn-danger" @click="stepData[6].items.splice(i,1)"><i class="bi bi-trash me-1"></i>Remove</button>
                                     </div>
                                     <div class="row g-2">
                                         <div class="col-md-4">
@@ -698,6 +701,15 @@
                                             </select>
                                         </div>
                                         <div class="col-md-8"><input type="text" class="form-control form-control-sm" x-model="item.title" placeholder="Title / Description"></div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" :id="'possess_'+i" x-model="item.is_in_possession">
+                                            <label class="form-check-label small" :for="'possess_'+i">
+                                                <span x-show="item.is_in_possession" class="text-success"><i class="bi bi-check-circle me-1"></i>I have this evidence</span>
+                                                <span x-show="!item.is_in_possession" class="text-warning"><i class="bi bi-hourglass-split me-1"></i>Need to obtain / request</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1129,7 +1141,12 @@ function wizardApp() {
                             // Only overwrite arrays if current is empty or has a single blank entry
                             if (current.length === 0 ||
                                 (current.length === 1 && !current[0].name)) {
-                                this.stepData[i][field] = value;
+                                // Tag evidence items as AI-suggested so the UI can show a badge
+                                if (i === 6 && field === 'items') {
+                                    this.stepData[i][field] = value.map(item => ({ ...item, ai_suggested: true }));
+                                } else {
+                                    this.stepData[i][field] = value;
+                                }
                             }
                         } else if (typeof value === 'boolean') {
                             // Always set booleans (was_recording: true/false)
