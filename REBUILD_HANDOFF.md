@@ -2,8 +2,7 @@
 
 ## What This Is
 A step-by-step rebuild of 1983law.org from scratch. Same stack, clean database, cleaner code.
-The old codebase lives at `/home/user/1983-law` and can be referenced at any time for logic,
-services, or templates to adapt — but nothing is copied blindly.
+Build everything from this spec. Nothing is copied from an old codebase.
 
 ---
 
@@ -160,7 +159,7 @@ Two-tier system — copy logic from old repo:
 1. **Static lookup** — `court_lookup_service.py` dynamically imports state module from
    `documents/services/court_data/states/` and calls `lookup_court_by_city(city)`
 2. **GPT fallback** — if city not in static data, calls `openai_service.lookup_federal_court(city, state)`
-3. Copy the entire `court_data/` directory from `/home/user/1983-law/documents/services/court_data/`
+3. Recreate or stub `court_data/` — static city→court mappings per state; GPT fallback covers any gaps
 
 ---
 
@@ -258,15 +257,13 @@ Work through these one at a time. Do not jump ahead.
 ---
 
 ## Reference Repo
-Old codebase: `/home/user/1983-law`
+No reference repo is available in this environment. Build everything from this spec.
 
-Use it to reference:
-- `static/css/app-theme.css` — copy directly
-- `static/*.svg` — copy logo/icon files
-- `templates/base.html` — reference navbar/footer structure
-- `documents/services/court_data/` — copy entire directory
-- `documents/services/openai_service.py` — reference AI prompt structure
-- `config/context_processors.py` — copy branding context processor
-- Any model, view, or template when rebuilding that feature
+When the spec says "copy from old repo", interpret it as:
+- **Theme CSS** — recreate `static/css/app-theme.css` using the color palette and design notes above
+- **SVG logos** — recreate simple SVG gavel icons (gavel-icon.svg, gavel-logo.svg, gavel.svg, favicon.svg)
+- **Court data** — recreate `documents/services/court_data/` with static city→court mappings per state, or stub it and rely on the GPT fallback until data is sourced
+- **Context processor** — build from the spec description above
+- **AI service** — build from the spec description above
 
 Do not copy old wizard templates or section_edit templates — those are the old process being replaced.
