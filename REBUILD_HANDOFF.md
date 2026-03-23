@@ -164,6 +164,48 @@ Two-tier system — copy logic from old repo:
 
 ---
 
+## Slugs
+Every `Document` uses a **short random slug** (e.g. `nP27cOkr`) as its URL identifier — never expose
+the database integer PK in URLs.
+
+- Generate on save using `secrets.token_urlsafe(6)` or similar, check for collisions
+- All document URLs use `<str:document_slug>/` — not `<int:pk>/`
+- `CivilRightsPage` (public_pages) also uses a human-readable slug from the title
+- Slugs are immutable once set — do not regenerate on update
+
+---
+
+## Mobile API (Build Later — Wire Now)
+The web app comes first. Mobile app comes after. But the API layer needs to be set up
+from the start so it doesn't require structural changes later.
+
+**Add to project from Step 1:**
+- Install `djangorestframework` and `djangorestframework-simplejwt`
+- Add to `INSTALLED_APPS`: `rest_framework`, `rest_framework_simplejwt`
+- Create `/api/v1/` URL namespace in `config/urls.py` (can be empty to start)
+- JWT settings in `settings.py`:
+  ```python
+  REST_FRAMEWORK = {
+      'DEFAULT_AUTHENTICATION_CLASSES': (
+          'rest_framework_simplejwt.authentication.JWTAuthentication',
+      ),
+  }
+  ```
+- Add token endpoints: `/api/v1/token/`, `/api/v1/token/refresh/`
+
+**API endpoints to build alongside each web feature** (stub them, implement fully later):
+- `POST /api/v1/auth/register/`
+- `POST /api/v1/auth/login/` (returns JWT)
+- `GET/POST /api/v1/documents/` — list + create
+- `GET /api/v1/documents/<slug>/` — detail
+- `POST /api/v1/documents/<slug>/wizard/save/` — save wizard step
+- `POST /api/v1/documents/<slug>/wizard/analyze/` — trigger AI analysis
+
+Mobile will be a React Native or similar app consuming these endpoints.
+All API views use JWT auth. All web views use session auth. They share the same models.
+
+---
+
 ## Security
 - Dynamic admin URL via `ADMIN_URL` env var (never hardcode in repo)
 - CSRF on all forms
@@ -200,7 +242,7 @@ SUPADATA_API_KEY=
 ## Build Order (Step by Step)
 Work through these one at a time. Do not jump ahead.
 
-- [ ] Step 1 — Project scaffold (Django project, apps, settings, base template, theme CSS, logo)
+- [ ] Step 1 — Project scaffold (Django project, apps, settings, base template, theme CSS, logo, DRF + JWT wired up, `/api/v1/` namespace)
 - [ ] Step 2 — `accounts` app: User model, auth views, login/register templates
 - [ ] Step 3 — `accounts` app: SiteSettings, pricing page, Stripe checkout + webhooks
 - [ ] Step 4 — `documents` app: All models, migrations, admin registration
